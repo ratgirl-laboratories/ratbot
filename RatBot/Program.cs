@@ -94,6 +94,7 @@ public static class Program
                     services.AddScoped<QuorumConfigService>();
                     services.AddScoped<UserVirtueService>();
                     services.AddScoped<EmojiVirtueService>();
+                    services.AddScoped<EmojiUsageService>();
 
                     #endregion
                 }

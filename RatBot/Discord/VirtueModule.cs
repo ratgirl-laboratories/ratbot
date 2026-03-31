@@ -115,12 +115,18 @@ public sealed class VirtueModule
                 return;
 
             IUserMessage? message = await cachedMessage.GetOrDownloadAsync();
-            if (message is null || message.Author.IsBot)
+            if (message is null)
                 return;
 
             string emojiId = ResolveEmojiId(reaction.Emote);
 
             await using AsyncServiceScope scope = _services.CreateAsyncScope();
+            EmojiUsageService emojiUsageService = scope.ServiceProvider.GetRequiredService<EmojiUsageService>();
+            await emojiUsageService.IncrementUsageAsync(emojiId);
+
+            if (message.Author.IsBot)
+                return;
+
             EmojiVirtueService emojiVirtueService = scope.ServiceProvider.GetRequiredService<EmojiVirtueService>();
             int? virtueDelta = await emojiVirtueService.GetVirtueAsync(emojiId);
             if (virtueDelta is null)
@@ -128,6 +134,19 @@ public sealed class VirtueModule
 
             UserVirtueService userVirtueService = scope.ServiceProvider.GetRequiredService<UserVirtueService>();
             int updatedVirtue = await userVirtueService.AddVirtueDeltaAsync(message.Author.Id, virtueDelta.Value);
+            int previousVirtue = updatedVirtue - virtueDelta.Value;
+
+            _logger.Information(
+                "Virtue changed for user {UserId} in guild {GuildId}: {PreviousVirtue} -> {UpdatedVirtue} (delta {VirtueDelta}) via emoji {EmojiId}, reactor {ReactorUserId}, message {MessageId}",
+                message.Author.Id,
+                guildChannel.Guild.Id,
+                previousVirtue,
+                updatedVirtue,
+                virtueDelta.Value,
+                emojiId,
+                reaction.UserId,
+                message.Id
+            );
 
             SocketGuild guild = guildChannel.Guild;
             SocketGuildUser? author = message.Author as SocketGuildUser ?? guild.GetUser(message.Author.Id);

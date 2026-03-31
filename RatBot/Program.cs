@@ -74,7 +74,7 @@ public static class Program
 
                     services.AddSingleton(sp => new InteractionService(sp.GetRequiredService<DiscordSocketClient>()));
                     services.AddSingleton<CommandService>();
-                    services.AddSingleton<ReactionScoreModule>();
+                    services.AddSingleton<VirtueModule>();
                     services.AddSingleton<DiscordBotService>();
                     services.AddHostedService<DiscordBotHostedService>();
 
@@ -92,8 +92,8 @@ public static class Program
 
                     services.AddScoped<GuildConfigService>();
                     services.AddScoped<QuorumConfigService>();
-                    services.AddScoped<UserScoreService>();
-                    services.AddScoped<ReactionEmojiScoreService>();
+                    services.AddScoped<UserVirtueService>();
+                    services.AddScoped<EmojiVirtueService>();
 
                     #endregion
                 }

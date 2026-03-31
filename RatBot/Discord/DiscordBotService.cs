@@ -14,7 +14,7 @@ public sealed class DiscordBotService
     private readonly InteractionService _interactionService;
     private readonly IServiceProvider _services;
     private readonly IConfiguration _config;
-    private readonly ReactionScoreModule _reactionScoreModule;
+    private readonly VirtueModule _virtueModule;
     private readonly ConcurrentDictionary<ulong, string> _prefixes = new ConcurrentDictionary<ulong, string>();
 
     public DiscordBotService(
@@ -23,7 +23,7 @@ public sealed class DiscordBotService
         InteractionService interactionService,
         IServiceProvider services,
         IConfiguration config,
-        ReactionScoreModule reactionScoreModule
+        VirtueModule virtueModule
     )
     {
         _discordClient = discordClient;
@@ -31,7 +31,7 @@ public sealed class DiscordBotService
         _interactionService = interactionService;
         _services = services;
         _config = config;
-        _reactionScoreModule = reactionScoreModule;
+        _virtueModule = virtueModule;
     }
 
     public async Task StartAsync(CancellationToken ct)
@@ -103,7 +103,7 @@ public sealed class DiscordBotService
 
         _discordClient.MessageReceived += ProcessMessageAsync;
         _discordClient.InteractionCreated += HandleInteractionAsync;
-        _reactionScoreModule.RegisterHandlers();
+        _virtueModule.RegisterHandlers();
 
         // Forward InteractionService logs to console to aid troubleshooting
         _interactionService.Log += msg =>

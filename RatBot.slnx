@@ -1,7 +1,12 @@
 <Solution>
-    <Project Path="RatBot.Commands/RatBot.Commands.csproj" />
-    <Project Path="RatBot.Domain/RatBot.Domain.csproj" />
-    <Project Path="RatBot.Infrastructure/RatBot.Infrastructure.csproj" />
-    <Project Path="RatBot.Interactions/RatBot.Interactions.csproj" />
-    <Project Path="RatBot/RatBot.csproj" />
+    <Folder Name="/src/">
+        <Project Path="RatBot/RatBot.csproj" />
+        <Project Path="RatBot.Commands/RatBot.Commands.csproj" />
+        <Project Path="RatBot.Interactions/RatBot.Interactions.csproj" />
+        <Project Path="RatBot.Domain/RatBot.Domain.csproj" />
+        <Project Path="RatBot.Infrastructure/RatBot.Infrastructure.csproj" />
+    </Folder>
+    <Folder Name="/ops/docker/">
+        <File Path="docker-compose.yml" />
+    </Folder>
 </Solution>

@@ -2,17 +2,17 @@ using RatBot.Infrastructure.Services;
 
 namespace RatBot.Discord;
 
-public sealed class ReactionScoreModule
+public sealed class VirtueModule
 {
     private readonly DiscordSocketClient _discordClient;
     private readonly IServiceProvider _services;
     private readonly ILogger _logger;
-    private readonly IReadOnlyList<ScoreRoleTier> _roleTiers;
+    private readonly IReadOnlyList<VirtueRoleTier> _roleTiers;
     private readonly ulong _baselineRoleId;
 
     private bool _isRegistered;
 
-    public ReactionScoreModule(
+    public VirtueModule(
         DiscordSocketClient discordClient,
         IServiceProvider services,
         IConfiguration config,
@@ -21,14 +21,14 @@ public sealed class ReactionScoreModule
     {
         _discordClient = discordClient;
         _services = services;
-        _logger = logger.ForContext<ReactionScoreModule>();
+        _logger = logger.ForContext<VirtueModule>();
 
-        _roleTiers = LoadRoleTiers(config).OrderBy(x => x.MinScore).Take(6).ToList();
-        _baselineRoleId = ParseUlong(config["ReactionScore:BaselineRoleId"]);
+        _roleTiers = LoadRoleTiers(config).OrderBy(x => x.MinVirtue).Take(6).ToList();
+        _baselineRoleId = ParseUlong(config["Virtue:BaselineRoleId"]);
 
         if (_roleTiers.Count != 6)
             _logger.Warning(
-                "Expected 6 configured role tiers for ReactionScore, but loaded {TierCount}.",
+                "Expected 6 configured virtue role tiers, but loaded {TierCount}.",
                 _roleTiers.Count
             );
     }
@@ -49,7 +49,7 @@ public sealed class ReactionScoreModule
     {
         if (_baselineRoleId == 0)
         {
-            _logger.Warning("ReactionScore baseline role is not configured. Set ReactionScore:BaselineRoleId.");
+            _logger.Warning("Virtue baseline role is not configured. Set Virtue:BaselineRoleId.");
             return;
         }
 
@@ -66,19 +66,19 @@ public sealed class ReactionScoreModule
 
             List<SocketGuildUser> users = guild.Users.Where(x => !x.IsBot).ToList();
             await using AsyncServiceScope scope = _services.CreateAsyncScope();
-            UserScoreService userScoreService = scope.ServiceProvider.GetRequiredService<UserScoreService>();
-            Dictionary<ulong, int> scores = await userScoreService.GetScoresAsync(users.Select(x => x.Id));
+            UserVirtueService userVirtueService = scope.ServiceProvider.GetRequiredService<UserVirtueService>();
+            Dictionary<ulong, int> virtues = await userVirtueService.GetVirtuesAsync(users.Select(x => x.Id));
 
             foreach (SocketGuildUser user in users)
             {
                 try
                 {
-                    int score = scores.GetValueOrDefault(user.Id);
-                    await ApplyRoleAssignmentAsync(user, score);
+                    int virtue = virtues.GetValueOrDefault(user.Id);
+                    await ApplyRoleAssignmentAsync(user, virtue);
                 }
                 catch (Exception ex)
                 {
-                    _logger.Warning(ex, "Failed to assign score role for user {UserId}.", user.Id);
+                    _logger.Warning(ex, "Failed to assign virtue role for user {UserId}.", user.Id);
                 }
             }
         }
@@ -92,13 +92,13 @@ public sealed class ReactionScoreModule
         try
         {
             await using AsyncServiceScope scope = _services.CreateAsyncScope();
-            UserScoreService userScoreService = scope.ServiceProvider.GetRequiredService<UserScoreService>();
-            int score = await userScoreService.GetScoreAsync(user.Id);
-            await ApplyRoleAssignmentAsync(user, score);
+            UserVirtueService userVirtueService = scope.ServiceProvider.GetRequiredService<UserVirtueService>();
+            int virtue = await userVirtueService.GetVirtueAsync(user.Id);
+            await ApplyRoleAssignmentAsync(user, virtue);
         }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Failed to assign baseline/score role for new user {UserId}.", user.Id);
+            _logger.Warning(ex, "Failed to assign baseline/virtue role for new user {UserId}.", user.Id);
         }
     }
 
@@ -121,14 +121,13 @@ public sealed class ReactionScoreModule
             string emojiId = ResolveEmojiId(reaction.Emote);
 
             await using AsyncServiceScope scope = _services.CreateAsyncScope();
-            ReactionEmojiScoreService emojiScoreService =
-                scope.ServiceProvider.GetRequiredService<ReactionEmojiScoreService>();
-            int? delta = await emojiScoreService.GetScoreAsync(emojiId);
-            if (delta is null)
+            EmojiVirtueService emojiVirtueService = scope.ServiceProvider.GetRequiredService<EmojiVirtueService>();
+            int? virtueDelta = await emojiVirtueService.GetVirtueAsync(emojiId);
+            if (virtueDelta is null)
                 return;
 
-            UserScoreService userScoreService = scope.ServiceProvider.GetRequiredService<UserScoreService>();
-            int updatedScore = await userScoreService.AddDeltaAsync(message.Author.Id, delta.Value);
+            UserVirtueService userVirtueService = scope.ServiceProvider.GetRequiredService<UserVirtueService>();
+            int updatedVirtue = await userVirtueService.AddVirtueDeltaAsync(message.Author.Id, virtueDelta.Value);
 
             SocketGuild guild = guildChannel.Guild;
             SocketGuildUser? author = message.Author as SocketGuildUser ?? guild.GetUser(message.Author.Id);
@@ -136,15 +135,15 @@ public sealed class ReactionScoreModule
             if (author is null || author.IsBot)
                 return;
 
-            await ApplyRoleAssignmentAsync(author, updatedScore);
+            await ApplyRoleAssignmentAsync(author, updatedVirtue);
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed processing reaction score event.");
+            _logger.Error(ex, "Failed processing virtue reaction event.");
         }
     }
 
-    private async Task ApplyRoleAssignmentAsync(SocketGuildUser user, int score)
+    private async Task ApplyRoleAssignmentAsync(SocketGuildUser user, int virtue)
     {
         if (_baselineRoleId == 0)
             return;
@@ -153,8 +152,8 @@ public sealed class ReactionScoreModule
         if (baselineRole is null)
             return;
 
-        ScoreRoleTier? matchedTier = _roleTiers.FirstOrDefault(x =>
-            x.Contains(score) && user.Guild.GetRole(x.RoleId) is not null
+        VirtueRoleTier? matchedTier = _roleTiers.FirstOrDefault(x =>
+            x.Contains(virtue) && user.Guild.GetRole(x.RoleId) is not null
         );
         ulong targetRoleId = matchedTier?.RoleId ?? _baselineRoleId;
 
@@ -188,22 +187,23 @@ public sealed class ReactionScoreModule
             await user.AddRolesAsync(toAdd);
     }
 
-    private static List<ScoreRoleTier> LoadRoleTiers(IConfiguration config)
+    private static List<VirtueRoleTier> LoadRoleTiers(IConfiguration config)
     {
-        List<ScoreRoleTier> tiers = new List<ScoreRoleTier>();
+        List<VirtueRoleTier> tiers = new List<VirtueRoleTier>();
 
-        foreach (IConfigurationSection child in config.GetSection("ReactionScore:RoleTiers").GetChildren())
+        foreach (IConfigurationSection child in config.GetSection("Virtue:RoleTiers").GetChildren())
         {
             ulong roleId = ParseUlong(child["RoleId"]);
             if (roleId == 0)
                 continue;
 
             if (
-                !int.TryParse(child["MinScore"], out int minScore) || !int.TryParse(child["MaxScore"], out int maxScore)
+                !int.TryParse(child["MinVirtue"], out int minVirtue)
+                || !int.TryParse(child["MaxVirtue"], out int maxVirtue)
             )
                 continue;
 
-            tiers.Add(new ScoreRoleTier(roleId, minScore, maxScore));
+            tiers.Add(new VirtueRoleTier(roleId, minVirtue, maxVirtue));
         }
 
         return tiers;
@@ -224,8 +224,8 @@ public sealed class ReactionScoreModule
         };
     }
 
-    private sealed record ScoreRoleTier(ulong RoleId, int MinScore, int MaxScore)
+    private sealed record VirtueRoleTier(ulong RoleId, int MinVirtue, int MaxVirtue)
     {
-        public bool Contains(int value) => value >= MinScore && value <= MaxScore;
+        public bool Contains(int value) => value >= MinVirtue && value <= MaxVirtue;
     }
 }

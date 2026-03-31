@@ -6,8 +6,9 @@ public sealed class BotDbContext : DbContext
 {
     public DbSet<GuildConfig> GuildConfigs => Set<GuildConfig>();
     public DbSet<QuorumScopeConfig> QuorumScopeConfigs => Set<QuorumScopeConfig>();
-    public DbSet<UserScore> UserScores => Set<UserScore>();
-    public DbSet<ReactionEmojiScore> ReactionEmojiScores => Set<ReactionEmojiScore>();
+    public DbSet<UserVirtue> UserVirtues => Set<UserVirtue>();
+    public DbSet<EmojiVirtue> EmojiVirtues => Set<EmojiVirtue>();
+    public DbSet<EmojiUsageCount> EmojiUsageCounts => Set<EmojiUsageCount>();
 
     public BotDbContext(DbContextOptions<BotDbContext> options)
         : base(options) { }
@@ -39,20 +40,28 @@ public sealed class BotDbContext : DbContext
             b.HasIndex(x => new { x.GuildId, x.ScopeType });
         });
 
-        modelBuilder.Entity<UserScore>(b =>
+        modelBuilder.Entity<UserVirtue>(b =>
         {
             b.HasKey(x => x.UserId);
 
             b.Property(x => x.UserId).ValueGeneratedNever().HasColumnType("bigint unsigned");
-            b.Property(x => x.Score).HasColumnType("int");
+            b.Property(x => x.Virtue).HasColumnName("Score").HasColumnType("int");
         });
 
-        modelBuilder.Entity<ReactionEmojiScore>(b =>
+        modelBuilder.Entity<EmojiVirtue>(b =>
         {
             b.HasKey(x => x.EmojiId);
 
             b.Property(x => x.EmojiId).HasMaxLength(128);
-            b.Property(x => x.Score).HasColumnType("int");
+            b.Property(x => x.Virtue).HasColumnName("Score").HasColumnType("int");
+        });
+
+        modelBuilder.Entity<EmojiUsageCount>(b =>
+        {
+            b.HasKey(x => x.EmojiId);
+
+            b.Property(x => x.EmojiId).HasMaxLength(128);
+            b.Property(x => x.UsageCount).HasColumnType("int");
         });
     }
 }

@@ -38,12 +38,17 @@ public static class Program
                         new DiscordSocketConfig
                         {
                             GatewayIntents =
-                                GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent,
+                                GatewayIntents.Guilds
+                                | GatewayIntents.GuildMembers
+                                | GatewayIntents.GuildMessages
+                                | GatewayIntents.GuildMessageReactions
+                                | GatewayIntents.MessageContent,
                         }
                     ));
 
                     services.AddSingleton(sp => new InteractionService(sp.GetRequiredService<DiscordSocketClient>()));
                     services.AddSingleton<CommandService>();
+                    services.AddSingleton<ReactionScoreModule>();
                     services.AddSingleton<DiscordBotService>();
                     services.AddHostedService<DiscordBotHostedService>();
 
@@ -61,6 +66,8 @@ public static class Program
 
                     services.AddScoped<GuildConfigService>();
                     services.AddScoped<QuorumConfigService>();
+                    services.AddScoped<UserScoreService>();
+                    services.AddScoped<ReactionEmojiScoreService>();
 
                     #endregion
                 }

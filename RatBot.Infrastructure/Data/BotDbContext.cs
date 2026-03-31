@@ -6,6 +6,8 @@ public sealed class BotDbContext : DbContext
 {
     public DbSet<GuildConfig> GuildConfigs => Set<GuildConfig>();
     public DbSet<QuorumScopeConfig> QuorumScopeConfigs => Set<QuorumScopeConfig>();
+    public DbSet<UserScore> UserScores => Set<UserScore>();
+    public DbSet<ReactionEmojiScore> ReactionEmojiScores => Set<ReactionEmojiScore>();
 
     public BotDbContext(DbContextOptions<BotDbContext> options)
         : base(options) { }
@@ -30,6 +32,22 @@ public sealed class BotDbContext : DbContext
 
             b.HasIndex(x => x.GuildId);
             b.HasIndex(x => new { x.GuildId, x.ScopeType });
+        });
+
+        modelBuilder.Entity<UserScore>(b =>
+        {
+            b.HasKey(x => x.UserId);
+
+            b.Property(x => x.UserId).ValueGeneratedNever().HasColumnType("bigint unsigned");
+            b.Property(x => x.Score).HasColumnType("int");
+        });
+
+        modelBuilder.Entity<ReactionEmojiScore>(b =>
+        {
+            b.HasKey(x => x.EmojiId);
+
+            b.Property(x => x.EmojiId).HasMaxLength(128);
+            b.Property(x => x.Score).HasColumnType("int");
         });
     }
 }

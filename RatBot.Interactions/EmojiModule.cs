@@ -1,22 +1,26 @@
 using System.Text;
 using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 using RatBot.Domain.Entities;
 using RatBot.Infrastructure.Services;
 
 namespace RatBot.Interactions;
 
 [Group("emoji", "Emoji analytics commands.")]
-public sealed class EmojiModule(EmojiUsageService emojiUsageService) : SlashCommandBase
+public sealed class EmojiModule(EmojiUsageService emojiUsageService, DiscordSocketClient discordClient) : SlashCommandBase
 {
     [SlashCommand("usage", "Show top emoji usage counts.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task UsageAsync()
     {
+        if (!await TryDeferEphemeralAsync())
+            return;
+
         List<EmojiUsageCount> topUsage = await emojiUsageService.GetTopUsageAsync(25);
         if (topUsage.Count == 0)
         {
-            await RespondAsync("No emoji usage has been recorded yet.", ephemeral: true);
+            await SendEphemeralAsync("No emoji usage has been recorded yet.");
             return;
         }
 
@@ -28,18 +32,24 @@ public sealed class EmojiModule(EmojiUsageService emojiUsageService) : SlashComm
             text.AppendLine($"{emojiDisplay}: {row.UsageCount}");
         }
 
-        await RespondAsync(text.ToString(), ephemeral: true);
+        await SendEphemeralAsync(text.ToString());
     }
 
     private string FormatEmojiForDisplay(string emojiId)
     {
+        if (string.IsNullOrWhiteSpace(emojiId))
+            return "[unknown]";
+
         if (!ulong.TryParse(emojiId, out ulong parsedEmojiId))
             return emojiId;
 
-        GuildEmote? guildEmote = Context.Guild.Emotes.FirstOrDefault(x => x.Id == parsedEmojiId);
-        if (guildEmote is not null)
-            return guildEmote.ToString();
+        foreach (SocketGuild guild in discordClient.Guilds)
+        {
+            GuildEmote? guildEmote = guild.Emotes.FirstOrDefault(x => x.Id == parsedEmojiId);
+            if (guildEmote is not null)
+                return guildEmote.ToString();
+        }
 
-        return $"<:emoji:{parsedEmojiId}>";
+        return $"[custom:{parsedEmojiId}]";
     }
 }

@@ -60,14 +60,17 @@ public sealed partial class VirtueModule(
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task ShowAsync()
     {
+        if (!await TryDeferEphemeralAsync())
+            return;
+
         int? virtue = await userVirtueService.TryGetVirtueAsync(Context.User.Id);
         if (virtue is null)
         {
-            await RespondAsync("You do not have a recorded virtue yet.", ephemeral: true);
+            await SendEphemeralAsync("You do not have a recorded virtue yet.");
             return;
         }
 
-        await RespondAsync($"Your virtue is `{virtue.Value}`.", ephemeral: true);
+        await SendEphemeralAsync($"Your virtue is `{virtue.Value}`.");
     }
 
     [SlashCommand("configure-role", "Configure one of the 7 virtue role tiers.")]

@@ -33,13 +33,13 @@ public sealed class VirtueModule(UserVirtueService userVirtueService) : SlashCom
             return;
         }
 
-        if (!Context.Interaction.HasResponded)
-            await DeferAsync();
+        if (!await TryDeferEphemeralAsync())
+            return;
 
         List<UserVirtue> topUsers = await userVirtueService.GetTopVirtuesAsync(20);
         if (topUsers.Count == 0)
         {
-            await FollowupAsync("No virtue entries found yet.");
+            await SendEphemeralAsync("No virtue entries found yet.");
             return;
         }
 
@@ -53,6 +53,6 @@ public sealed class VirtueModule(UserVirtueService userVirtueService) : SlashCom
             rank++;
         }
 
-        await FollowupAsync(text.ToString());
+        await SendEphemeralAsync(text.ToString());
     }
 }

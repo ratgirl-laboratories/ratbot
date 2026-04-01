@@ -8,9 +8,9 @@ namespace RatBot.Interactions;
 [DefaultMemberPermissions(GuildPermission.Administrator)]
 public sealed class AdminModule : SlashCommandBase
 {
-    private const int DiscordMessageLimit = 2000;
-    private const int ModalMessageLimit = 4000;
-    private const string SayModalCustomId = "admin-say";
+    internal const int DiscordMessageLimit = 2000;
+    internal const int ModalMessageLimit = 4000;
+    internal const string SayModalCustomId = "admin-say";
     private static readonly TimeSpan PendingRequestTtl = TimeSpan.FromMinutes(15);
     private static readonly ConcurrentDictionary<string, PendingAdminSayRequest> PendingRequests = new();
 
@@ -40,63 +40,13 @@ public sealed class AdminModule : SlashCommandBase
         await RespondWithModalAsync<AdminSayModal>(SayModalCustomId);
     }
 
-    [ModalInteraction(SayModalCustomId)]
-    [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task SayModalAsync(AdminSayModal modal)
+    internal static bool TryTakePendingChannelId(ulong guildId, ulong userId, out ulong channelId)
     {
-        if (Context.Guild is null)
-        {
-            await RespondAsync("This command can only be used in a guild.", ephemeral: true);
-            return;
-        }
+        string pendingKey = GetPendingRequestKey(guildId, userId);
+        bool found = PendingRequests.TryRemove(pendingKey, out PendingAdminSayRequest? pendingRequest);
 
-        string pendingKey = GetPendingRequestKey(Context.Guild.Id, Context.User.Id);
-        if (!PendingRequests.TryRemove(pendingKey, out PendingAdminSayRequest? pendingRequest))
-        {
-            await RespondAsync("No pending destination channel was found. Run `/admin say` again.", ephemeral: true);
-            return;
-        }
-
-        ITextChannel? channel = Context.Guild.GetTextChannel(pendingRequest.ChannelId);
-        if (channel is null)
-        {
-            await RespondAsync(
-                "I couldn't find that destination channel anymore. Run `/admin say` again.",
-                ephemeral: true
-            );
-            return;
-        }
-
-        ChannelPermissions botPermissions = Context.Guild.CurrentUser.GetPermissions(channel);
-        if (!botPermissions.ViewChannel || !botPermissions.SendMessages)
-        {
-            await RespondAsync($"I don't have permission to post in {channel.Mention}.", ephemeral: true);
-            return;
-        }
-
-        string message = modal.Message;
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            await RespondAsync("Message cannot be empty.", ephemeral: true);
-            return;
-        }
-
-        if (!await TryDeferEphemeralAsync())
-            return;
-
-        IReadOnlyList<string> messageChunks = SplitIntoChunks(message, DiscordMessageLimit);
-        foreach (string chunk in messageChunks)
-            await channel.SendMessageAsync(chunk);
-
-        if (messageChunks.Count == 1)
-        {
-            await SendEphemeralAsync($"Sent your message to {channel.Mention}.");
-            return;
-        }
-
-        await SendEphemeralAsync(
-            $"Sent your message to {channel.Mention} in {messageChunks.Count} parts (Discord's limit is {DiscordMessageLimit} characters per message)."
-        );
+        channelId = pendingRequest?.ChannelId ?? 0;
+        return found;
     }
 
     private static string GetPendingRequestKey(ulong guildId, ulong userId)
@@ -113,7 +63,7 @@ public sealed class AdminModule : SlashCommandBase
                 PendingRequests.TryRemove(key, out _);
     }
 
-    private static IReadOnlyList<string> SplitIntoChunks(string message, int chunkSize)
+    internal static IReadOnlyList<string> SplitIntoChunks(string message, int chunkSize)
     {
         List<string> chunks = [];
         int index = 0;

@@ -12,7 +12,9 @@ public sealed class VirtueModule
     private readonly ILogger _logger;
     private readonly IReadOnlyList<VirtueRoleTier> _fallbackRoleTiers;
     private readonly ulong _fallbackBaselineRoleId;
-    private readonly SemaphoreSlim _eventWorkGate = new(MaxConcurrentVirtueEventWork, MaxConcurrentVirtueEventWork);
+    private readonly SemaphoreSlim _eventWorkGate = new SemaphoreSlim(
+        MaxConcurrentVirtueEventWork,
+        MaxConcurrentVirtueEventWork);
 
     private bool _isRegistered;
 

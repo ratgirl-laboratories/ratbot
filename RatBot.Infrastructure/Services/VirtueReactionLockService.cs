@@ -16,8 +16,7 @@ public sealed class VirtueReactionLockService
         ulong messageId,
         ulong reactorUserId,
         ulong targetUserId,
-        string emojiId,
-        int virtueDelta
+        string emojiId
     )
     {
         VirtueReactionLock? existing = await _dbContext.VirtueReactionLocks.FindAsync(messageId, reactorUserId);
@@ -31,7 +30,6 @@ public sealed class VirtueReactionLockService
                 ReactorUserId = reactorUserId,
                 TargetUserId = targetUserId,
                 EmojiId = emojiId,
-                VirtueDelta = virtueDelta,
                 CreatedAtUtc = DateTime.UtcNow,
             }
         );

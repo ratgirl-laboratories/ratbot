@@ -93,7 +93,6 @@ public static class Program
                     services.AddScoped<GuildConfigService>();
                     services.AddScoped<QuorumConfigService>();
                     services.AddScoped<UserVirtueService>();
-                    services.AddScoped<EmojiVirtueService>();
                     services.AddScoped<EmojiUsageService>();
                     services.AddScoped<VirtueReactionLockService>();
                     services.AddScoped<VirtueRoleTierConfigService>();

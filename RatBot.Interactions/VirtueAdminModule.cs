@@ -9,7 +9,9 @@ namespace RatBot.Interactions;
 [DefaultMemberPermissions(GuildPermission.Administrator)]
 public sealed class VirtueAdminModule(VirtueRoleTierConfigService virtueRoleTierConfigService) : SlashCommandBase
 {
-    [SlashCommand("configure-role", "Configure one of the 7 virtue role tiers.")]
+    private const int TotalTiers = 8;
+
+    [SlashCommand("configure-role", "Configure one of the 8 virtue role tiers.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task ConfigureRoleAsync(int tier, IRole role, int minVirtue, int maxVirtue)
     {
@@ -19,9 +21,9 @@ public sealed class VirtueAdminModule(VirtueRoleTierConfigService virtueRoleTier
             return;
         }
 
-        if (tier is < 1 or > 7)
+        if (tier is < 1 or > TotalTiers)
         {
-            await RespondAsync("Tier must be between 1 and 7.", ephemeral: true);
+            await RespondAsync($"Tier must be between 1 and {TotalTiers}.", ephemeral: true);
             return;
         }
 
@@ -75,7 +77,7 @@ public sealed class VirtueAdminModule(VirtueRoleTierConfigService virtueRoleTier
 
         int configuredCount = proposed.Select(x => x.TierIndex).Distinct().Count();
         await RespondAsync(
-            $"Configured tier `{tier}`: {role.Mention} for range `{minVirtue}`..`{maxVirtue}`. Configured tiers: `{configuredCount}/7`.",
+            $"Configured tier `{tier}`: {role.Mention} for range `{minVirtue}`..`{maxVirtue}`. Configured tiers: `{configuredCount}/{TotalTiers}`.",
             ephemeral: true
         );
     }

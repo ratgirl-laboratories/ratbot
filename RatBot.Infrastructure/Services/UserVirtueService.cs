@@ -42,17 +42,6 @@ public sealed class UserVirtueService
         return userVirtue?.Virtue;
     }
 
-    public async Task<Dictionary<ulong, int>> GetVirtuesAsync(IEnumerable<ulong> userIds)
-    {
-        List<ulong> ids = userIds.Distinct().ToList();
-        if (ids.Count == 0)
-            return new Dictionary<ulong, int>();
-
-        return await _dbContext
-            .UserVirtues.Where(x => ids.Contains(x.UserId))
-            .ToDictionaryAsync(x => x.UserId, x => x.Virtue);
-    }
-
     public Task<List<UserVirtue>> GetTopVirtuesAsync(int limit = 20)
     {
         int clampedLimit = Math.Clamp(limit, 1, 100);
@@ -63,5 +52,14 @@ public sealed class UserVirtueService
             .ThenBy(x => x.UserId)
             .Take(clampedLimit)
             .ToListAsync();
+    }
+
+    public Task<UserVirtue?> GetLowestVirtueAsync()
+    {
+        return _dbContext
+            .UserVirtues.AsNoTracking()
+            .OrderBy(x => x.Virtue)
+            .ThenBy(x => x.UserId)
+            .FirstOrDefaultAsync();
     }
 }

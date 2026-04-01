@@ -14,17 +14,33 @@ public sealed class EmojiUsageService
 
     public async Task IncrementUsageAsync(string emojiId)
     {
-        EmojiUsageCount? usageRecord = await _dbContext.EmojiUsageCounts.FindAsync(emojiId);
-        if (usageRecord is null)
-        {
-            _dbContext.EmojiUsageCounts.Add(new EmojiUsageCount { EmojiId = emojiId, UsageCount = 1 });
-        }
-        else
-        {
-            usageRecord.UsageCount += 1;
-        }
+        int updatedRowCount = await _dbContext
+            .EmojiUsageCounts.Where(x => x.EmojiId == emojiId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsageCount, x => x.UsageCount + 1));
 
-        await _dbContext.SaveChangesAsync();
+        if (updatedRowCount != 0)
+            return;
+
+        _dbContext.EmojiUsageCounts.Add(new EmojiUsageCount { EmojiId = emojiId, UsageCount = 1 });
+
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsDuplicateKey(ex))
+        {
+            // A concurrent insert won the race; increment the now-existing row.
+            _dbContext.ChangeTracker.Clear();
+            await _dbContext
+                .EmojiUsageCounts.Where(x => x.EmojiId == emojiId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsageCount, x => x.UsageCount + 1));
+        }
+    }
+
+    private static bool IsDuplicateKey(DbUpdateException ex)
+    {
+        string message = ex.InnerException?.Message ?? ex.Message;
+        return message.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase);
     }
 
     public Task<List<EmojiUsageCount>> GetTopUsageAsync(int limit = 25)

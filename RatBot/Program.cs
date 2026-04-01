@@ -57,13 +57,16 @@ public static class Program
                 (ctx, services) =>
                 {
                     IConfiguration config = ctx.Configuration;
+                    int messageCacheSize = int.TryParse(config["Discord:MessageCacheSize"], out int configuredCacheSize)
+                        ? Math.Max(configuredCacheSize, 1000)
+                        : 5000;
 
                     #region Discord Core Services
 
                     services.AddSingleton(_ => new DiscordSocketClient(
                         new DiscordSocketConfig
                         {
-                            MessageCacheSize = 1000,
+                            MessageCacheSize = messageCacheSize,
                             GatewayIntents =
                                 GatewayIntents.Guilds
                                 | GatewayIntents.GuildMembers

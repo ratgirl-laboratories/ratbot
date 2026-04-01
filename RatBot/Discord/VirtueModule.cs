@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using RatBot.Domain.Entities;
 using RatBot.Infrastructure.Services;
 
@@ -5,11 +6,13 @@ namespace RatBot.Discord;
 
 public sealed class VirtueModule
 {
-    private const int MaxConcurrentVirtueEventWork = 8;
+    private const int MaxConcurrentMessageEventWork = 8;
+    private const int MaxConcurrentReactionEventWork = 32;
     private const int ReactionVirtueDelta = 5;
     private const int MinimumConfiguredTierCount = 7;
     private const int MaximumConfiguredTierCount = 8;
     private const int ExpectedFallbackTierCount = 6;
+    private static readonly TimeSpan RoleConfigCacheTtl = TimeSpan.FromSeconds(30);
 
     private readonly DiscordSocketClient _discordClient;
     private readonly IServiceProvider _services;
@@ -17,10 +20,18 @@ public sealed class VirtueModule
     private readonly IReadOnlyList<VirtueRoleTier> _fallbackRoleTiers;
     private readonly ulong _fallbackBaselineRoleId;
 
-    private readonly SemaphoreSlim _eventWorkGate = new SemaphoreSlim(
-        MaxConcurrentVirtueEventWork,
-        MaxConcurrentVirtueEventWork
+    private readonly SemaphoreSlim _messageEventWorkGate = new SemaphoreSlim(
+        MaxConcurrentMessageEventWork,
+        MaxConcurrentMessageEventWork
     );
+
+    private readonly SemaphoreSlim _reactionEventWorkGate = new SemaphoreSlim(
+        MaxConcurrentReactionEventWork,
+        MaxConcurrentReactionEventWork
+    );
+
+    private readonly ConcurrentDictionary<ulong, CachedRoleAssignmentConfig> _roleConfigCache = new();
+    private readonly ConcurrentDictionary<ulong, SemaphoreSlim> _roleAssignmentGates = new();
 
     private bool _isRegistered;
 
@@ -63,6 +74,7 @@ public sealed class VirtueModule
     {
         _ = QueueVirtueEventWorkAsync(
             () => HandleMessageReceivedAsync(rawMessage),
+            _messageEventWorkGate,
             "message"
         );
 
@@ -111,6 +123,7 @@ public sealed class VirtueModule
     {
         _ = QueueVirtueEventWorkAsync(
             () => HandleReactionAddedAsync(cachedMessage, cachedChannel, reaction),
+            _reactionEventWorkGate,
             "reaction"
         );
 
@@ -125,7 +138,10 @@ public sealed class VirtueModule
     {
         try
         {
-            IMessageChannel? channel = await cachedChannel.GetOrDownloadAsync();
+            IMessageChannel? channel = cachedChannel.HasValue
+                ? cachedChannel.Value
+                : _discordClient.GetChannel(cachedChannel.Id) as IMessageChannel;
+
             if (channel is not SocketGuildChannel guildChannel)
                 return;
 
@@ -137,7 +153,14 @@ public sealed class VirtueModule
 
             await using AsyncServiceScope scope = _services.CreateAsyncScope();
             EmojiUsageService emojiUsageService = scope.ServiceProvider.GetRequiredService<EmojiUsageService>();
-            await emojiUsageService.IncrementUsageAsync(emojiId);
+            try
+            {
+                await emojiUsageService.IncrementUsageAsync(emojiId);
+            }
+            catch
+            {
+                // Emoji analytics should never block virtue scoring.
+            }
 
             if (message.Author.IsBot)
                 return;
@@ -165,11 +188,11 @@ public sealed class VirtueModule
         }
     }
 
-    private async Task QueueVirtueEventWorkAsync(Func<Task> work, string source)
+    private async Task QueueVirtueEventWorkAsync(Func<Task> work, SemaphoreSlim gate, string source)
     {
         try
         {
-            await _eventWorkGate.WaitAsync();
+            await gate.WaitAsync();
 
             try
             {
@@ -177,7 +200,7 @@ public sealed class VirtueModule
             }
             finally
             {
-                _eventWorkGate.Release();
+                gate.Release();
             }
         }
         catch (Exception ex)
@@ -191,59 +214,69 @@ public sealed class VirtueModule
 
     private async Task ApplyRoleAssignmentAsync(SocketGuildUser user, int virtue, GuildRoleAssignmentConfig config)
     {
-        VirtueRoleTier? matchedTier = config.RoleTiers.FirstOrDefault(x =>
-            x.Contains(virtue) && user.Guild.GetRole(x.RoleId) is not null
-        );
+        SemaphoreSlim roleGate = _roleAssignmentGates.GetOrAdd(user.Id, _ => new SemaphoreSlim(1, 1));
+        await roleGate.WaitAsync();
 
-        ulong targetRoleId = matchedTier?.RoleId ?? config.FallbackBaselineRoleId;
-
-        if (targetRoleId == 0)
-            return;
-
-        List<SocketRole> trackedRoles = config.RoleTiers
-            .Select(x => user.Guild.GetRole(x.RoleId))
-            .Where(x => x is not null)
-            .ToList();
-
-        SocketRole? baselineRole = user.Guild.GetRole(config.FallbackBaselineRoleId);
-        if (baselineRole is not null && trackedRoles.All(x => x.Id != baselineRole.Id))
-            trackedRoles.Add(baselineRole);
-
-        List<IRole> toAdd = [];
-        List<IRole> toRemove = [];
-
-        foreach (SocketRole role in trackedRoles)
+        try
         {
-            bool userHasRole = user.Roles.Any(r => r.Id == role.Id);
-            bool shouldHaveRole = role.Id == targetRoleId;
+            VirtueRoleTier? matchedTier = config.RoleTiers.FirstOrDefault(x =>
+                x.Contains(virtue) && user.Guild.GetRole(x.RoleId) is not null
+            );
 
-            switch (shouldHaveRole)
+            ulong targetRoleId = matchedTier?.RoleId ?? config.FallbackBaselineRoleId;
+
+            if (targetRoleId == 0)
+                return;
+
+            List<SocketRole> trackedRoles = config.RoleTiers
+                .Select(x => user.Guild.GetRole(x.RoleId))
+                .Where(x => x is not null)
+                .ToList();
+
+            SocketRole? baselineRole = user.Guild.GetRole(config.FallbackBaselineRoleId);
+            if (baselineRole is not null && trackedRoles.All(x => x.Id != baselineRole.Id))
+                trackedRoles.Add(baselineRole);
+
+            List<IRole> toAdd = [];
+            List<IRole> toRemove = [];
+
+            foreach (SocketRole role in trackedRoles)
             {
-                case true when !userHasRole:
-                    toAdd.Add(role);
-                    break;
-                case false when userHasRole:
-                    toRemove.Add(role);
-                    break;
+                bool userHasRole = user.Roles.Any(r => r.Id == role.Id);
+                bool shouldHaveRole = role.Id == targetRoleId;
+
+                switch (shouldHaveRole)
+                {
+                    case true when !userHasRole:
+                        toAdd.Add(role);
+                        break;
+                    case false when userHasRole:
+                        toRemove.Add(role);
+                        break;
+                }
+            }
+
+            if (toRemove.Count > 0)
+                await user.RemoveRolesAsync(toRemove);
+
+            if (toAdd.Count > 0)
+            {
+                await user.AddRolesAsync(toAdd);
+
+                foreach (IRole role in toAdd)
+                    _logger.Information(
+                        "Granted virtue role {RoleId} ({RoleName}) to user {UserId} in guild {GuildId} at virtue {Virtue}",
+                        role.Id,
+                        role.Name,
+                        user.Id,
+                        user.Guild.Id,
+                        virtue
+                    );
             }
         }
-
-        if (toRemove.Count > 0)
-            await user.RemoveRolesAsync(toRemove);
-
-        if (toAdd.Count > 0)
+        finally
         {
-            await user.AddRolesAsync(toAdd);
-
-            foreach (IRole role in toAdd)
-                _logger.Information(
-                    "Granted virtue role {RoleId} ({RoleName}) to user {UserId} in guild {GuildId} at virtue {Virtue}",
-                    role.Id,
-                    role.Name,
-                    user.Id,
-                    user.Guild.Id,
-                    virtue
-                );
+            roleGate.Release();
         }
     }
 
@@ -274,17 +307,33 @@ public sealed class VirtueModule
         VirtueRoleTierConfigService configService
     )
     {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (_roleConfigCache.TryGetValue(guildId, out CachedRoleAssignmentConfig? cached) && cached.ExpiresAtUtc > now)
+            return cached.Config;
+
         List<VirtueRoleTierConfig> persisted = await configService.ListAsync(guildId);
 
+        GuildRoleAssignmentConfig resolvedConfig;
         if (persisted.Count is < MinimumConfiguredTierCount or > MaximumConfiguredTierCount)
-            return new GuildRoleAssignmentConfig(_fallbackRoleTiers, _fallbackBaselineRoleId);
+        {
+            resolvedConfig = new GuildRoleAssignmentConfig(_fallbackRoleTiers, _fallbackBaselineRoleId);
+        }
+        else
+        {
+            IReadOnlyList<VirtueRoleTier> tiers = persisted
+                .OrderBy(x => x.TierIndex)
+                .Select(x => new VirtueRoleTier(x.RoleId, x.MinVirtue, x.MaxVirtue))
+                .ToList();
 
-        IReadOnlyList<VirtueRoleTier> tiers = persisted
-            .OrderBy(x => x.TierIndex)
-            .Select(x => new VirtueRoleTier(x.RoleId, x.MinVirtue, x.MaxVirtue))
-            .ToList();
+            resolvedConfig = new GuildRoleAssignmentConfig(tiers, 0);
+        }
 
-        return new GuildRoleAssignmentConfig(tiers, 0);
+        _roleConfigCache[guildId] = new CachedRoleAssignmentConfig(
+            resolvedConfig,
+            now.Add(RoleConfigCacheTtl)
+        );
+
+        return resolvedConfig;
     }
 
     private static ulong ParseUlong(string? value)
@@ -310,5 +359,10 @@ public sealed class VirtueModule
     private sealed record GuildRoleAssignmentConfig(
         IReadOnlyList<VirtueRoleTier> RoleTiers,
         ulong FallbackBaselineRoleId
+    );
+
+    private sealed record CachedRoleAssignmentConfig(
+        GuildRoleAssignmentConfig Config,
+        DateTimeOffset ExpiresAtUtc
     );
 }

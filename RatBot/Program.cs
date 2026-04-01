@@ -119,14 +119,14 @@ public static class Program
             List<string> pending = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
             if (pending.Count != 0)
             {
-                Console.WriteLine($"[DB] Applying {pending.Count} pending migration(s)...");
+                Log.Information("Applying {PendingMigrationCount} pending database migration(s).", pending.Count);
                 await dbContext.Database.MigrateAsync();
-                Console.WriteLine("[DB] Migrations applied successfully.");
+                Log.Information("Database migrations applied successfully.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[DB] Migration/creation failed: {ex}");
+            Log.Error(ex, "Database migration/creation failed.");
             throw;
         }
     }

@@ -4,6 +4,7 @@ using Discord.Commands;
 using Discord.Interactions;
 using RatBot.Domain.Entities;
 using RatBot.Infrastructure.Services;
+using Serilog.Events;
 using IResult = Discord.Interactions.IResult;
 
 namespace RatBot.Discord;
@@ -16,6 +17,7 @@ public sealed class DiscordBotService
     private readonly IServiceProvider _services;
     private readonly IConfiguration _config;
     private readonly VirtueModule _virtueModule;
+    private readonly ILogger _logger;
     private readonly ConcurrentDictionary<ulong, string> _prefixes = new ConcurrentDictionary<ulong, string>();
 
     public DiscordBotService(
@@ -24,7 +26,8 @@ public sealed class DiscordBotService
         InteractionService interactionService,
         IServiceProvider services,
         IConfiguration config,
-        VirtueModule virtueModule
+        VirtueModule virtueModule,
+        ILogger logger
     )
     {
         _discordClient = discordClient;
@@ -33,25 +36,29 @@ public sealed class DiscordBotService
         _services = services;
         _config = config;
         _virtueModule = virtueModule;
+        _logger = logger.ForContext<DiscordBotService>();
     }
 
     public async Task StartAsync(CancellationToken ct)
     {
         _discordClient.Log += msg =>
         {
-            Console.WriteLine(msg.ToString());
+            LogDiscordMessage("Gateway", msg);
             return Task.CompletedTask;
         };
 
         _discordClient.Connected += () =>
         {
-            Console.WriteLine("[Gateway] Connected.");
+            _logger.Information("Gateway connected.");
             return Task.CompletedTask;
         };
 
         _discordClient.Disconnected += ex =>
         {
-            Console.WriteLine(ex is null ? "[Gateway] Disconnected." : $"[Gateway] Disconnected with error: {ex}");
+            if (ex is null)
+                _logger.Warning("Gateway disconnected.");
+            else
+                _logger.Warning(ex, "Gateway disconnected with error.");
 
             return Task.CompletedTask;
         };
@@ -61,11 +68,11 @@ public sealed class DiscordBotService
         Assembly mainAssembly = Assembly.GetExecutingAssembly();
 
         await _commandService.AddModulesAsync(prefixCommandsAssembly, _services);
-        Console.WriteLine($"[DiscordBot] Registered {_commandService.Modules.Count()} command modules.");
+        _logger.Information("Registered {PrefixModuleCount} prefix command modules.", _commandService.Modules.Count());
 
         await _interactionService.AddModulesAsync(mainAssembly, _services);
         await _interactionService.AddModulesAsync(slashCommandsAssembly, _services);
-        Console.WriteLine($"[DiscordBot] Registered {_interactionService.Modules.Count} interaction modules.");
+        _logger.Information("Registered {InteractionModuleCount} interaction modules.", _interactionService.Modules.Count);
 
         _discordClient.Ready += async () =>
         {
@@ -77,31 +84,29 @@ public sealed class DiscordBotService
                 {
                     // Overwrite guild commands to match current modules (deleteMissing=true)
                     await _interactionService.RegisterCommandsToGuildAsync(devGuildId, deleteMissing: true);
-                    Console.WriteLine(
-                        $"[DiscordBot] Slash commands registered to guild {devGuildId} (development mode)."
-                    );
+                    _logger.Information("Slash commands registered to guild {GuildId} (development mode).", devGuildId);
 
                     try
                     {
                         await ClearGlobalApplicationCommandsAsync();
-                        Console.WriteLine(
-                            "[DiscordBot] Cleared global application commands to prevent duplicates while using per‑guild registration."
+                        _logger.Information(
+                            "Cleared global application commands to prevent duplicates while using per-guild registration."
                         );
                     }
                     catch (Exception clearEx)
                     {
-                        Console.WriteLine($"[DiscordBot] Failed to clear global application commands: {clearEx}");
+                        _logger.Warning(clearEx, "Failed to clear global application commands.");
                     }
                 }
                 else
                 {
                     await _interactionService.RegisterCommandsGloballyAsync();
-                    Console.WriteLine("[DiscordBot] Slash commands registered globally.");
+                    _logger.Information("Slash commands registered globally.");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[DiscordBot] Failed to register slash commands: {ex}");
+                _logger.Error(ex, "Failed to register slash commands.");
             }
 
             try
@@ -122,7 +127,7 @@ public sealed class DiscordBotService
         // Forward InteractionService logs to console to aid troubleshooting
         _interactionService.Log += msg =>
         {
-            Console.WriteLine($"[Interactions] {msg}");
+            LogDiscordMessage("Interactions", msg);
             return Task.CompletedTask;
         };
 
@@ -154,8 +159,10 @@ public sealed class DiscordBotService
             if (result.IsSuccess)
                 return;
 
-            Console.WriteLine(
-                $"[DiscordBot] Interaction command failed. Error={result.Error}, Reason={result.ErrorReason}"
+            _logger.Warning(
+                "Interaction command failed. Error={Error} Reason={Reason}",
+                result.Error,
+                result.ErrorReason
             );
 
             string reason = string.IsNullOrWhiteSpace(result.ErrorReason)
@@ -169,7 +176,7 @@ public sealed class DiscordBotService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[DiscordBot] Interaction execution failed: {ex}");
+            _logger.Error(ex, "Interaction execution failed.");
 
             try
             {
@@ -180,7 +187,7 @@ public sealed class DiscordBotService
             }
             catch (Exception followupEx)
             {
-                Console.WriteLine($"[DiscordBot] Failed to send error followup: {followupEx}");
+                _logger.Warning(followupEx, "Failed to send interaction error follow-up.");
             }
         }
     }
@@ -238,9 +245,29 @@ public sealed class DiscordBotService
             }
             catch (Exception ex)
             {
-                Console.WriteLine(
-                    $"[DiscordBot] Failed to delete global command '{cmd.Name}' ({cmd.Id}): {ex.Message}"
-                );
+                _logger.Warning(ex, "Failed to delete global command {CommandName} ({CommandId}).", cmd.Name, cmd.Id);
             }
+    }
+
+    private void LogDiscordMessage(string category, LogMessage message)
+    {
+        LogEventLevel level = message.Severity switch
+        {
+            LogSeverity.Critical => LogEventLevel.Fatal,
+            LogSeverity.Error => LogEventLevel.Error,
+            LogSeverity.Warning => LogEventLevel.Warning,
+            LogSeverity.Info => LogEventLevel.Information,
+            LogSeverity.Verbose => LogEventLevel.Verbose,
+            _ => LogEventLevel.Debug,
+        };
+
+        string source = string.IsNullOrWhiteSpace(message.Source) ? "Unknown" : message.Source;
+        if (message.Exception is not null)
+        {
+            _logger.Write(level, message.Exception, "[{Category}] {Source}: {Message}", category, source, message.Message);
+            return;
+        }
+
+        _logger.Write(level, "[{Category}] {Source}: {Message}", category, source, message.Message);
     }
 }

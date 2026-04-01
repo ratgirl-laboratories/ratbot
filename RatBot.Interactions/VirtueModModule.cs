@@ -39,9 +39,9 @@ public sealed partial class VirtueModModule(
     [RequireUserPermission(GuildPermission.BanMembers)]
     public async Task AddEmojiAsync(string emoji, int virtue)
     {
-        if (virtue is < -5 or > 5)
+        if (virtue is < -15 or > 15)
         {
-            await RespondAsync("Virtue must be between -5 and 5.", ephemeral: true);
+            await RespondAsync("Virtue must be between -15 and 15.", ephemeral: true);
             return;
         }
 

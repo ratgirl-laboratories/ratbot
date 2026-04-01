@@ -9,6 +9,7 @@ public sealed class BotDbContext : DbContext
     public DbSet<UserVirtue> UserVirtues => Set<UserVirtue>();
     public DbSet<EmojiVirtue> EmojiVirtues => Set<EmojiVirtue>();
     public DbSet<EmojiUsageCount> EmojiUsageCounts => Set<EmojiUsageCount>();
+    public DbSet<VirtueReactionLock> VirtueReactionLocks => Set<VirtueReactionLock>();
     public DbSet<VirtueRoleTierConfig> VirtueRoleTierConfigs => Set<VirtueRoleTierConfig>();
 
     public BotDbContext(DbContextOptions<BotDbContext> options)
@@ -63,6 +64,20 @@ public sealed class BotDbContext : DbContext
 
             b.Property(x => x.EmojiId).HasMaxLength(128);
             b.Property(x => x.UsageCount).HasColumnType("int");
+        });
+
+        modelBuilder.Entity<VirtueReactionLock>(b =>
+        {
+            b.HasKey(x => new { x.MessageId, x.ReactorUserId });
+
+            b.Property(x => x.MessageId).HasColumnType("bigint unsigned");
+            b.Property(x => x.ReactorUserId).HasColumnType("bigint unsigned");
+            b.Property(x => x.TargetUserId).HasColumnType("bigint unsigned");
+            b.Property(x => x.EmojiId).HasMaxLength(128);
+            b.Property(x => x.VirtueDelta).HasColumnType("int");
+            b.Property(x => x.CreatedAtUtc).HasColumnType("datetime(6)");
+
+            b.HasIndex(x => x.TargetUserId);
         });
 
         modelBuilder.Entity<VirtueRoleTierConfig>(b =>

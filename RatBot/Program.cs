@@ -95,6 +95,7 @@ public static class Program
                     services.AddScoped<UserVirtueService>();
                     services.AddScoped<EmojiVirtueService>();
                     services.AddScoped<EmojiUsageService>();
+                    services.AddScoped<VirtueReactionLockService>();
                     services.AddScoped<VirtueRoleTierConfigService>();
 
                     #endregion

@@ -135,6 +135,26 @@ public sealed class VirtueModule
             if (virtueDelta is null)
                 return;
 
+            VirtueReactionLockService virtueReactionLockService =
+                scope.ServiceProvider.GetRequiredService<VirtueReactionLockService>();
+            bool isFirstReactionFromUserForMessage = await virtueReactionLockService.TryLockAsync(
+                message.Id,
+                reaction.UserId,
+                message.Author.Id,
+                emojiId,
+                virtueDelta.Value
+            );
+
+            if (!isFirstReactionFromUserForMessage)
+            {
+                _logger.Debug(
+                    "Ignored duplicate virtue reaction from user {ReactorUserId} for message {MessageId}.",
+                    reaction.UserId,
+                    message.Id
+                );
+                return;
+            }
+
             VirtueRoleTierConfigService configService = scope.ServiceProvider.GetRequiredService<VirtueRoleTierConfigService>();
             UserVirtueService userVirtueService = scope.ServiceProvider.GetRequiredService<UserVirtueService>();
             int updatedVirtue = await userVirtueService.AddVirtueDeltaAsync(message.Author.Id, virtueDelta.Value);

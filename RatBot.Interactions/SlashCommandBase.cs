@@ -15,6 +15,10 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
 
             return true;
         }
+        catch (TimeoutException)
+        {
+            return false;
+        }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
         {
             return true;
@@ -33,6 +37,14 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                 await FollowupAsync(text, ephemeral: true);
             else
                 await RespondAsync(text, ephemeral: true);
+        }
+        catch (TimeoutException)
+        {
+            // Interaction token already expired; cannot send a response.
+        }
+        catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
+        {
+            // Interaction token already expired; cannot send a response.
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
         {

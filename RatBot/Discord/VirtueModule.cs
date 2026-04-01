@@ -5,11 +5,14 @@ namespace RatBot.Discord;
 
 public sealed class VirtueModule
 {
+    private const int MaxConcurrentVirtueEventWork = 8;
+
     private readonly DiscordSocketClient _discordClient;
     private readonly IServiceProvider _services;
     private readonly ILogger _logger;
     private readonly IReadOnlyList<VirtueRoleTier> _fallbackRoleTiers;
     private readonly ulong _fallbackBaselineRoleId;
+    private readonly SemaphoreSlim _eventWorkGate = new(MaxConcurrentVirtueEventWork, MaxConcurrentVirtueEventWork);
 
     private bool _isRegistered;
 
@@ -45,7 +48,17 @@ public sealed class VirtueModule
         _isRegistered = true;
     }
 
-    private async Task OnMessageReceivedAsync(SocketMessage rawMessage)
+    private Task OnMessageReceivedAsync(SocketMessage rawMessage)
+    {
+        _ = QueueVirtueEventWorkAsync(
+            () => HandleMessageReceivedAsync(rawMessage),
+            "message"
+        );
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleMessageReceivedAsync(SocketMessage rawMessage)
     {
         if (rawMessage is not SocketUserMessage message)
             return;
@@ -78,7 +91,21 @@ public sealed class VirtueModule
         }
     }
 
-    private async Task OnReactionAddedAsync(
+    private Task OnReactionAddedAsync(
+        Cacheable<IUserMessage, ulong> cachedMessage,
+        Cacheable<IMessageChannel, ulong> cachedChannel,
+        SocketReaction reaction
+    )
+    {
+        _ = QueueVirtueEventWorkAsync(
+            () => HandleReactionAddedAsync(cachedMessage, cachedChannel, reaction),
+            "reaction"
+        );
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleReactionAddedAsync(
         Cacheable<IUserMessage, ulong> cachedMessage,
         Cacheable<IMessageChannel, ulong> cachedChannel,
         SocketReaction reaction
@@ -137,6 +164,27 @@ public sealed class VirtueModule
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed processing virtue reaction event.");
+        }
+    }
+
+    private async Task QueueVirtueEventWorkAsync(Func<Task> work, string source)
+    {
+        try
+        {
+            await _eventWorkGate.WaitAsync();
+
+            try
+            {
+                await work();
+            }
+            finally
+            {
+                _eventWorkGate.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Unhandled virtue background processing error for {Source}.", source);
         }
     }
 

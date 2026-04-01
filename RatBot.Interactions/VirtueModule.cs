@@ -8,19 +8,6 @@ namespace RatBot.Interactions;
 [Group("virtue", "Virtue commands.")]
 public sealed class VirtueModule(UserVirtueService userVirtueService) : SlashCommandBase
 {
-    private const ulong BeholdTargetUserId = 203864799870844928;
-
-    [SlashCommand("me", "Show your current virtue.")]
-    public async Task MeAsync()
-    {
-        if (!await TryDeferEphemeralAsync())
-            return;
-
-        int updatedVirtue = await userVirtueService.GetVirtueAsync(Context.User.Id);
-
-        await SendEphemeralAsync($"Your virtue is {updatedVirtue}.");
-    }
-
     [SlashCommand("leaderboard", "Show the top 20 users by virtue.")]
     public async Task LeaderboardAsync()
     {
@@ -51,21 +38,5 @@ public sealed class VirtueModule(UserVirtueService userVirtueService) : SlashCom
         }
 
         await SendEphemeralAsync(text.ToString());
-    }
-
-    [SlashCommand("behold", "Behold the lowest amongst thee")]
-    public async Task BeholdAsync()
-    {
-        if (Context.Guild is null)
-        {
-            await RespondAsync("This command can only be used in a guild.", ephemeral: true);
-            return;
-        }
-
-        int targetVirtue = await userVirtueService.GetVirtueAsync(BeholdTargetUserId);
-
-        await RespondAsync(
-            $"Behold the lowest amongst thee: <@{BeholdTargetUserId}> with virtue `{targetVirtue}`."
-        );
     }
 }

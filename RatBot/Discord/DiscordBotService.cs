@@ -16,7 +16,6 @@ public sealed class DiscordBotService
     private readonly InteractionService _interactionService;
     private readonly IServiceProvider _services;
     private readonly IConfiguration _config;
-    private readonly VirtueModule _virtueModule;
     private readonly ILogger _logger;
     private readonly ConcurrentDictionary<ulong, string> _prefixes = new ConcurrentDictionary<ulong, string>();
 
@@ -26,7 +25,6 @@ public sealed class DiscordBotService
         InteractionService interactionService,
         IServiceProvider services,
         IConfiguration config,
-        VirtueModule virtueModule,
         ILogger logger
     )
     {
@@ -35,7 +33,6 @@ public sealed class DiscordBotService
         _interactionService = interactionService;
         _services = services;
         _config = config;
-        _virtueModule = virtueModule;
         _logger = logger.ForContext<DiscordBotService>();
     }
 
@@ -122,7 +119,6 @@ public sealed class DiscordBotService
 
         _discordClient.MessageReceived += ProcessMessageAsync;
         _discordClient.InteractionCreated += HandleInteractionAsync;
-        _virtueModule.RegisterHandlers();
 
         // Forward InteractionService logs to console to aid troubleshooting
         _interactionService.Log += msg =>

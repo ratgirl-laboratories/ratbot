@@ -10,8 +10,10 @@
 
     <ItemGroup>
         <PackageReference Include="Discord.Net" />
+        <PackageReference Include="Discord.Net.Commands" />
         <PackageReference Include="Discord.Net.Core" />
         <PackageReference Include="Discord.Net.Interactions" />
+        <PackageReference Include="Discord.Net.Webhook" />
         <PackageReference Include="Discord.Net.WebSocket" />
         <PackageReference Include="DotNetEnv" />
         <PackageReference Include="JetBrains.Annotations" />

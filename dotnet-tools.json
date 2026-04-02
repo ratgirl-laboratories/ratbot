@@ -7,21 +7,21 @@
       "commands": [
         "csharpier"
       ],
-      "rollForward": false
+      "rollForward": "minor"
     },
     "dotnet-ef": {
-      "version": "10.0.0",
+      "version": "10.0.5",
       "commands": [
         "dotnet-ef"
       ],
-      "rollForward": false
+      "rollForward": "minor"
     },
     "gitversion.tool": {
       "version": "6.5.0",
       "commands": [
         "dotnet-gitversion"
       ],
-      "rollForward": false
+      "rollForward": true
     }
   }
 }

@@ -1,9 +1,5 @@
-﻿using System.Collections.Concurrent;
 using System.Reflection;
-using Discord.Commands;
 using Discord.Interactions;
-using RatBot.Domain.Entities;
-using RatBot.Infrastructure.Services;
 using Serilog.Events;
 using IResult = Discord.Interactions.IResult;
 
@@ -12,16 +8,13 @@ namespace RatBot.Discord;
 public sealed class DiscordBotService
 {
     private readonly DiscordSocketClient _discordClient;
-    private readonly CommandService _commandService;
     private readonly InteractionService _interactionService;
     private readonly IServiceProvider _services;
     private readonly IConfiguration _config;
     private readonly ILogger _logger;
-    private readonly ConcurrentDictionary<ulong, string> _prefixes = new ConcurrentDictionary<ulong, string>();
 
     public DiscordBotService(
         DiscordSocketClient discordClient,
-        CommandService commandService,
         InteractionService interactionService,
         IServiceProvider services,
         IConfiguration config,
@@ -29,7 +22,6 @@ public sealed class DiscordBotService
     )
     {
         _discordClient = discordClient;
-        _commandService = commandService;
         _interactionService = interactionService;
         _services = services;
         _config = config;
@@ -60,12 +52,8 @@ public sealed class DiscordBotService
             return Task.CompletedTask;
         };
 
-        Assembly prefixCommandsAssembly = Assembly.Load("RatBot.Commands");
         Assembly slashCommandsAssembly = Assembly.Load("RatBot.Interactions");
         Assembly mainAssembly = Assembly.GetExecutingAssembly();
-
-        await _commandService.AddModulesAsync(prefixCommandsAssembly, _services);
-        _logger.Information("Registered {PrefixModuleCount} prefix command modules.", _commandService.Modules.Count());
 
         await _interactionService.AddModulesAsync(mainAssembly, _services);
         await _interactionService.AddModulesAsync(slashCommandsAssembly, _services);
@@ -105,19 +93,8 @@ public sealed class DiscordBotService
             {
                 _logger.Error(ex, "Failed to register slash commands.");
             }
-
-            try
-            {
-                foreach (SocketGuild guild in _discordClient.Guilds)
-                    await GetOrLoadPrefixAsync(guild.Id);
-            }
-            catch
-            {
-                // Ignore preload errors
-            }
         };
 
-        _discordClient.MessageReceived += ProcessMessageAsync;
         _discordClient.InteractionCreated += HandleInteractionAsync;
 
         // Forward InteractionService logs to console to aid troubleshooting
@@ -147,10 +124,7 @@ public sealed class DiscordBotService
         try
         {
             IInteractionContext context = new SocketInteractionContext(_discordClient, interaction);
-            IResult result = await _interactionService.ExecuteCommandAsync(
-                context,
-                _services
-            );
+            IResult result = await _interactionService.ExecuteCommandAsync(context, _services);
 
             if (result.IsSuccess)
                 return;
@@ -186,44 +160,6 @@ public sealed class DiscordBotService
                 _logger.Warning(followupEx, "Failed to send interaction error follow-up.");
             }
         }
-    }
-
-    private async Task ProcessMessageAsync(SocketMessage rawMessage)
-    {
-        // Ignore system messages and messages from bots
-        if (rawMessage is not SocketUserMessage message)
-            return;
-
-        if (message.Author.IsBot)
-            return;
-
-        if (message.Channel is not SocketGuildChannel guildChannel)
-            return;
-
-        // Get the current guild prefix; load once per guild and cache for runtime
-        string prefix = await GetOrLoadPrefixAsync(guildChannel.Guild.Id);
-
-        int argPos = 0;
-        if (!message.HasStringPrefix(prefix, ref argPos))
-            return;
-
-        SocketCommandContext context = new SocketCommandContext(_discordClient, message);
-        await _commandService.ExecuteAsync(context, argPos, _services);
-    }
-
-    private async Task<string> GetOrLoadPrefixAsync(ulong guildId)
-    {
-        if (_prefixes.TryGetValue(guildId, out string? existing))
-            return existing;
-
-        await using AsyncServiceScope scope = _services.CreateAsyncScope();
-        GuildConfigService guildConfigService = scope.ServiceProvider.GetRequiredService<GuildConfigService>();
-        GuildConfig guildConfig = await guildConfigService.GetOrCreateAsync(guildId);
-
-        string prefix = string.IsNullOrWhiteSpace(guildConfig.Prefix) ? "?" : guildConfig.Prefix;
-        _prefixes[guildId] = prefix;
-
-        return prefix;
     }
 
     private async Task ClearGlobalApplicationCommandsAsync()

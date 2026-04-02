@@ -1,4 +1,3 @@
-﻿using Discord.Commands;
 using Discord.Interactions;
 using RatBot.Discord;
 using RatBot.Infrastructure.Data;
@@ -77,7 +76,6 @@ public static class Program
                     ));
 
                     services.AddSingleton(sp => new InteractionService(sp.GetRequiredService<DiscordSocketClient>()));
-                    services.AddSingleton<CommandService>();
                     services.AddSingleton<DiscordBotService>();
                     services.AddHostedService<DiscordBotHostedService>();
 

@@ -1,10 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <LangVersion>14</LangVersion>
-        <Nullable>enable</Nullable>
         <RootNamespace>RatBot</RootNamespace>
         <AssemblyVersion>0.0.1.0</AssemblyVersion>
         <FileVersion>0.0.1.0</FileVersion>
@@ -13,26 +9,26 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Discord.Net" Version="3.18.0" />
-        <PackageReference Include="Discord.Net.Core" Version="3.18.0" />
-        <PackageReference Include="Discord.Net.Interactions" Version="3.18.0" />
-        <PackageReference Include="Discord.Net.WebSocket" Version="3.18.0" />
-        <PackageReference Include="DotNetEnv" Version="3.1.1" />
-        <PackageReference Include="JetBrains.Annotations" Version="2025.2.2" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="10.0.3" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="10.0.3" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.3" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
+        <PackageReference Include="Discord.Net" />
+        <PackageReference Include="Discord.Net.Core" />
+        <PackageReference Include="Discord.Net.Interactions" />
+        <PackageReference Include="Discord.Net.WebSocket" />
+        <PackageReference Include="DotNetEnv" />
+        <PackageReference Include="JetBrains.Annotations" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Serilog" Version="4.3.0" />
-        <PackageReference Include="Serilog.Filters.Expressions" Version="2.1.0" />
-        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-        <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+        <PackageReference Include="Serilog" />
+        <PackageReference Include="Serilog.Filters.Expressions" />
+        <PackageReference Include="Serilog.Sinks.File" />
+        <PackageReference Include="Serilog.Sinks.Console" />
+        <PackageReference Include="Serilog.Extensions.Hosting" />
     </ItemGroup>
 
     <ItemGroup>

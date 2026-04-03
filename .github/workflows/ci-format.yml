@@ -1,0 +1,31 @@
+name: Formatting CI
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore local tools
+        run: dotnet tool restore
+
+      - name: Check SA1201 ordering
+        run: dotnet sa1201ier . --check
+
+      - name: Check CSharpier formatting
+        run: dotnet csharpier check .

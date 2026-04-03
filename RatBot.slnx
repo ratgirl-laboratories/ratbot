@@ -8,6 +8,9 @@
     <Folder Name="/ops/docker/">
         <File Path="docker-compose.yml" />
     </Folder>
+    <Folder Name="/ops/cicd/">
+        <File Path=".github/workflows/ci-format.yml" />
+    </Folder>
     <Folder Name="/build/">
         <File Path="Directory.Build.props" />
         <File Path="Directory.Packages.props" />

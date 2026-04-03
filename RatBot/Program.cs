@@ -2,6 +2,7 @@ using Discord.Interactions;
 using RatBot.Discord;
 using RatBot.Infrastructure.Data;
 using RatBot.Infrastructure.Services;
+using Serilog.Debugging;
 using Serilog.Events;
 using Serilog.Sinks.Grafana.Loki;
 
@@ -19,6 +20,7 @@ public static class Program
     public static async Task Main(string[] args)
     {
         Env.TraversePath().Load();
+        EnableSerilogSelfDiagnostics();
 
         using IHost host = Host.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration(
@@ -94,7 +96,9 @@ public static class Program
             )
             .Build();
 
+        LogGrafanaLokiStartupConfiguration(host.Services.GetRequiredService<IConfiguration>());
         await ApplyDatabaseMigrationsAsync(host);
+        Log.Information("Grafana Loki startup test event.");
 
         await host.RunAsync();
     }
@@ -149,6 +153,33 @@ public static class Program
             ],
             credentials: credentials,
             restrictedToMinimumLevel: LogEventLevel.Information
+        );
+    }
+
+    private static void EnableSerilogSelfDiagnostics()
+    {
+        SelfLog.Enable(message => Console.Error.WriteLine($"[SerilogSelfLog] {message}"));
+    }
+
+    private static void LogGrafanaLokiStartupConfiguration(IConfiguration config)
+    {
+        string? uri = config["Grafana:Logs:Uri"];
+        if (string.IsNullOrWhiteSpace(uri))
+        {
+            Log.Warning("Grafana Loki sink is disabled because Grafana:Logs:Uri is not configured.");
+            return;
+        }
+
+        string? username = config["Grafana:Logs:Username"];
+        string? password = config["Grafana:Logs:Password"];
+        string? environment = config["Grafana:Logs:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production";
+
+        Log.Information(
+            "Grafana Loki sink configured. Uri={LokiUri} Username={LokiUsername} HasPassword={HasPassword} Environment={Environment}",
+            uri,
+            username,
+            !string.IsNullOrWhiteSpace(password),
+            environment
         );
     }
 }

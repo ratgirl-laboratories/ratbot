@@ -1,5 +1,5 @@
 services:
-  postgres-production:
+  postgres:
     image: postgres:17
     restart: unless-stopped
     environment:
@@ -16,7 +16,7 @@ services:
     networks:
       - app_internal
 
-  bot-production:
+  bot:
     image: ${RATBOT_IMAGE:-ratbot:production}
     pull_policy: always
     restart: unless-stopped
@@ -24,7 +24,7 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       DISCORD__TOKEN: ${DISCORD__TOKEN}
       DISCORD__GUILDID: ${DISCORD__GUILDID}
-      DB__HOST: postgres-production
+      DB__HOST: postgres
       DB__PORT: "5432"
       DB__DATABASE: ${DB__DATABASE}
       DB__USER: ${DB__USER}
@@ -34,7 +34,7 @@ services:
       OTEL__RESOURCE__SERVICE_NAME: ${OTEL__RESOURCE__SERVICE_NAME:-ratbot-production}
       OTEL__RESOURCE__ENVIRONMENT: ${OTEL__RESOURCE__ENVIRONMENT:-production}
     depends_on:
-      postgres-production:
+      postgres:
         condition: service_healthy
     networks:
       - app_internal

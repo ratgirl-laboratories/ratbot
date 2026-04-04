@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace RatBot.Interactions.Features.Games;
 
 public sealed partial class RpsModule
@@ -45,24 +47,48 @@ public sealed partial class RpsModule
     [UserCommand("Challenge to RPS")]
     public async Task ChallengeAsync(IUser opponent)
     {
+        Stopwatch totalStopwatch = Stopwatch.StartNew();
+        ILogger timingLogger = CreateTimingLogger("challenge");
+        timingLogger.Information("rps_timing challenge_start. HasRespondedAtEntry={HasRespondedAtEntry}", Context.Interaction.HasResponded);
+
+        Stopwatch deferStopwatch = Stopwatch.StartNew();
         if (!await TryDeferPublicAsync())
+        {
+            timingLogger.Warning(
+                "rps_timing challenge_defer_failed. DeferMs={DeferMs} TotalMs={TotalMs}",
+                Math.Round(deferStopwatch.Elapsed.TotalMilliseconds, 2),
+                Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+            );
             return;
+        }
+
+        timingLogger.Information(
+            "rps_timing challenge_defer_succeeded. DeferMs={DeferMs} TotalMs={TotalMs}",
+            Math.Round(deferStopwatch.Elapsed.TotalMilliseconds, 2),
+            Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+        );
 
         if (Context.User.Id == opponent.Id)
         {
             await SendEphemeralAsync("You cannot challenge yourself.");
+            timingLogger.Information("rps_timing challenge_rejected_self. TotalMs={TotalMs}", Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2));
             return;
         }
 
         if (opponent.IsBot)
         {
             await SendEphemeralAsync("You cannot challenge a bot.");
+            timingLogger.Information("rps_timing challenge_rejected_bot. TotalMs={TotalMs}", Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2));
             return;
         }
 
         if (Context.Channel is not ITextChannel)
         {
             await SendEphemeralAsync("This command can only be used in a guild text channel.");
+            timingLogger.Information(
+                "rps_timing challenge_rejected_channel_type. TotalMs={TotalMs}",
+                Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+            );
             return;
         }
 
@@ -77,9 +103,16 @@ public sealed partial class RpsModule
             .WithButton("Scissors", GetCustomId(gameId, RpsPick.Scissors))
             .Build();
 
+        Stopwatch followupStopwatch = Stopwatch.StartNew();
         await FollowupAsync(
             $"{Context.User.Mention} challenged {opponent.Mention} to Rock-Paper-Scissors.\nBoth players choose using the buttons below.",
             components: buttons
+        );
+
+        timingLogger.Information(
+            "rps_timing challenge_followup_sent. FollowupMs={FollowupMs} TotalMs={TotalMs}",
+            Math.Round(followupStopwatch.Elapsed.TotalMilliseconds, 2),
+            Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
         );
     }
 
@@ -91,20 +124,40 @@ public sealed partial class RpsModule
     [ComponentInteraction($"{CustomIdPrefix}:*:*", ignoreGroupNames: true)]
     public async Task ChooseAsync(string gameId, string pickRaw)
     {
+        Stopwatch totalStopwatch = Stopwatch.StartNew();
+        ILogger timingLogger = CreateTimingLogger("choose");
+        timingLogger.Information("rps_timing choose_start. HasRespondedAtEntry={HasRespondedAtEntry}", Context.Interaction.HasResponded);
+
+        Stopwatch deferStopwatch = Stopwatch.StartNew();
         if (!await TryDeferEphemeralAsync())
+        {
+            timingLogger.Warning(
+                "rps_timing choose_defer_failed. DeferMs={DeferMs} TotalMs={TotalMs}",
+                Math.Round(deferStopwatch.Elapsed.TotalMilliseconds, 2),
+                Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+            );
             return;
+        }
+
+        timingLogger.Information(
+            "rps_timing choose_defer_succeeded. DeferMs={DeferMs} TotalMs={TotalMs}",
+            Math.Round(deferStopwatch.Elapsed.TotalMilliseconds, 2),
+            Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+        );
 
         PurgeExpiredGames();
 
         if (!Games.TryGetValue(gameId, out RpsGameState? state))
         {
             await SendEphemeralAsync("That game is no longer active.");
+            timingLogger.Information("rps_timing choose_game_not_found. TotalMs={TotalMs}", Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2));
             return;
         }
 
         if (!TryParsePick(pickRaw, out RpsPick pick))
         {
             await SendEphemeralAsync("Invalid pick.");
+            timingLogger.Information("rps_timing choose_invalid_pick. TotalMs={TotalMs}", Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2));
             return;
         }
 
@@ -114,6 +167,10 @@ public sealed partial class RpsModule
         if (!isChallenger && !isOpponent)
         {
             await SendEphemeralAsync("You are not part of this game.");
+            timingLogger.Information(
+                "rps_timing choose_unauthorized_user. TotalMs={TotalMs}",
+                Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+            );
             return;
         }
 
@@ -121,6 +178,11 @@ public sealed partial class RpsModule
         Games[gameId] = state;
 
         await SendEphemeralAsync($"Locked in: **{pick}**.");
+
+        timingLogger.Information(
+            "rps_timing choose_pick_recorded. TotalMs={TotalMs}",
+            Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+        );
 
         if (state.ChallengerPick is null || state.OpponentPick is null)
             return;
@@ -131,6 +193,25 @@ public sealed partial class RpsModule
         string summary =
             $"Game complete: <@{state.ChallengerId}> picked **{state.ChallengerPick}**, <@{state.OpponentId}> picked **{state.OpponentPick}**.\n{result}";
 
+        Stopwatch followupStopwatch = Stopwatch.StartNew();
         await FollowupAsync(summary);
+
+        timingLogger.Information(
+            "rps_timing choose_result_sent. FollowupMs={FollowupMs} TotalMs={TotalMs}",
+            Math.Round(followupStopwatch.Elapsed.TotalMilliseconds, 2),
+            Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+        );
+    }
+
+    private ILogger CreateTimingLogger(string operation)
+    {
+        return Log.ForContext<RpsModule>()
+            .ForContext("RpsOperation", operation)
+            .ForContext("InteractionId", Context.Interaction.Id)
+            .ForContext("InteractionType", Context.Interaction.Type.ToString())
+            .ForContext("InteractionAgeMsAtEntry", Math.Round(DateTimeOffset.UtcNow.Subtract(Context.Interaction.CreatedAt).TotalMilliseconds, 2))
+            .ForContext("UserId", Context.User.Id)
+            .ForContext("GuildId", Context.Guild?.Id)
+            .ForContext("ChannelId", Context.Channel?.Id);
     }
 }

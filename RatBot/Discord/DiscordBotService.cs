@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using Discord.Interactions;
 using Serilog.Events;
@@ -138,39 +139,115 @@ public sealed class DiscordBotService
         if (interaction.Type is not (InteractionType.ApplicationCommand or InteractionType.ModalSubmit or InteractionType.MessageComponent))
             return;
 
+        Stopwatch totalStopwatch = Stopwatch.StartNew();
+        ILogger interactionLogger = _logger
+            .ForContext("InteractionId", interaction.Id)
+            .ForContext("InteractionType", interaction.Type.ToString())
+            .ForContext("InteractionName", GetInteractionName(interaction))
+            .ForContext("InteractionAgeMsAtReceive", GetInteractionAgeMs(interaction));
+
         try
         {
             IInteractionContext context = new SocketInteractionContext(_discordClient, interaction);
+            interactionLogger = interactionLogger
+                .ForContext("UserId", context.User.Id)
+                .ForContext("GuildId", context.Guild?.Id)
+                .ForContext("ChannelId", context.Channel?.Id);
+
+            interactionLogger.Information(
+                "interaction_timing received. HasRespondedAtReceive={HasRespondedAtReceive}",
+                interaction.HasResponded
+            );
+
+            Stopwatch executeStopwatch = Stopwatch.StartNew();
             IResult result = await _interactionService.ExecuteCommandAsync(context, _services);
+            double executeMs = Math.Round(executeStopwatch.Elapsed.TotalMilliseconds, 2);
+            double totalMs = Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2);
 
             if (result.IsSuccess)
+            {
+                interactionLogger.Information(
+                    "interaction_timing execute_success. ExecuteMs={ExecuteMs} TotalMs={TotalMs} HasRespondedAfterExecute={HasRespondedAfterExecute}",
+                    executeMs,
+                    totalMs,
+                    interaction.HasResponded
+                );
                 return;
+            }
 
-            _logger.Warning("Interaction command failed. Error={Error} Reason={Reason}", result.Error, result.ErrorReason);
+            interactionLogger.Warning(
+                "interaction_timing execute_failed. Error={Error} Reason={Reason} ExecuteMs={ExecuteMs} TotalMs={TotalMs} HasRespondedAfterExecute={HasRespondedAfterExecute}",
+                result.Error,
+                result.ErrorReason,
+                executeMs,
+                totalMs,
+                interaction.HasResponded
+            );
 
             string reason = string.IsNullOrWhiteSpace(result.ErrorReason) ? "Command execution failed." : result.ErrorReason;
 
+            Stopwatch responseStopwatch = Stopwatch.StartNew();
             if (!interaction.HasResponded)
                 await interaction.RespondAsync($"Command failed: {reason}", ephemeral: true);
             else
                 await interaction.FollowupAsync($"Command failed: {reason}", ephemeral: true);
+
+            interactionLogger.Information(
+                "interaction_timing failure_response_sent. ResponseMs={ResponseMs} TotalMs={TotalMs}",
+                Math.Round(responseStopwatch.Elapsed.TotalMilliseconds, 2),
+                Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+            );
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Interaction execution failed.");
+            interactionLogger.Error(
+                ex,
+                "interaction_timing execute_exception. TotalMs={TotalMs} HasRespondedAtException={HasRespondedAtException}",
+                Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2),
+                interaction.HasResponded
+            );
 
             try
             {
+                Stopwatch responseStopwatch = Stopwatch.StartNew();
                 if (!interaction.HasResponded)
                     await interaction.RespondAsync("An error occurred executing that command.", ephemeral: true);
                 else
                     await interaction.FollowupAsync("An error occurred executing that command.", ephemeral: true);
+
+                interactionLogger.Information(
+                    "interaction_timing exception_response_sent. ResponseMs={ResponseMs} TotalMs={TotalMs}",
+                    Math.Round(responseStopwatch.Elapsed.TotalMilliseconds, 2),
+                    Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+                );
             }
             catch (Exception followupEx)
             {
-                _logger.Warning(followupEx, "Failed to send interaction error follow-up.");
+                interactionLogger.Warning(
+                    followupEx,
+                    "interaction_timing exception_response_failed. TotalMs={TotalMs}",
+                    Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
+                );
             }
         }
+    }
+
+    private static double GetInteractionAgeMs(SocketInteraction interaction)
+    {
+        return Math.Round(DateTimeOffset.UtcNow.Subtract(interaction.CreatedAt).TotalMilliseconds, 2);
+    }
+
+    private static string GetInteractionName(SocketInteraction interaction)
+    {
+        return interaction switch
+        {
+            SocketSlashCommand slashCommand => slashCommand.Data.Name,
+            SocketUserCommand userCommand => userCommand.Data.Name,
+            SocketMessageCommand messageCommand => messageCommand.Data.Name,
+            SocketMessageComponent component => component.Data.CustomId,
+            SocketModal modal => modal.Data.CustomId,
+            _ => interaction.Type.ToString(),
+        };
     }
 
     private async Task HandleReactionAddedAsync(

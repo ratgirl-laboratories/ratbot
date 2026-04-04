@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Discord.Net;
 using RatBot.Interactions.Common.Responses;
 
@@ -133,23 +134,58 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
 
     private async Task<bool> TryDeferAsync(bool ephemeral)
     {
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        ILogger logger = Log
+            .ForContext("SourceContext", GetType().FullName)
+            .ForContext("InteractionId", Context.Interaction.Id)
+            .ForContext("InteractionType", Context.Interaction.Type.ToString())
+            .ForContext("InteractionAgeMsAtDeferStart", Math.Round(DateTimeOffset.UtcNow.Subtract(Context.Interaction.CreatedAt).TotalMilliseconds, 2));
+        bool hasRespondedBefore = Context.Interaction.HasResponded;
+
         try
         {
             if (!Context.Interaction.HasResponded)
                 await DeferAsync(ephemeral: ephemeral);
 
+            logger.Information(
+                "interaction_timing defer_success. DeferMs={DeferMs} Ephemeral={Ephemeral} HasRespondedBefore={HasRespondedBefore} HasRespondedAfter={HasRespondedAfter}",
+                Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2),
+                ephemeral,
+                hasRespondedBefore,
+                Context.Interaction.HasResponded
+            );
+
             return true;
         }
         catch (TimeoutException)
         {
+            logger.Warning(
+                "interaction_timing defer_timeout. DeferMs={DeferMs} Ephemeral={Ephemeral} HasRespondedBefore={HasRespondedBefore}",
+                Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2),
+                ephemeral,
+                hasRespondedBefore
+            );
             return false;
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
         {
+            logger.Information(
+                "interaction_timing defer_already_acknowledged. DeferMs={DeferMs} Ephemeral={Ephemeral} DiscordCode={DiscordCode}",
+                Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2),
+                ephemeral,
+                (int)ex.DiscordCode
+            );
             return true;
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
         {
+            logger.Warning(
+                ex,
+                "interaction_timing defer_unknown_interaction. DeferMs={DeferMs} Ephemeral={Ephemeral} DiscordCode={DiscordCode}",
+                Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2),
+                ephemeral,
+                (int)ex.DiscordCode
+            );
             return false;
         }
     }

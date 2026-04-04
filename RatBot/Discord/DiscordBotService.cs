@@ -79,29 +79,13 @@ public sealed class DiscordBotService
         {
             try
             {
-                // Prefer fast per-guild registration in development if a Guild Id is configured; fall back to global
-                string? devGuildIdStr = _config["Discord:DevelopmentGuildId"] ?? _config["Discord:GuildId"];
-                if (!string.IsNullOrWhiteSpace(devGuildIdStr) && ulong.TryParse(devGuildIdStr, out ulong devGuildId))
-                {
-                    // Overwrite guild commands to match current modules (deleteMissing=true)
-                    await _interactionService.RegisterCommandsToGuildAsync(devGuildId, deleteMissing: true);
-                    _logger.Information("Slash commands registered to guild {GuildId} (development mode).", devGuildId);
+                string guildIdStr = _config["Discord:GuildId"] ?? throw new InvalidOperationException("Discord guild id missing");
+                if (!ulong.TryParse(guildIdStr, out ulong guildId))
+                    throw new InvalidOperationException("Discord guild id is invalid");
 
-                    try
-                    {
-                        await ClearGlobalApplicationCommandsAsync();
-                        _logger.Information("Cleared global application commands to prevent duplicates while using per-guild registration.");
-                    }
-                    catch (Exception clearEx)
-                    {
-                        _logger.Warning(clearEx, "Failed to clear global application commands.");
-                    }
-                }
-                else
-                {
-                    await _interactionService.RegisterCommandsGloballyAsync();
-                    _logger.Information("Slash commands registered globally.");
-                }
+                // Overwrite guild commands to match current modules (deleteMissing=true)
+                await _interactionService.RegisterCommandsToGuildAsync(guildId, deleteMissing: true);
+                _logger.Information("Slash commands registered to guild {GuildId}.", guildId);
             }
             catch (Exception ex)
             {
@@ -221,25 +205,6 @@ public sealed class DiscordBotService
         {
             return Task.FromException(exception);
         }
-    }
-
-    private async Task ClearGlobalApplicationCommandsAsync()
-    {
-        // Enumerate and delete existing global commands
-        IReadOnlyCollection<RestGlobalCommand> existing = await _discordClient.Rest.GetGlobalApplicationCommands();
-
-        if (existing.Count == 0)
-            return;
-
-        foreach (RestGlobalCommand cmd in existing)
-            try
-            {
-                await cmd.DeleteAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning(ex, "Failed to delete global command {CommandName} ({CommandId}).", cmd.Name, cmd.Id);
-            }
     }
 
     private void LogDiscordMessage(string category, LogMessage message)

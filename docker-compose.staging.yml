@@ -24,7 +24,6 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Staging}
       DISCORD__TOKEN: ${DISCORD__TOKEN}
       DISCORD__GUILDID: ${DISCORD__GUILDID}
-      BOT__PREFIX: ${BOT__PREFIX:-?}
       DB__HOST: postgres-staging
       DB__PORT: "5432"
       DB__DATABASE: ${DB__DATABASE}

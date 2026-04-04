@@ -43,7 +43,7 @@ public sealed partial class RpsModule
     /// </summary>
     /// <param name="opponent">The challenged user.</param>
     [UserCommand("Challenge to RPS")]
-    public async Task ChallengeAsync(IUser opponent)
+    public async Task ChallengeAsync(SocketGuildUser opponent)
     {
         if (Context.User.Id == opponent.Id)
         {

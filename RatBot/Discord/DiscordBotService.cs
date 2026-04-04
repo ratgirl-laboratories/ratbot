@@ -124,7 +124,7 @@ public sealed class DiscordBotService
 
     private async Task HandleInteractionAsync(SocketInteraction interaction)
     {
-        if (interaction.Type is not (InteractionType.ApplicationCommand or InteractionType.ModalSubmit))
+        if (interaction.Type is not (InteractionType.ApplicationCommand or InteractionType.ModalSubmit or InteractionType.MessageComponent))
             return;
 
         try

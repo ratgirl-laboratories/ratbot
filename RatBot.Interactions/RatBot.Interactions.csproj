@@ -8,6 +8,7 @@
     <ItemGroup>
         <PackageReference Include="Discord.Net.Interactions" />
         <PackageReference Include="Discord.Net.WebSocket" />
+        <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="Serilog" />
     </ItemGroup>
     <ItemGroup>

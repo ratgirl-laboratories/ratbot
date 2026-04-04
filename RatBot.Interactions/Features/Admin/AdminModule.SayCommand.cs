@@ -2,16 +2,19 @@ using System.Collections.Concurrent;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using JetBrains.Annotations;
 using RatBot.Interactions.Common.Discord;
 
 namespace RatBot.Interactions.Features.Admin;
 
+[UsedImplicitly]
 public sealed partial class AdminModule
 {
     private const string SayModalCustomId = "admin-say";
     private const int ModalMessageLimit = 4000;
 
     private static readonly TimeSpan PendingRequestTtl = TimeSpan.FromMinutes(5);
+
     private static readonly ConcurrentDictionary<string, PendingAdminSayRequest> PendingRequests =
         new ConcurrentDictionary<string, PendingAdminSayRequest>();
 
@@ -116,6 +119,7 @@ public sealed partial class AdminModule
     /// <summary>
     /// Modal payload for the admin say command.
     /// </summary>
+    [UsedImplicitly]
     public sealed class AdminSayModal : IModal
     {
         /// <summary>

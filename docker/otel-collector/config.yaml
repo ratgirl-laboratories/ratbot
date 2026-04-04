@@ -1,0 +1,49 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 128
+  transform:
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["service_name"], resource.attributes["service.name"]) where attributes["service_name"] == nil
+          - set(attributes["environment"], resource.attributes["environment"]) where attributes["environment"] == nil
+          - set(attributes["service_name"], "ratbot-unknown") where attributes["service_name"] == nil
+          - set(attributes["environment"], "unknown") where attributes["environment"] == nil
+          - set(attributes["level"], severity_text)
+  attributes:
+    actions:
+      - action: insert
+        key: loki.attribute.labels
+        value: service_name,environment,level
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+exporters:
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    default_labels_enabled:
+      exporter: false
+      job: false
+      instance: false
+
+service:
+  extensions: [health_check]
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, transform, attributes, batch]
+      exporters: [loki]

@@ -20,8 +20,8 @@ public sealed class DesignTimeBotDbContextFactory : IDesignTimeDbContextFactory<
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(db) || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pwd))
             return null;
 
-        string portPart = string.IsNullOrWhiteSpace(port) ? string.Empty : $";Port={port}";
-        return $"Server={host}{portPart};Database={db};User Id={user};Password={pwd};SslMode=Preferred";
+        string resolvedPort = string.IsNullOrWhiteSpace(port) ? "5432" : port;
+        return $"Host={host};Port={resolvedPort};Database={db};Username={user};Password={pwd};SSL Mode=Prefer";
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public sealed class DesignTimeBotDbContextFactory : IDesignTimeDbContextFactory<
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("Design-time connection string missing. Set DB__CONNECTION_STRING or discrete DB__* vars.");
 
-        DbContextOptions<BotDbContext> options = new DbContextOptionsBuilder<BotDbContext>().UseMySQL(connectionString).Options;
+        DbContextOptions<BotDbContext> options = new DbContextOptionsBuilder<BotDbContext>().UseNpgsql(connectionString).Options;
 
         return new BotDbContext(options);
     }

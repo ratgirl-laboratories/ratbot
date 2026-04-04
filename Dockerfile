@@ -3,7 +3,6 @@ WORKDIR /src
 
 COPY Directory.Build.props ./
 COPY Directory.Packages.props ./
-COPY global.json ./
 COPY RatBot/RatBot.csproj RatBot/
 COPY RatBot.Infrastructure/RatBot.Infrastructure.csproj RatBot.Infrastructure/
 COPY RatBot.Interactions/RatBot.Interactions.csproj RatBot.Interactions/

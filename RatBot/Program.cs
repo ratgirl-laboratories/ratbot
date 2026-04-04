@@ -4,7 +4,7 @@ using RatBot.Infrastructure.Data;
 using RatBot.Infrastructure.Services;
 using Serilog.Debugging;
 using Serilog.Events;
-using Serilog.Sinks.Grafana.Loki;
+using Serilog.Sinks.OpenTelemetry;
 
 namespace RatBot;
 
@@ -36,7 +36,11 @@ public static class Program
                         .MinimumLevel.Verbose()
                         .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
                         .Enrich.FromLogContext()
-                        .Enrich.WithProperty("Application", "RatBot")
+                        .Enrich.WithProperty("service_name", ctx.Configuration["OTEL:Resource:ServiceName"] ?? "ratbot")
+                        .Enrich.WithProperty(
+                            "environment",
+                            ctx.Configuration["OTEL:Resource:Environment"] ?? ctx.Configuration["ASPNETCORE_ENVIRONMENT"] ?? "production"
+                        )
                         .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
                         .WriteTo.File("logs/verbose-.log", rollingInterval: RollingInterval.Day, restrictedToMinimumLevel: LogEventLevel.Verbose)
                         .WriteTo.File("logs/debug-.log", rollingInterval: RollingInterval.Day, restrictedToMinimumLevel: LogEventLevel.Debug)
@@ -44,7 +48,7 @@ public static class Program
                         .WriteTo.File("logs/warning-.log", rollingInterval: RollingInterval.Day, restrictedToMinimumLevel: LogEventLevel.Warning)
                         .WriteTo.File("logs/error-.log", rollingInterval: RollingInterval.Day, restrictedToMinimumLevel: LogEventLevel.Error);
 
-                    ConfigureGrafanaLoki(ctx.Configuration, loggerConfiguration);
+                    ConfigureOpenTelemetryLogs(ctx.Configuration, loggerConfiguration);
                 }
             )
             .ConfigureServices(
@@ -78,9 +82,9 @@ public static class Program
 
                     #region EF Core Services
 
-                    string connectionString = MySqlConnectionStringBuilder.Build(config);
+                    string connectionString = PostgresConnectionStringBuilder.Build(config);
 
-                    services.AddDbContext<BotDbContext>(opt => opt.UseMySQL(connectionString));
+                    services.AddDbContext<BotDbContext>(opt => opt.UseNpgsql(connectionString));
 
                     #endregion
 
@@ -96,9 +100,9 @@ public static class Program
             )
             .Build();
 
-        LogGrafanaLokiStartupConfiguration(host.Services.GetRequiredService<IConfiguration>());
+        LogOpenTelemetryStartupConfiguration(host.Services.GetRequiredService<IConfiguration>());
         await ApplyDatabaseMigrationsAsync(host);
-        Log.Information("Grafana Loki startup test event.");
+        Log.Information("OpenTelemetry logging pipeline startup test event.");
 
         await host.RunAsync();
     }
@@ -110,7 +114,7 @@ public static class Program
             await using AsyncServiceScope scope = host.Services.CreateAsyncScope();
             BotDbContext dbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-            // If there are migrations, apply pending ones; otherwise ensure database is created (first run)
+            // Apply any migrations that have not yet been applied to the current database.
             List<string> pending = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
             if (pending.Count != 0)
             {
@@ -126,33 +130,32 @@ public static class Program
         }
     }
 
-    private static void ConfigureGrafanaLoki(IConfiguration config, LoggerConfiguration loggerConfiguration)
+    private static void ConfigureOpenTelemetryLogs(IConfiguration config, LoggerConfiguration loggerConfiguration)
     {
-        string? uri = config["Grafana:Logs:Uri"];
-        if (string.IsNullOrWhiteSpace(uri))
+        string? endpoint = config["OTEL:Logs:Endpoint"];
+        if (string.IsNullOrWhiteSpace(endpoint))
             return;
 
-        string? username = config["Grafana:Logs:Username"];
-        string? password = config["Grafana:Logs:Password"];
-        string? environment = config["Grafana:Logs:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production";
-        string? host = Environment.MachineName;
+        string serviceName = config["OTEL:Resource:ServiceName"] ?? "ratbot";
+        string environment = config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production";
+        string configuredProtocol = config["OTEL:Logs:Protocol"] ?? "grpc";
+        OtlpProtocol protocol = configuredProtocol.Equals("http", StringComparison.OrdinalIgnoreCase)
+            || configuredProtocol.Equals("http/protobuf", StringComparison.OrdinalIgnoreCase)
+            ? OtlpProtocol.HttpProtobuf
+            : OtlpProtocol.Grpc;
 
-        LokiCredentials? credentials = null;
-        if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(password))
-        {
-            credentials = new LokiCredentials { Login = username, Password = password };
-        }
-
-        loggerConfiguration.WriteTo.GrafanaLoki(
-            uri,
-            labels:
-            [
-                new LokiLabel { Key = "app", Value = "ratbot" },
-                new LokiLabel { Key = "environment", Value = environment },
-                new LokiLabel { Key = "host", Value = host },
-            ],
-            credentials: credentials,
-            restrictedToMinimumLevel: LogEventLevel.Information
+        loggerConfiguration.WriteTo.OpenTelemetry(
+            options =>
+            {
+                options.Endpoint = endpoint;
+                options.Protocol = protocol;
+                options.ResourceAttributes = new Dictionary<string, object>
+                {
+                    ["service.name"] = serviceName,
+                    ["service_name"] = serviceName,
+                    ["environment"] = environment,
+                };
+            }
         );
     }
 
@@ -161,24 +164,24 @@ public static class Program
         SelfLog.Enable(message => Console.Error.WriteLine($"[SerilogSelfLog] {message}"));
     }
 
-    private static void LogGrafanaLokiStartupConfiguration(IConfiguration config)
+    private static void LogOpenTelemetryStartupConfiguration(IConfiguration config)
     {
-        string? uri = config["Grafana:Logs:Uri"];
-        if (string.IsNullOrWhiteSpace(uri))
+        string? endpoint = config["OTEL:Logs:Endpoint"];
+        if (string.IsNullOrWhiteSpace(endpoint))
         {
-            Log.Warning("Grafana Loki sink is disabled because Grafana:Logs:Uri is not configured.");
+            Log.Warning("OpenTelemetry sink is disabled because OTEL:Logs:Endpoint is not configured.");
             return;
         }
 
-        string? username = config["Grafana:Logs:Username"];
-        string? password = config["Grafana:Logs:Password"];
-        string? environment = config["Grafana:Logs:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production";
+        string serviceName = config["OTEL:Resource:ServiceName"] ?? "ratbot";
+        string environment = config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production";
+        string protocol = config["OTEL:Logs:Protocol"] ?? "grpc";
 
         Log.Information(
-            "Grafana Loki sink configured. Uri={LokiUri} Username={LokiUsername} HasPassword={HasPassword} Environment={Environment}",
-            uri,
-            username,
-            !string.IsNullOrWhiteSpace(password),
+            "OpenTelemetry sink configured. Endpoint={OtelEndpoint} Protocol={OtelProtocol} ServiceName={ServiceName} Environment={Environment}",
+            endpoint,
+            protocol,
+            serviceName,
             environment
         );
     }

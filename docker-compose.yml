@@ -1,22 +1,50 @@
-﻿services:
-  mysql:
-    image: mysql:latest
-    container_name: bot-mysql
+services:
+  loki:
+    image: grafana/loki:3.0.0
     restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB__PASSWORD}
-      MYSQL_DATABASE: ${DB__DATABASE}
-      MYSQL_USER: ${DB__USER}
-      MYSQL_PASSWORD: ${DB__PASSWORD}
-    ports:
-      - "3306:3306"
+    command: ["-config.file=/etc/loki/config.yaml"]
     volumes:
-      - ./docker/mysql-data:/var/lib/mysql
+      - ./docker/loki/config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - observability
 
-  adminer:
-    image: adminer:latest
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.99.0
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./docker/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      loki:
+        condition: service_started
+    networks:
+      - observability
+
+  grafana:
+    image: grafana/grafana:11.0.0
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA__ADMIN__USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA__ADMIN__PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
-      - mysql
+      loki:
+        condition: service_started
+    networks:
+      - observability
+
+volumes:
+  loki_data:
+    name: ratbot_loki_data
+  grafana_data:
+    name: ratbot_grafana_data
+
+networks:
+  observability:
+    name: ratbot_observability

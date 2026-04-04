@@ -45,6 +45,7 @@ public sealed class BotDbContext : DbContext
         modelBuilder.Entity<GuildConfig>(b =>
         {
             b.HasKey(x => x.GuildId);
+            b.Property(x => x.GuildId).ValueGeneratedNever().HasColumnType("numeric(20,0)");
             b.Property(x => x.Prefix).HasMaxLength(2);
         });
 
@@ -57,10 +58,10 @@ public sealed class BotDbContext : DbContext
                 x.ScopeId,
             });
 
-            b.Property(x => x.GuildId).HasColumnType("bigint unsigned");
-            b.Property(x => x.ScopeId).HasColumnType("bigint unsigned");
+            b.Property(x => x.GuildId).HasColumnType("numeric(20,0)");
+            b.Property(x => x.ScopeId).HasColumnType("numeric(20,0)");
             b.Property(x => x.RoleIds)
-                .HasColumnType("json")
+                .HasColumnType("jsonb")
                 .HasConversion(
                     roleIds => JsonSerializer.Serialize(roleIds, (JsonSerializerOptions?)null),
                     value => JsonSerializer.Deserialize<List<ulong>>(value, (JsonSerializerOptions?)null) ?? new List<ulong>()
@@ -83,7 +84,7 @@ public sealed class BotDbContext : DbContext
         {
             b.HasKey(x => x.UserId);
 
-            b.Property(x => x.UserId).ValueGeneratedNever().HasColumnType("bigint unsigned");
+            b.Property(x => x.UserId).ValueGeneratedNever().HasColumnType("numeric(20,0)");
             b.Property(x => x.Virtue).HasColumnName("Score").HasColumnType("int");
         });
 

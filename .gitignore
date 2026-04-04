@@ -115,6 +115,8 @@ obj/
 
 # Environment variables
 .env
+env/*.env
+!env/*.env.example
 
 # Docker MySQL data
 docker/mysql-data/

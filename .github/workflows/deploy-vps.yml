@@ -1,0 +1,210 @@
+name: Deploy RatBot to VPS
+
+on:
+  workflow_run:
+    workflows:
+      - Build and Publish RatBot Image
+    types:
+      - completed
+    branches:
+      - master
+      - development
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deployment target"
+        required: true
+        type: choice
+        options:
+          - shared
+          - production
+          - staging
+      image_tag:
+        description: "Optional image tag or full image ref (only for production/staging). Defaults to latest-* tags."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.resolve.outputs.deploy }}
+      target: ${{ steps.resolve.outputs.target }}
+      environment_name: ${{ steps.resolve.outputs.environment_name }}
+      project: ${{ steps.resolve.outputs.project }}
+      remote_dir: ${{ steps.resolve.outputs.remote_dir }}
+      image_ref: ${{ steps.resolve.outputs.image_ref }}
+      reason: ${{ steps.resolve.outputs.reason }}
+    steps:
+      - name: Resolve deployment target and image
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion || '' }}
+          WORKFLOW_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch || '' }}
+          WORKFLOW_HEAD_SHA: ${{ github.event.workflow_run.head_sha || '' }}
+          WORKFLOW_HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name || '' }}
+          INPUT_TARGET: ${{ github.event.inputs.target || '' }}
+          INPUT_IMAGE_TAG: ${{ github.event.inputs.image_tag || '' }}
+        run: |
+          set -euo pipefail
+
+          image_repo="ghcr.io/${GITHUB_REPOSITORY,,}"
+
+          deploy="false"
+          target=""
+          environment_name=""
+          project=""
+          remote_dir=""
+          image_ref=""
+          reason=""
+
+          if [[ "$EVENT_NAME" == "workflow_run" ]]; then
+            if [[ "$WORKFLOW_CONCLUSION" != "success" ]]; then
+              reason="Upstream build workflow did not succeed."
+            elif [[ "$WORKFLOW_HEAD_REPO" != "$GITHUB_REPOSITORY" ]]; then
+              reason="Ignoring workflow run from different repository."
+            elif [[ "$WORKFLOW_HEAD_BRANCH" == "master" ]]; then
+              deploy="true"
+              target="production"
+              environment_name="production"
+              project="ratbot-production"
+              remote_dir="/opt/ratbot/production"
+              image_ref="${image_repo}:sha-${WORKFLOW_HEAD_SHA}"
+              reason="Auto deploy from master."
+            elif [[ "$WORKFLOW_HEAD_BRANCH" == "development" ]]; then
+              deploy="true"
+              target="staging"
+              environment_name="staging"
+              project="ratbot-staging"
+              remote_dir="/opt/ratbot/staging"
+              image_ref="${image_repo}:sha-${WORKFLOW_HEAD_SHA}"
+              reason="Auto deploy from development."
+            else
+              reason="Branch is not mapped to auto deployment."
+            fi
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            case "$INPUT_TARGET" in
+              shared)
+                deploy="true"
+                target="shared"
+                environment_name="shared"
+                project="ratbot-shared"
+                remote_dir="/opt/ratbot/shared"
+                reason="Manual shared deployment."
+                ;;
+              production)
+                deploy="true"
+                target="production"
+                environment_name="production"
+                project="ratbot-production"
+                remote_dir="/opt/ratbot/production"
+
+                tag="${INPUT_IMAGE_TAG:-latest-production}"
+                if [[ "$tag" == *"/"* ]]; then
+                  image_ref="$tag"
+                else
+                  image_ref="${image_repo}:${tag}"
+                fi
+                reason="Manual production deployment."
+                ;;
+              staging)
+                deploy="true"
+                target="staging"
+                environment_name="staging"
+                project="ratbot-staging"
+                remote_dir="/opt/ratbot/staging"
+
+                tag="${INPUT_IMAGE_TAG:-latest-staging}"
+                if [[ "$tag" == *"/"* ]]; then
+                  image_ref="$tag"
+                else
+                  image_ref="${image_repo}:${tag}"
+                fi
+                reason="Manual staging deployment."
+                ;;
+              *)
+                reason="Invalid manual target."
+                ;;
+            esac
+          else
+            reason="Unsupported event type."
+          fi
+
+          {
+            echo "deploy=$deploy"
+            echo "target=$target"
+            echo "environment_name=$environment_name"
+            echo "project=$project"
+            echo "remote_dir=$remote_dir"
+            echo "image_ref=$image_ref"
+            echo "reason=$reason"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summarize resolved plan
+        shell: bash
+        run: |
+          {
+            echo "### Deployment Plan"
+            echo "- Deploy: `${{ steps.resolve.outputs.deploy }}`"
+            echo "- Target: `${{ steps.resolve.outputs.target }}`"
+            echo "- Project: `${{ steps.resolve.outputs.project }}`"
+            echo "- Remote dir: `${{ steps.resolve.outputs.remote_dir }}`"
+            echo "- Image ref: `${{ steps.resolve.outputs.image_ref }}`"
+            echo "- Reason: ${{ steps.resolve.outputs.reason }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: prepare
+    if: needs.prepare.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.prepare.outputs.environment_name }}
+    concurrency:
+      group: deploy-${{ needs.prepare.outputs.target }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run remote deploy
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+          TARGET: ${{ needs.prepare.outputs.target }}
+          PROJECT: ${{ needs.prepare.outputs.project }}
+          REMOTE_DIR: ${{ needs.prepare.outputs.remote_dir }}
+          IMAGE_REF: ${{ needs.prepare.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+          chmod +x ./scripts/deploy-vps-stack.sh
+
+          args=(
+            --stack "$TARGET"
+            --project "$PROJECT"
+            --remote-dir "$REMOTE_DIR"
+          )
+
+          if [[ -n "${IMAGE_REF}" ]]; then
+            args+=(--image-ref "$IMAGE_REF")
+          fi
+
+          ./scripts/deploy-vps-stack.sh "${args[@]}"
+
+      - name: Summarize deployment
+        shell: bash
+        run: |
+          {
+            echo "### Deployment Result"
+            echo "- Target: `${{ needs.prepare.outputs.target }}`"
+            echo "- Project: `${{ needs.prepare.outputs.project }}`"
+            echo "- Remote dir: `${{ needs.prepare.outputs.remote_dir }}`"
+            echo "- Image ref: `${{ needs.prepare.outputs.image_ref }}`"
+          } >> "$GITHUB_STEP_SUMMARY"

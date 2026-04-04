@@ -101,8 +101,6 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
     /// <param name="text">The text to send.</param>
     protected async Task SendEphemeralAsync(string text) => await TrySendAsync(text, ephemeral: true);
 
-    private Task RunAsync(Func<Task<InteractionResponse>> handler, bool defer) => RunAsync(handler, static value => value(), defer);
-
     private async Task RunAsync<TState>(TState state, Func<TState, Task<InteractionResponse>> handler, bool defer)
     {
         if (Context.Guild is null)

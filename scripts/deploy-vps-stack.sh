@@ -23,6 +23,18 @@ local_compose=""
 local_env_example=""
 local_sync_dir=""
 
+upload_file() {
+  local src="$1"
+  local dest="$2"
+
+  if [[ ! -f "$src" ]]; then
+    echo "Local file not found: $src" >&2
+    exit 1
+  fi
+
+  ssh "${ssh_opts[@]}" "${vps_user}@${VPS_HOST}" "cat > '$dest'" < "$src"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --stack)
@@ -130,8 +142,8 @@ set -euo pipefail
 mkdir -p "$REMOTE_DIR" "$REMOTE_TMP_DIR"
 REMOTE_PREP_EOF
 
-scp "${ssh_opts[@]}" "$local_compose" "${vps_user}@${VPS_HOST}:${remote_tmp_dir}/compose.yaml"
-scp "${ssh_opts[@]}" "$local_env_example" "${vps_user}@${VPS_HOST}:${remote_tmp_dir}/.env.example"
+upload_file "$local_compose" "${remote_tmp_dir}/compose.yaml"
+upload_file "$local_env_example" "${remote_tmp_dir}/.env.example"
 
 if [[ -n "$local_sync_dir" ]]; then
   tar -C "$repo_root" -cf - "$(basename "$local_sync_dir")" | \
@@ -152,6 +164,8 @@ cd "$REMOTE_DIR"
 if [[ -d .sync-tmp/docker ]]; then
   rm -rf docker
   mv .sync-tmp/docker ./docker
+  find docker -type d -exec chmod 0755 {} +
+  find docker -type f -exec chmod 0644 {} +
 fi
 
 mv .sync-tmp/compose.yaml ./compose.yaml

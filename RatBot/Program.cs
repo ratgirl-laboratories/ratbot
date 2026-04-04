@@ -138,24 +138,23 @@ public static class Program
         string serviceName = config["OTEL:Resource:ServiceName"] ?? "ratbot";
         string environment = config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production";
         string configuredProtocol = config["OTEL:Logs:Protocol"] ?? "grpc";
-        OtlpProtocol protocol = configuredProtocol.Equals("http", StringComparison.OrdinalIgnoreCase)
+        OtlpProtocol protocol =
+            configuredProtocol.Equals("http", StringComparison.OrdinalIgnoreCase)
             || configuredProtocol.Equals("http/protobuf", StringComparison.OrdinalIgnoreCase)
-            ? OtlpProtocol.HttpProtobuf
-            : OtlpProtocol.Grpc;
+                ? OtlpProtocol.HttpProtobuf
+                : OtlpProtocol.Grpc;
 
-        loggerConfiguration.WriteTo.OpenTelemetry(
-            options =>
+        loggerConfiguration.WriteTo.OpenTelemetry(options =>
+        {
+            options.Endpoint = endpoint;
+            options.Protocol = protocol;
+            options.ResourceAttributes = new Dictionary<string, object>
             {
-                options.Endpoint = endpoint;
-                options.Protocol = protocol;
-                options.ResourceAttributes = new Dictionary<string, object>
-                {
-                    ["service.name"] = serviceName,
-                    ["service_name"] = serviceName,
-                    ["environment"] = environment,
-                };
-            }
-        );
+                ["service.name"] = serviceName,
+                ["service_name"] = serviceName,
+                ["environment"] = environment,
+            };
+        });
     }
 
     private static void EnableSerilogSelfDiagnostics()

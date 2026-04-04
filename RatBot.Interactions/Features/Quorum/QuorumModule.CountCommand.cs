@@ -26,15 +26,13 @@ public sealed partial class QuorumModule
 
         ICategoryChannel? category = await currentChannel.GetCategoryAsync();
 
-        QuorumScopeConfig? config =
-            await _quorumConfigService.GetAsync(currentChannel.GuildId, QuorumScopeType.Channel, currentChannel.Id);
+        QuorumScopeConfig? config = await _quorumConfigService.GetAsync(currentChannel.GuildId, QuorumScopeType.Channel, currentChannel.Id);
 
         if (config is null && category?.Id is { } categoryId)
             config = await _quorumConfigService.GetAsync(currentChannel.GuildId, QuorumScopeType.Category, categoryId);
 
         if (config is null)
-            return InteractionResponse.Ephemeral(
-                "No quorum config found for this channel or category. Please use `/quorum config add` to add one.");
+            return InteractionResponse.Ephemeral("No quorum config found for this channel or category. Please use `/quorum config add` to add one.");
 
         SocketGuild guild = Context.Guild!;
 

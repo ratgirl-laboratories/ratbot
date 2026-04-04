@@ -38,7 +38,8 @@ public static class PostgresConnectionStringBuilder
             string host = uri.Host;
             int port = uri.Port == -1 ? 5432 : uri.Port;
 
-            Dictionary<string, string> queryValues = uri.Query.TrimStart('?')
+            Dictionary<string, string> queryValues = uri
+                .Query.TrimStart('?')
                 .Split('&', StringSplitOptions.RemoveEmptyEntries)
                 .Select(part => part.Split('=', 2, StringSplitOptions.TrimEntries))
                 .Where(parts => parts.Length == 2)
@@ -50,9 +51,10 @@ public static class PostgresConnectionStringBuilder
             if (!queryValues.TryGetValue("password", out string? password) || string.IsNullOrWhiteSpace(password))
                 throw new InvalidOperationException("The JDBC connection string is missing the 'password' query parameter.");
 
-            string sslMode = queryValues.TryGetValue("sslmode", out string? configuredSslMode) && !string.IsNullOrWhiteSpace(configuredSslMode)
-                ? configuredSslMode
-                : "Prefer";
+            string sslMode =
+                queryValues.TryGetValue("sslmode", out string? configuredSslMode) && !string.IsNullOrWhiteSpace(configuredSslMode)
+                    ? configuredSslMode
+                    : "Prefer";
 
             return $"Host={host};Port={port};Database={database};Username={user};Password={password};SSL Mode={sslMode}";
         }

@@ -28,7 +28,7 @@
       "commands": [
         "sa1201ier"
       ],
-      "rollForward": false
+      "rollForward": true
     }
   }
 }

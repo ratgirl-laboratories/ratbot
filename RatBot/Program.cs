@@ -17,7 +17,7 @@ public static class Program
     /// Creates and runs the RatBot host.
     /// </summary>
     /// <param name="args">The process command-line arguments.</param>
-    public static async Task Main(string[] args)
+    public async static Task Main(string[] args)
     {
         Env.TraversePath().Load();
         EnableSerilogSelfDiagnostics();

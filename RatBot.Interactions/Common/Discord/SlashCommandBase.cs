@@ -298,8 +298,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
 
     private ILogger CreateInteractionDiagnosticsLogger(string diagComponent)
     {
-        return Log
-            .ForContext("SourceContext", GetType().FullName)
+        return Log.ForContext("SourceContext", GetType().FullName)
             .ForContext("diag_event", DiagEventName)
             .ForContext("diag_component", diagComponent)
             .ForContext("interaction_id", Context.Interaction.Id)

@@ -46,6 +46,7 @@ public sealed partial class RpsModule
     /// </summary>
     /// <param name="opponent">The challenged user.</param>
     [UserCommand("Challenge to RPS")]
+    // ReSharper disable once UnusedMember.Global
     public async Task ChallengeAsync(IUser opponent)
     {
         Stopwatch totalStopwatch = Stopwatch.StartNew();
@@ -68,6 +69,7 @@ public sealed partial class RpsModule
                 Math.Round(deferStopwatch.Elapsed.TotalMilliseconds, 2),
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
             );
+
             return;
         }
 
@@ -88,6 +90,7 @@ public sealed partial class RpsModule
                 "rejected_self",
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
             );
+
             return;
         }
 
@@ -100,6 +103,7 @@ public sealed partial class RpsModule
                 "rejected_bot",
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
             );
+
             return;
         }
 
@@ -112,6 +116,7 @@ public sealed partial class RpsModule
                 "rejected_channel_type",
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
             );
+
             return;
         }
 
@@ -169,6 +174,7 @@ public sealed partial class RpsModule
                 Math.Round(deferStopwatch.Elapsed.TotalMilliseconds, 2),
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
             );
+
             return;
         }
 
@@ -191,6 +197,7 @@ public sealed partial class RpsModule
                 "game_not_found",
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
             );
+
             return;
         }
 
@@ -203,6 +210,7 @@ public sealed partial class RpsModule
                 "invalid_pick",
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
             );
+
             return;
         }
 
@@ -218,6 +226,7 @@ public sealed partial class RpsModule
                 "unauthorized_user",
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
             );
+
             return;
         }
 

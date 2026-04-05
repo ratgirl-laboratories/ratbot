@@ -45,6 +45,24 @@ public sealed class DiscordBotService
         _serviceInstanceId = _config["OTEL:Resource:ServiceInstanceId"] ?? Environment.MachineName;
     }
 
+    private static double GetInteractionAgeMs(SocketInteraction interaction)
+    {
+        return Math.Round(DateTimeOffset.UtcNow.Subtract(interaction.CreatedAt).TotalMilliseconds, 2);
+    }
+
+    private static string GetInteractionName(SocketInteraction interaction)
+    {
+        return interaction switch
+        {
+            SocketSlashCommand slashCommand => slashCommand.Data.Name,
+            SocketUserCommand userCommand => userCommand.Data.Name,
+            SocketMessageCommand messageCommand => messageCommand.Data.Name,
+            SocketMessageComponent component => component.Data.CustomId,
+            SocketModal modal => modal.Data.CustomId,
+            _ => interaction.Type.ToString(),
+        };
+    }
+
     /// <summary>
     /// Starts the Discord bot connection and interaction handlers.
     /// </summary>
@@ -145,8 +163,7 @@ public sealed class DiscordBotService
             return;
 
         Stopwatch totalStopwatch = Stopwatch.StartNew();
-        ILogger interactionLogger = CreateInteractionDiagnosticsLogger(interaction)
-            .ForContext("diag_component", "interaction_dispatch");
+        ILogger interactionLogger = CreateInteractionDiagnosticsLogger(interaction).ForContext("diag_component", "interaction_dispatch");
         double interactionAgeMsAtReceive = GetInteractionAgeMs(interaction);
 
         try
@@ -273,24 +290,6 @@ public sealed class DiscordBotService
                 );
             }
         }
-    }
-
-    private static double GetInteractionAgeMs(SocketInteraction interaction)
-    {
-        return Math.Round(DateTimeOffset.UtcNow.Subtract(interaction.CreatedAt).TotalMilliseconds, 2);
-    }
-
-    private static string GetInteractionName(SocketInteraction interaction)
-    {
-        return interaction switch
-        {
-            SocketSlashCommand slashCommand => slashCommand.Data.Name,
-            SocketUserCommand userCommand => userCommand.Data.Name,
-            SocketMessageCommand messageCommand => messageCommand.Data.Name,
-            SocketMessageComponent component => component.Data.CustomId,
-            SocketModal modal => modal.Data.CustomId,
-            _ => interaction.Type.ToString(),
-        };
     }
 
     private ILogger CreateInteractionDiagnosticsLogger(SocketInteraction interaction)

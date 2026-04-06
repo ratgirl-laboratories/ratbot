@@ -13,18 +13,18 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
     private const string GuildOnlyMessage = "This command can only be used in a guild.";
     private const string UnexpectedErrorMessage = "An unexpected error occurred while handling that command.";
 
-    private static InteractionResponse CreateResponse(string content, bool isEphemeral)
-    {
-        return isEphemeral ? InteractionResponse.Ephemeral(content) : InteractionResponse.Public(content);
-    }
+    private static InteractionResponse CreateResponse(string content, bool isEphemeral) =>
+        isEphemeral
+            ? InteractionResponse.Ephemeral(content)
+            : InteractionResponse.Public(content);
 
     /// <summary>
     /// Replies ephemerally with plain text.
     /// </summary>
-    protected Task ReplyAsync(string content)
-    {
-        return RunAsync(InteractionResponse.Ephemeral(content), static response => Task.FromResult(response), defer: false);
-    }
+    protected Task ReplyAsync(string content) => RunAsync(
+        InteractionResponse.Ephemeral(content),
+        static response => Task.FromResult(response),
+        defer: false);
 
     /// <summary>
     /// Replies publicly with plain text.
@@ -58,8 +58,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
         RunAsync(
             (Args: args, Handler: handler, IsEphemeral: true),
             static async state => CreateResponse(await state.Handler(state.Args), state.IsEphemeral),
-            defer
-        );
+            defer);
 
     /// <summary>
     /// Executes a handler that returns plain text and replies publicly.
@@ -74,8 +73,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
         RunAsync(
             (Args: args, Handler: handler, IsEphemeral: false),
             static async state => CreateResponse(await state.Handler(state.Args), state.IsEphemeral),
-            defer
-        );
+            defer);
 
     /// <summary>
     /// Executes a handler that returns an explicit interaction response.
@@ -106,6 +104,14 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
     /// <param name="text">The text to send.</param>
     protected async Task SendEphemeralAsync(string text) => await TrySendAsync(text, ephemeral: true);
 
+    /// <summary>
+    /// Creates a logger with standardized interaction and method context fields.
+    /// </summary>
+    /// <param name="methodContext">The logical method context name.</param>
+    /// <returns>The enriched logger.</returns>
+    protected ILogger CreateMethodLogger(string methodContext) =>
+        InteractionLoggerContext.Create(Context, GetType().FullName, $"{GetType().Name}.{methodContext}");
+
     private async Task RunAsync<TState>(TState state, Func<TState, Task<InteractionResponse>> handler, bool defer)
     {
         if (Context.Guild is null)
@@ -117,6 +123,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
         if (defer)
         {
             bool deferred = await TryDeferAsync(ephemeral: true);
+
             if (!deferred)
                 return;
         }
@@ -128,7 +135,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
         }
         catch (Exception ex)
         {
-            Log.ForContext("SourceContext", GetType().FullName).Error(ex, "Interaction handler execution failed.");
+            CreateMethodLogger(nameof(RunAsync)).Error(ex, "Interaction handler execution failed.");
             await TrySendAsync(UnexpectedErrorMessage, ephemeral: true);
         }
     }
@@ -136,7 +143,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
     private async Task<bool> TryDeferAsync(bool ephemeral)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
-        ILogger logger = CreateInteractionDiagnosticsLogger("interaction_ack");
+        ILogger logger = CreateInteractionDiagnosticsLogger("interaction_ack", nameof(TryDeferAsync));
         double interactionAgeMs = Math.Round(DateTimeOffset.UtcNow.Subtract(Context.Interaction.CreatedAt).TotalMilliseconds, 2);
         bool hasRespondedBefore = Context.Interaction.HasResponded;
 
@@ -153,8 +160,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                 interactionAgeMs,
                 ephemeral,
                 hasRespondedBefore,
-                Context.Interaction.HasResponded
-            );
+                Context.Interaction.HasResponded);
 
             return true;
         }
@@ -167,8 +173,8 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                 Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2),
                 interactionAgeMs,
                 ephemeral,
-                hasRespondedBefore
-            );
+                hasRespondedBefore);
+
             return false;
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
@@ -180,8 +186,8 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                 Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2),
                 interactionAgeMs,
                 ephemeral,
-                (int)ex.DiscordCode
-            );
+                (int)ex.DiscordCode);
+
             return true;
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
@@ -194,8 +200,8 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                 Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2),
                 interactionAgeMs,
                 ephemeral,
-                (int)ex.DiscordCode
-            );
+                (int)ex.DiscordCode);
+
             return false;
         }
     }
@@ -208,13 +214,14 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
     private async Task TrySendAsync(string content, bool ephemeral)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
-        ILogger logger = CreateInteractionDiagnosticsLogger("interaction_send");
+        ILogger logger = CreateInteractionDiagnosticsLogger("interaction_send", nameof(TrySendAsync));
         double interactionAgeMs = Math.Round(DateTimeOffset.UtcNow.Subtract(Context.Interaction.CreatedAt).TotalMilliseconds, 2);
         bool hasRespondedBefore = Context.Interaction.HasResponded;
 
         try
         {
             string sendMode;
+
             if (Context.Interaction.HasResponded)
             {
                 await FollowupAsync(content, ephemeral: ephemeral);
@@ -235,8 +242,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                 sendMode,
                 ephemeral,
                 hasRespondedBefore,
-                Context.Interaction.HasResponded
-            );
+                Context.Interaction.HasResponded);
         }
         catch (TimeoutException)
         {
@@ -247,8 +253,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                 Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2),
                 interactionAgeMs,
                 ephemeral,
-                hasRespondedBefore
-            );
+                hasRespondedBefore);
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
         {
@@ -260,8 +265,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                 Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2),
                 interactionAgeMs,
                 ephemeral,
-                (int)ex.DiscordCode
-            );
+                (int)ex.DiscordCode);
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
         {
@@ -277,8 +281,7 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                     interactionAgeMs,
                     "followup",
                     ephemeral,
-                    (int)ex.DiscordCode
-                );
+                    (int)ex.DiscordCode);
             }
             catch (Exception)
             {
@@ -290,22 +293,13 @@ public abstract class SlashCommandBase : InteractionModuleBase<SocketInteraction
                     interactionAgeMs,
                     "followup",
                     ephemeral,
-                    (int)ex.DiscordCode
-                );
+                    (int)ex.DiscordCode);
             }
         }
     }
 
-    private ILogger CreateInteractionDiagnosticsLogger(string diagComponent)
+    private ILogger CreateInteractionDiagnosticsLogger(string diagComponent, string methodContext)
     {
-        return Log.ForContext("SourceContext", GetType().FullName)
-            .ForContext("diag_event", DiagEventName)
-            .ForContext("diag_component", diagComponent)
-            .ForContext("interaction_id", Context.Interaction.Id)
-            .ForContext("interaction_type", Context.Interaction.Type.ToString())
-            .ForContext("interaction_created_at_utc", Context.Interaction.CreatedAt.UtcDateTime.ToString("O"))
-            .ForContext("user_id", Context.User.Id)
-            .ForContext("guild_id", Context.Guild?.Id)
-            .ForContext("channel_id", Context.Channel?.Id);
+        return CreateMethodLogger(methodContext).ForContext("diag_event", DiagEventName).ForContext("diag_component", diagComponent);
     }
 }

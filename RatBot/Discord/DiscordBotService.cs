@@ -34,8 +34,7 @@ public sealed class DiscordBotService
         InteractionService interactionService,
         IServiceProvider services,
         IConfiguration config,
-        ILogger logger
-    )
+        ILogger logger)
     {
         _discordClient = discordClient;
         _interactionService = interactionService;
@@ -54,13 +53,95 @@ public sealed class DiscordBotService
     {
         return interaction switch
         {
-            SocketSlashCommand slashCommand => slashCommand.Data.Name,
+            SocketSlashCommand slashCommand => GetSlashCommandName(slashCommand),
             SocketUserCommand userCommand => userCommand.Data.Name,
             SocketMessageCommand messageCommand => messageCommand.Data.Name,
             SocketMessageComponent component => component.Data.CustomId,
             SocketModal modal => modal.Data.CustomId,
             _ => interaction.Type.ToString(),
         };
+    }
+
+    private static string GetSlashCommandName(SocketSlashCommand command)
+    {
+        List<string> parts = [command.Data.Name];
+        IReadOnlyCollection<SocketSlashCommandDataOption> options = command.Data.Options;
+
+        while (true)
+        {
+            SocketSlashCommandDataOption? subCommandOption = options.FirstOrDefault(option =>
+                option.Type is ApplicationCommandOptionType.SubCommand or ApplicationCommandOptionType.SubCommandGroup);
+
+            if (subCommandOption is null)
+                break;
+
+            parts.Add(subCommandOption.Name);
+            options = subCommandOption.Options;
+        }
+
+        return string.Join(" ", parts);
+    }
+
+    private static IEnumerable<SocketSlashCommandDataOption> EnumerateSlashOptions(IReadOnlyCollection<SocketSlashCommandDataOption> options)
+    {
+        foreach (SocketSlashCommandDataOption option in options)
+        {
+            yield return option;
+
+            if (option.Options.Count == 0)
+                continue;
+
+            foreach (SocketSlashCommandDataOption nested in EnumerateSlashOptions(option.Options))
+                yield return nested;
+        }
+    }
+
+    private static CommandUsageDetails GetCommandUsageDetails(SocketInteraction interaction)
+    {
+        return interaction switch
+        {
+            SocketSlashCommand slashCommand => GetSlashUsageDetails(slashCommand),
+            SocketUserCommand userCommand => GetUserContextUsageDetails(userCommand),
+            SocketMessageCommand messageCommand => GetMessageContextUsageDetails(messageCommand),
+            _ => new CommandUsageDetails(GetInteractionName(interaction), null, null, null),
+        };
+    }
+
+    private static CommandUsageDetails GetSlashUsageDetails(SocketSlashCommand slashCommand)
+    {
+        string commandName = GetSlashCommandName(slashCommand);
+
+        foreach (SocketSlashCommandDataOption option in EnumerateSlashOptions(slashCommand.Data.Options))
+        {
+            if (option.Type is not (ApplicationCommandOptionType.User or ApplicationCommandOptionType.Mentionable))
+                continue;
+
+            switch (option.Value)
+            {
+                case SocketGuildUser guildUser:
+                    return new CommandUsageDetails(commandName, guildUser.Id, guildUser.Username, $"slash_option:{option.Name}");
+                case SocketUser socketUser:
+                    return new CommandUsageDetails(commandName, socketUser.Id, socketUser.Username, $"slash_option:{option.Name}");
+                case IUser user:
+                    return new CommandUsageDetails(commandName, user.Id, user.Username, $"slash_option:{option.Name}");
+                case ulong userId:
+                    return new CommandUsageDetails(commandName, userId, null, $"slash_option:{option.Name}");
+            }
+        }
+
+        return new CommandUsageDetails(commandName, null, null, null);
+    }
+
+    private static CommandUsageDetails GetUserContextUsageDetails(SocketUserCommand userCommand)
+    {
+        IUser? invokee = userCommand.Data.Member ?? ((IUserCommandInteractionData)userCommand.Data).User;
+        return new CommandUsageDetails(userCommand.Data.Name, invokee?.Id, invokee?.Username, "user_context_target");
+    }
+
+    private static CommandUsageDetails GetMessageContextUsageDetails(SocketMessageCommand messageCommand)
+    {
+        IUser? invokee = messageCommand.Data.Message.Author;
+        return new CommandUsageDetails(messageCommand.Data.Name, invokee?.Id, invokee?.Username, "message_context_author");
     }
 
     /// <summary>
@@ -106,8 +187,7 @@ public sealed class DiscordBotService
             "Discovered commands. Slash={SlashCount} Context={ContextCount} Component={ComponentCount}",
             _interactionService.SlashCommands.Count,
             _interactionService.ContextCommands.Count,
-            _interactionService.ComponentCommands.Count
-        );
+            _interactionService.ComponentCommands.Count);
 
         _discordClient.Ready += async () =>
         {
@@ -169,10 +249,13 @@ public sealed class DiscordBotService
         try
         {
             IInteractionContext context = new SocketInteractionContext(_discordClient, interaction);
-            interactionLogger = interactionLogger
-                .ForContext("user_id", context.User.Id)
+
+            interactionLogger = interactionLogger.ForContext("user_id", context.User.Id)
                 .ForContext("guild_id", context.Guild?.Id)
                 .ForContext("channel_id", context.Channel?.Id);
+
+            if (interaction.Type == InteractionType.ApplicationCommand)
+                LogCommandUsage(interactionLogger, context, interaction);
 
             interactionLogger.Information(
                 "interaction_diag diag_stage={diag_stage} diag_outcome={diag_outcome} interaction_age_ms={interaction_age_ms} total_ms={total_ms} has_responded={has_responded}",
@@ -180,8 +263,7 @@ public sealed class DiscordBotService
                 "start",
                 interactionAgeMsAtReceive,
                 0,
-                interaction.HasResponded
-            );
+                interaction.HasResponded);
 
             Stopwatch executeStopwatch = Stopwatch.StartNew();
             IResult result = await _interactionService.ExecuteCommandAsync(context, _services);
@@ -196,8 +278,8 @@ public sealed class DiscordBotService
                     "success",
                     executeMs,
                     totalMs,
-                    interaction.HasResponded
-                );
+                    interaction.HasResponded);
+
                 return;
             }
 
@@ -209,12 +291,14 @@ public sealed class DiscordBotService
                 result.ErrorReason ?? string.Empty,
                 executeMs,
                 totalMs,
-                interaction.HasResponded
-            );
+                interaction.HasResponded);
 
-            string reason = string.IsNullOrWhiteSpace(result.ErrorReason) ? "Command execution failed." : result.ErrorReason;
+            string reason = string.IsNullOrWhiteSpace(result.ErrorReason)
+                ? "Command execution failed."
+                : result.ErrorReason;
 
             Stopwatch responseStopwatch = Stopwatch.StartNew();
+
             if (!interaction.HasResponded)
                 await interaction.RespondAsync($"Command failed: {reason}", ephemeral: true);
             else
@@ -225,8 +309,7 @@ public sealed class DiscordBotService
                 "failure_response",
                 "sent",
                 Math.Round(responseStopwatch.Elapsed.TotalMilliseconds, 2),
-                Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
-            );
+                Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2));
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
         {
@@ -237,8 +320,7 @@ public sealed class DiscordBotService
                 "unknown_interaction",
                 (int)ex.DiscordCode,
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2),
-                interaction.HasResponded
-            );
+                interaction.HasResponded);
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
         {
@@ -249,8 +331,7 @@ public sealed class DiscordBotService
                 "already_responded",
                 (int)ex.DiscordCode,
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2),
-                interaction.HasResponded
-            );
+                interaction.HasResponded);
         }
         catch (Exception ex)
         {
@@ -260,12 +341,12 @@ public sealed class DiscordBotService
                 "dispatch",
                 "exception",
                 Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2),
-                interaction.HasResponded
-            );
+                interaction.HasResponded);
 
             try
             {
                 Stopwatch responseStopwatch = Stopwatch.StartNew();
+
                 if (!interaction.HasResponded)
                     await interaction.RespondAsync("An error occurred executing that command.", ephemeral: true);
                 else
@@ -276,8 +357,7 @@ public sealed class DiscordBotService
                     "exception_response",
                     "sent",
                     Math.Round(responseStopwatch.Elapsed.TotalMilliseconds, 2),
-                    Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
-                );
+                    Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2));
             }
             catch (Exception followupEx)
             {
@@ -286,29 +366,39 @@ public sealed class DiscordBotService
                     "interaction_diag diag_stage={diag_stage} diag_outcome={diag_outcome} total_ms={total_ms}",
                     "exception_response",
                     "failed",
-                    Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2)
-                );
+                    Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2));
             }
         }
     }
 
-    private ILogger CreateInteractionDiagnosticsLogger(SocketInteraction interaction)
+    private void LogCommandUsage(ILogger interactionLogger, IInteractionContext context, SocketInteraction interaction)
     {
-        return _logger
-            .ForContext("diag_event", DiagEventName)
+        CommandUsageDetails usage = GetCommandUsageDetails(interaction);
+
+        interactionLogger.ForContext("method_context", $"{nameof(DiscordBotService)}.{nameof(LogCommandUsage)}")
+            .ForContext("command_name", usage.CommandName)
+            .ForContext("invoker_user_id", context.User.Id)
+            .ForContext("invokee_user_id", usage.InvokeeUserId)
+            .ForContext("invokee_username", usage.InvokeeUsername)
+            .ForContext("invokee_source", usage.InvokeeSource)
+            .Information("Command Invoked");
+    }
+
+    private ILogger CreateInteractionDiagnosticsLogger(SocketInteraction interaction) =>
+        _logger.ForContext("diag_event", DiagEventName)
             .ForContext("service_instance_id", _serviceInstanceId)
             .ForContext("process_id", Environment.ProcessId)
             .ForContext("interaction_id", interaction.Id)
             .ForContext("interaction_type", interaction.Type.ToString())
             .ForContext("interaction_name", GetInteractionName(interaction))
             .ForContext("interaction_created_at_utc", interaction.CreatedAt.UtcDateTime.ToString("O"));
-    }
+
+    private readonly record struct CommandUsageDetails(string CommandName, ulong? InvokeeUserId, string? InvokeeUsername, string? InvokeeSource);
 
     private async Task HandleReactionAddedAsync(
         Cacheable<IUserMessage, ulong> message,
         Cacheable<IMessageChannel, ulong> channel,
-        SocketReaction reaction
-    )
+        SocketReaction reaction)
     {
         await LogReactionEventAsync("added", reaction);
     }
@@ -316,8 +406,7 @@ public sealed class DiscordBotService
     private async Task HandleReactionRemovedAsync(
         Cacheable<IUserMessage, ulong> cachedMessage,
         Cacheable<IMessageChannel, ulong> cachedChannel,
-        SocketReaction reaction
-    )
+        SocketReaction reaction)
     {
         await LogReactionEventAsync("removed", reaction);
     }
@@ -361,7 +450,10 @@ public sealed class DiscordBotService
             _ => LogEventLevel.Debug,
         };
 
-        string source = string.IsNullOrWhiteSpace(message.Source) ? "Unknown" : message.Source;
+        string source = string.IsNullOrWhiteSpace(message.Source)
+            ? "Unknown"
+            : message.Source;
+
         if (message.Exception is not null)
         {
             _logger.Write(level, message.Exception, "[{Category}] {Source}: {Message}", category, source, message.Message);
@@ -377,10 +469,12 @@ public sealed class DiscordBotService
         try
         {
             string emojiName = reaction.Emote.Name;
-            ulong? emojiId = reaction.Emote is Emote customEmote ? customEmote.Id : null;
 
-            _logger
-                .ForContext("ReactionEventType", reactionEventType)
+            ulong? emojiId = reaction.Emote is Emote customEmote
+                ? customEmote.Id
+                : null;
+
+            _logger.ForContext("ReactionEventType", reactionEventType)
                 .ForContext("EmojiName", emojiName)
                 .ForContext("EmojiId", emojiId)
                 .ForContext("IsCustomEmoji", emojiId.HasValue)
@@ -396,10 +490,11 @@ public sealed class DiscordBotService
 
     private void LogReactionEmoteClearEvent(IEmote emote)
     {
-        ulong? emojiId = emote is Emote customEmote ? customEmote.Id : null;
+        ulong? emojiId = emote is Emote customEmote
+            ? customEmote.Id
+            : null;
 
-        _logger
-            .ForContext("ReactionEventType", "cleared_emote")
+        _logger.ForContext("ReactionEventType", "cleared_emote")
             .ForContext("EmojiName", emote.Name)
             .ForContext("EmojiId", emojiId)
             .ForContext("IsCustomEmoji", emojiId.HasValue)

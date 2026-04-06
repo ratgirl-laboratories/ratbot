@@ -265,16 +265,10 @@ public sealed partial class RpsModule
 
     private ILogger CreateTimingLogger(string operation)
     {
-        return Log.ForContext<RpsModule>()
+        return CreateMethodLogger(nameof(CreateTimingLogger))
             .ForContext("diag_event", DiagEventName)
             .ForContext("diag_component", "rps_module")
             .ForContext("rps_operation", operation)
-            .ForContext("interaction_id", Context.Interaction.Id)
-            .ForContext("interaction_type", Context.Interaction.Type.ToString())
-            .ForContext("interaction_age_ms", Math.Round(DateTimeOffset.UtcNow.Subtract(Context.Interaction.CreatedAt).TotalMilliseconds, 2))
-            .ForContext("interaction_created_at_utc", Context.Interaction.CreatedAt.UtcDateTime.ToString("O"))
-            .ForContext("user_id", Context.User.Id)
-            .ForContext("guild_id", Context.Guild?.Id)
-            .ForContext("channel_id", Context.Channel?.Id);
+            .ForContext("interaction_age_ms", Math.Round(DateTimeOffset.UtcNow.Subtract(Context.Interaction.CreatedAt).TotalMilliseconds, 2));
     }
 }

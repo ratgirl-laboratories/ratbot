@@ -88,12 +88,13 @@ public static class Program
                     string connectionString = PostgresConnectionStringBuilder.Build(config);
 
                     services.AddDbContext<BotDbContext>(opt => opt.UseNpgsql(connectionString));
+                    services.AddDbContextFactory<BotDbContext>(opt => opt.UseNpgsql(connectionString));
 
                     #endregion
 
                     #region Application Services
 
-                    services.AddScoped<QuorumConfigService>();
+                    services.AddSingleton<IConfigRepository, JsonConfigRepository>();
                     services.AddScoped<EmojiUsageService>();
 
                     #endregion

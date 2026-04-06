@@ -1,6 +1,3 @@
-using System.Text.Json;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-
 namespace RatBot.Infrastructure.Data;
 
 /// <summary>
@@ -16,9 +13,9 @@ public sealed class BotDbContext : DbContext
         : base(options) { }
 
     /// <summary>
-    /// Gets the quorum scope configuration set.
+    /// Gets the persisted config entry set.
     /// </summary>
-    public DbSet<QuorumScopeConfig> QuorumScopeConfigs => Set<QuorumScopeConfig>();
+    public DbSet<ConfigEntry> ConfigEntries => Set<ConfigEntry>();
 
     /// <summary>
     /// Gets the emoji usage set.
@@ -31,35 +28,12 @@ public sealed class BotDbContext : DbContext
     /// <param name="modelBuilder">The model builder instance.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<QuorumScopeConfig>(b =>
+        modelBuilder.Entity<ConfigEntry>(b =>
         {
-            b.HasKey(x => new
-            {
-                x.GuildId,
-                x.ScopeType,
-                x.ScopeId,
-            });
-
-            b.Property(x => x.GuildId).HasColumnType("numeric(20,0)");
-            b.Property(x => x.ScopeId).HasColumnType("numeric(20,0)");
-            b.Property(x => x.RoleIds)
-                .HasColumnType("jsonb")
-                .HasConversion(
-                    roleIds => JsonSerializer.Serialize(roleIds, (JsonSerializerOptions?)null),
-                    value => JsonSerializer.Deserialize<List<ulong>>(value, (JsonSerializerOptions?)null) ?? new List<ulong>()
-                )
-                .Metadata.SetValueComparer(
-                    new ValueComparer<IReadOnlyList<ulong>>(
-                        (left, right) => left!.SequenceEqual(right!),
-                        roleIds => roleIds.Aggregate(0, (hash, roleId) => HashCode.Combine(hash, roleId)),
-                        roleIds => roleIds.ToList()
-                    )
-                );
-            b.Property(x => x.ScopeType).HasConversion<int>();
-            b.Property(x => x.QuorumProportion).HasPrecision(6, 4);
-
-            b.HasIndex(x => x.GuildId);
-            b.HasIndex(x => new { x.GuildId, x.ScopeType });
+            b.ToTable("Configs");
+            b.HasKey(x => new { x.Key, x.Value });
+            b.Property(x => x.Key).HasColumnType("text");
+            b.Property(x => x.Value).HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<EmojiUsageCount>(b =>

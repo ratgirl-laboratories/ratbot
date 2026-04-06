@@ -23,7 +23,7 @@ public sealed partial class QuorumModule
         ICategoryChannel? category = await currentChannel.GetCategoryAsync();
 
         Option<QuorumScopeConfig> config = await QuorumConfigs.GetForChannelAsync(
-            _configRepository,
+            configRepository,
             currentChannel.GuildId,
             currentChannel.Id,
             category?.Id
@@ -37,7 +37,7 @@ public sealed partial class QuorumModule
                 int membersWithRole = roles.SelectMany(role => role.Members).Select(member => member.Id).Distinct().Count();
                 int quorumCount = (int)Math.Ceiling(membersWithRole * resolvedConfig.QuorumProportion);
 
-                _logger.Debug(
+                logger.Debug(
                     "Members with roles {RoleIds}: {MembersWithRole}, quorum count: {QuorumCount}, proportion: {ConfigQuorumProportion}",
                     resolvedConfig.RoleIds,
                     membersWithRole,

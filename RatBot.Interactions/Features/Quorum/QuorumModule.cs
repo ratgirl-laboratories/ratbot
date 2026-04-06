@@ -5,15 +5,6 @@ namespace RatBot.Interactions.Features.Quorum;
 /// <summary>
 /// Defines quorum-related interactions.
 /// </summary>
-[Group("quorum", "Quorum commands.")]
-public sealed partial class QuorumModule : SlashCommandBase
-{
-    private readonly ILogger _logger;
-    private readonly IConfigRepository _configRepository;
-
-    public QuorumModule(ILogger logger, IConfigRepository configRepository)
-    {
-        _logger = logger;
-        _configRepository = configRepository;
-    }
-}
+[Group("quorum", "Quorum commands. Group restricted to moderators by default.")]
+[DefaultMemberPermissions(GuildPermission.MuteMembers)]
+public sealed partial class QuorumModule(ILogger logger, IConfigRepository configRepository) : SlashCommandBase;

@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
   packages: write
 
@@ -66,66 +65,12 @@ jobs:
             type=raw,value=staging,enable=${{ github.ref == 'refs/heads/master' }}
 
       - name: Build and push image
-        id: build
         uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: true
         with:
           context: .
           file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Resolve Docker build record ID
-        id: build_record
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          artifacts_url="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100"
-          build_record_artifact=""
-
-          for _ in {1..6}; do
-            response="$(curl -fsSL \
-              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-              -H "Accept: application/vnd.github+json" \
-              "$artifacts_url")"
-
-            build_record_artifact="$(jq -r '.artifacts[]? | select(.name | endswith(".dockerbuild")) | .name' <<<"$response" | head -n1)"
-            if [[ -n "$build_record_artifact" ]]; then
-              break
-            fi
-
-            sleep 5
-          done
-
-          if [[ -z "$build_record_artifact" ]]; then
-            echo "::warning::No .dockerbuild artifact found for this run; skipping build-record tag."
-            echo "id=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          build_record_id="${build_record_artifact##*~}"
-          build_record_id="${build_record_id%.dockerbuild}"
-
-          echo "id=${build_record_id}" >> "$GITHUB_OUTPUT"
-
-      - name: Tag image with Docker build record ID
-        if: steps.build_record.outputs.id != ''
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          image_repo="${{ steps.image.outputs.name }}"
-          build_record_id="${{ steps.build_record.outputs.id }}"
-          digest="${{ steps.build.outputs.digest }}"
-
-          docker buildx imagetools create \
-            --tag "${image_repo}:${build_record_id}" \
-            "${image_repo}@${digest}"
-
-          {
-            echo "### Build Record Tag"
-            echo "- Added image tag: \`${image_repo}:${build_record_id}\`"
-          } >> "$GITHUB_STEP_SUMMARY"

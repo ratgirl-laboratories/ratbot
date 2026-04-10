@@ -1,3 +1,5 @@
+using RatBot.Infrastructure.Configuration.Quorum;
+
 namespace RatBot.Infrastructure.Data;
 
 /// <summary>
@@ -14,11 +16,11 @@ public sealed class BotDbContext : DbContext, IBotDataContext
 
     public DbSet<EmojiUsageCount> EmojiUsageCounts => Set<EmojiUsageCount>();
 
-    public DbSet<Configuration.Quorum.QuorumScopeConfigEntity> QuorumScopeConfigs =>
-        Set<Configuration.Quorum.QuorumScopeConfigEntity>();
+    public DbSet<QuorumConfigEntity> QuorumConfigs =>
+        Set<QuorumConfigEntity>();
 
-    public DbSet<Configuration.Quorum.QuorumScopeConfigRoleEntity> QuorumScopeConfigRoles =>
-        Set<Configuration.Quorum.QuorumScopeConfigRoleEntity>();
+    public DbSet<QuorumConfigRoleEntity> QuorumConfigRoles =>
+        Set<QuorumConfigRoleEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,34 +32,34 @@ public sealed class BotDbContext : DbContext, IBotDataContext
             b.Property(x => x.UsageCount).HasColumnType("int");
         });
 
-        modelBuilder.Entity<Configuration.Quorum.QuorumScopeConfigEntity>(b =>
+        modelBuilder.Entity<QuorumConfigEntity>(b =>
         {
-            b.ToTable("QuorumScopeConfigs");
-            b.HasKey(x => new { x.GuildId, x.ScopeType, x.ScopeId });
+            b.ToTable("QuorumConfigs");
+            b.HasKey(x => new { x.GuildId, x.TargetType, x.TargetId });
 
             b.Property(x => x.GuildId).HasColumnType("numeric(20,0)");
-            b.Property(x => x.ScopeType).HasColumnType("integer");
-            b.Property(x => x.ScopeId).HasColumnType("numeric(20,0)");
+            b.Property(x => x.TargetType).HasColumnType("integer");
+            b.Property(x => x.TargetId).HasColumnType("numeric(20,0)");
             b.Property(x => x.QuorumProportion).HasColumnType("double precision").HasPrecision(6, 4);
 
             b.HasIndex(x => x.GuildId);
-            b.HasIndex(x => new { x.GuildId, x.ScopeType });
+            b.HasIndex(x => new { x.GuildId, x.TargetType });
 
             b.HasMany(x => x.Roles)
-                .WithOne(x => x.Config)
-                .HasForeignKey(x => new { x.GuildId, x.ScopeType, x.ScopeId })
+                .WithOne()
+                .HasForeignKey("GuildId", "TargetType", "TargetId")
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<Configuration.Quorum.QuorumScopeConfigRoleEntity>(b =>
+        modelBuilder.Entity<QuorumConfigRoleEntity>(b =>
         {
-            b.ToTable("QuorumScopeConfigRoles");
-            b.HasKey(x => new { x.GuildId, x.ScopeType, x.ScopeId, x.RoleId });
-
-            b.Property(x => x.GuildId).HasColumnType("numeric(20,0)");
-            b.Property(x => x.ScopeType).HasColumnType("integer");
-            b.Property(x => x.ScopeId).HasColumnType("numeric(20,0)");
+            b.ToTable("QuorumConfigRoles");
+            b.Property<ulong>("GuildId").HasColumnType("numeric(20,0)");
+            b.Property<QuorumConfigType>("TargetType").HasColumnType("integer");
+            b.Property<ulong>("TargetId").HasColumnType("numeric(20,0)");
             b.Property(x => x.RoleId).HasColumnType("numeric(20,0)");
+
+            b.HasKey("GuildId", "TargetType", "TargetId", "RoleId");
         });
     }
 }

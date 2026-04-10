@@ -1,27 +1,28 @@
 using System.Text.Json.Serialization;
 using LanguageExt;
+using RatBot.Domain.Enums;
 
 namespace RatBot.Domain.Features.Quorum;
 
 /// <summary>
-/// Represents quorum behaviour for a guild scope.
+/// Represents quorum behaviour for a guild target.
 /// </summary>
-public sealed class QuorumScopeConfig
+public sealed class QuorumConfig
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="QuorumScopeConfig"/> class.
+    /// Initializes a new instance of the <see cref="QuorumConfig"/> class.
     /// </summary>
     /// <param name="guildId">The guild identifier.</param>
-    /// <param name="scopeType">The scope type.</param>
-    /// <param name="scopeId">The scope identifier.</param>
+    /// <param name="targetType">The configuration target type.</param>
+    /// <param name="targetId">The configuration target identifier.</param>
     /// <param name="roleIds">The role identifiers used for quorum counting.</param>
     /// <param name="quorumProportion">The quorum proportion.</param>
     [JsonConstructor]
-    public QuorumScopeConfig(ulong guildId, QuorumScopeType scopeType, ulong scopeId, ulong[] roleIds, double quorumProportion)
+    public QuorumConfig(ulong guildId, QuorumConfigType targetType, ulong targetId, ulong[] roleIds, double quorumProportion)
     {
         GuildId = RequireDiscordId(guildId, nameof(guildId));
-        ScopeType = RequireScopeType(scopeType);
-        ScopeId = RequireDiscordId(scopeId, nameof(scopeId));
+        TargetType = RequireTargetType(targetType);
+        TargetId = RequireDiscordId(targetId, nameof(targetId));
         RoleIds = RequireRoleIds(roleIds).ToArray();
         QuorumProportion = RequireQuorumProportion(quorumProportion);
     }
@@ -32,14 +33,14 @@ public sealed class QuorumScopeConfig
     public ulong GuildId { get; }
 
     /// <summary>
-    /// Gets the scope type.
+    /// Gets the configuration target type.
     /// </summary>
-    public QuorumScopeType ScopeType { get; }
+    public QuorumConfigType TargetType { get; }
 
     /// <summary>
-    /// Gets the scope identifier.
+    /// Gets the configuration target identifier.
     /// </summary>
-    public ulong ScopeId { get; }
+    public ulong TargetId { get; }
 
     /// <summary>
     /// Gets the role identifiers used for quorum counting.
@@ -55,45 +56,45 @@ public sealed class QuorumScopeConfig
     /// Creates a new config using a single role identifier.
     /// </summary>
     /// <param name="guildId">The guild identifier.</param>
-    /// <param name="scopeType">The scope type.</param>
-    /// <param name="scopeId">The scope identifier.</param>
+    /// <param name="targetType">The configuration target type.</param>
+    /// <param name="targetId">The configuration target identifier.</param>
     /// <param name="roleId">The role identifier.</param>
     /// <param name="quorumProportion">The quorum proportion.</param>
     /// <returns>The created config.</returns>
-    public static QuorumScopeConfig Create(
+    public static QuorumConfig Create(
         ulong guildId,
-        QuorumScopeType scopeType,
-        ulong scopeId,
+        QuorumConfigType targetType,
+        ulong targetId,
         ulong roleId,
         double quorumProportion
-    ) => Create(guildId, scopeType, scopeId, new Arr<ulong>([roleId]), quorumProportion);
+    ) => Create(guildId, targetType, targetId, new Arr<ulong>([roleId]), quorumProportion);
 
     /// <summary>
     /// Creates a new config.
     /// </summary>
     /// <param name="guildId">The guild identifier.</param>
-    /// <param name="scopeType">The scope type.</param>
-    /// <param name="scopeId">The scope identifier.</param>
+    /// <param name="targetType">The configuration target type.</param>
+    /// <param name="targetId">The configuration target identifier.</param>
     /// <param name="roleIds">The role identifiers.</param>
     /// <param name="quorumProportion">The quorum proportion.</param>
     /// <returns>The created config.</returns>
-    public static QuorumScopeConfig Create(
+    public static QuorumConfig Create(
         ulong guildId,
-        QuorumScopeType scopeType,
-        ulong scopeId,
+        QuorumConfigType targetType,
+        ulong targetId,
         Arr<ulong> roleIds,
         double quorumProportion
-    ) => new QuorumScopeConfig(guildId, scopeType, scopeId, roleIds.ToArray(), quorumProportion);
+    ) => new QuorumConfig(guildId, targetType, targetId, roleIds.ToArray(), quorumProportion);
 
     private static ulong RequireDiscordId(ulong value, string paramName) =>
         value == 0
             ? throw new ArgumentOutOfRangeException(paramName, "Discord identifiers must be non-zero.")
             : value;
 
-    private static QuorumScopeType RequireScopeType(QuorumScopeType scopeType) =>
-        !Enum.IsDefined(scopeType)
-            ? throw new ArgumentOutOfRangeException(nameof(scopeType), "Invalid quorum scope type.")
-            : scopeType;
+    private static QuorumConfigType RequireTargetType(QuorumConfigType targetType) =>
+        !Enum.IsDefined(targetType)
+            ? throw new ArgumentOutOfRangeException(nameof(targetType), "Invalid quorum configuration type.")
+            : targetType;
 
     private static Arr<ulong> RequireRoleIds(IEnumerable<ulong> roleIds)
     {
@@ -128,7 +129,7 @@ public sealed class QuorumScopeConfig
     /// <param name="roleId">The role identifier.</param>
     /// <param name="quorumProportion">The quorum proportion.</param>
     /// <returns>The replacement config.</returns>
-    public QuorumScopeConfig Reconfigure(ulong roleId, double quorumProportion) =>
+    public QuorumConfig Reconfigure(ulong roleId, double quorumProportion) =>
         Reconfigure(new Arr<ulong>([roleId]), quorumProportion);
 
     /// <summary>
@@ -137,6 +138,6 @@ public sealed class QuorumScopeConfig
     /// <param name="roleIds">The role identifiers.</param>
     /// <param name="quorumProportion">The quorum proportion.</param>
     /// <returns>The replacement config.</returns>
-    public QuorumScopeConfig Reconfigure(Arr<ulong> roleIds, double quorumProportion) =>
-        new QuorumScopeConfig(GuildId, ScopeType, ScopeId, roleIds.ToArray(), quorumProportion);
+    public QuorumConfig Reconfigure(Arr<ulong> roleIds, double quorumProportion) =>
+        new QuorumConfig(GuildId, TargetType, TargetId, roleIds.ToArray(), quorumProportion);
 }

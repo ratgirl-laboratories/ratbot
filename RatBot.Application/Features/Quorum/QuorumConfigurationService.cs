@@ -1,69 +1,72 @@
+using RatBot.Domain.Enums;
+using RatBot.Domain.Features.Quorum;
+
 namespace RatBot.Application.Features.Quorum;
 
 public sealed class QuorumConfigurationService(IQuorumConfigurationRepository repository, ILogger logger)
 {
     private readonly ILogger _logger = logger.ForContext<QuorumConfigurationService>();
 
-    public async Task<(bool Created, QuorumScopeConfig Config)> UpsertAsync(
+    public async Task<(bool Created, QuorumConfig Config)> UpsertAsync(
         ulong guildId,
-        QuorumScopeType scopeType,
-        ulong scopeId,
+        QuorumConfigType targetType,
+        ulong targetId,
         IReadOnlyCollection<ulong> roleIds,
         double quorumProportion,
         CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(guildId);
-        ArgumentOutOfRangeException.ThrowIfZero(scopeId);
+        ArgumentOutOfRangeException.ThrowIfZero(targetId);
         ArgumentNullException.ThrowIfNull(roleIds);
 
-        QuorumScopeConfig config = new QuorumScopeConfig(
+        QuorumConfig config = new QuorumConfig(
             guildId,
-            scopeType,
-            scopeId,
+            targetType,
+            targetId,
             roleIds.Distinct().ToArray(),
             quorumProportion);
         bool created = await repository.UpsertAsync(config, ct);
 
         _logger.Information(
-            "Quorum scope config {Action} for guild {GuildId}, scope type {ScopeType}, scope {ScopeId}.",
+            "Quorum configuration {Action} for guild {GuildId}, target type {TargetType}, target {TargetId}.",
             created ? "created" : "updated",
             guildId,
-            scopeType,
-            scopeId);
+            targetType,
+            targetId);
 
         return (created, config);
     }
 
     public async Task<bool> DeleteAsync(
         ulong guildId,
-        QuorumScopeType scopeType,
-        ulong scopeId,
+        QuorumConfigType targetType,
+        ulong targetId,
         CancellationToken ct = default)
     {
-        bool deleted = await repository.DeleteAsync(guildId, scopeType, scopeId, ct);
+        bool deleted = await repository.DeleteAsync(guildId, targetType, targetId, ct);
 
         _logger.Information(
-            "Quorum scope config delete attempted for guild {GuildId}, scope type {ScopeType}, scope {ScopeId}. Deleted={Deleted}",
+            "Quorum configuration delete attempted for guild {GuildId}, target type {TargetType}, target {TargetId}. Deleted={Deleted}",
             guildId,
-            scopeType,
-            scopeId,
+            targetType,
+            targetId,
             deleted);
 
         return deleted;
     }
 
-    public async Task<QuorumScopeConfig?> GetEffectiveAsync(
+    public async Task<QuorumConfig?> GetEffectiveAsync(
         ulong guildId,
         ulong channelId,
         ulong? categoryId,
         CancellationToken ct = default)
     {
-        QuorumScopeConfig? channelConfig = await repository.GetAsync(guildId, QuorumScopeType.Channel, channelId, ct);
+        QuorumConfig? channelConfig = await repository.GetAsync(guildId, QuorumConfigType.Channel, channelId, ct);
         if (channelConfig is not null)
             return channelConfig;
 
         return categoryId is null
             ? null
-            : await repository.GetAsync(guildId, QuorumScopeType.Category, categoryId.Value, ct);
+            : await repository.GetAsync(guildId, QuorumConfigType.Category, categoryId.Value, ct);
     }
 }

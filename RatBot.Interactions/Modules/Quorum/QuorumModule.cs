@@ -1,3 +1,4 @@
+using RatBot.Domain.Features.Quorum;
 using RatBot.Interactions.Common.Responses;
 
 namespace RatBot.Interactions.Modules.Quorum;
@@ -19,7 +20,7 @@ public sealed class QuorumModule(ILogger logger, QuorumConfigurationService quor
             return InteractionResponse.Ephemeral("This command can only be used in a text channel.");
 
         ICategoryChannel? category = await currentChannel.GetCategoryAsync();
-        QuorumScopeConfig? config = await quorumConfigurationService.GetEffectiveAsync(
+        QuorumConfig? config = await quorumConfigurationService.GetEffectiveAsync(
             currentChannel.GuildId,
             currentChannel.Id,
             category?.Id);
@@ -27,7 +28,7 @@ public sealed class QuorumModule(ILogger logger, QuorumConfigurationService quor
         if (config is null)
         {
             return InteractionResponse.Ephemeral(
-                "No quorum config found for this channel or category. Please use `/config quorum set` to configure one.");
+                "No quorum configuration found for this channel or category. Please use `/config quorum set` to configure one.");
         }
 
         SocketGuild guild = Context.Guild!;

@@ -1,18 +1,21 @@
+using RatBot.Domain.Enums;
+using RatBot.Domain.Features.Quorum;
+
 namespace RatBot.Application.Features.Quorum;
 
 public interface IQuorumConfigurationRepository
 {
-    Task<QuorumScopeConfig?> GetAsync(
+    Task<QuorumConfig?> GetAsync(
         ulong guildId,
-        QuorumScopeType scopeType,
-        ulong scopeId,
+        QuorumConfigType targetType,
+        ulong targetId,
         CancellationToken ct = default);
 
-    Task<bool> UpsertAsync(QuorumScopeConfig config, CancellationToken ct = default);
+    Task<bool> UpsertAsync(QuorumConfig config, CancellationToken ct = default);
 
     Task<bool> DeleteAsync(
         ulong guildId,
-        QuorumScopeType scopeType,
-        ulong scopeId,
+        QuorumConfigType targetType,
+        ulong targetId,
         CancellationToken ct = default);
 }

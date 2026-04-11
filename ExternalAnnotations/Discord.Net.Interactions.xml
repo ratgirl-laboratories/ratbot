@@ -1,0 +1,5 @@
+<assembly name="Discord.Net.Interactions">
+    <member name="T:Discord.Interactions.SlashCommandAttribute">
+        <attribute ctor="M:JetBrains.Annotations.MeansImplicitUseAttribute.#ctor" />
+    </member>
+</assembly>

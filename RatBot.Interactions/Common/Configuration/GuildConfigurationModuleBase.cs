@@ -1,3 +1,5 @@
+using RatBot.Domain.Common;
+
 namespace RatBot.Interactions.Common.Configuration;
 
 public abstract class GuildConfigurationModuleBase : SlashCommandBase
@@ -8,7 +10,7 @@ public abstract class GuildConfigurationModuleBase : SlashCommandBase
     {
         scope = null;
 
-        if (!ulong.TryParse(scopeId, out ulong parsedScopeId))
+        if (!MentionParser.TryParse(scopeId, out ulong parsedScopeId))
         {
             errorMessage = "Invalid scope ID provided.";
             return false;
@@ -31,7 +33,7 @@ public abstract class GuildConfigurationModuleBase : SlashCommandBase
 
         ulong[] parsedRoleIds = roleIds
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Select(value => ulong.TryParse(value, out ulong parsedRoleId) ? parsedRoleId : 0)
+            .Select(value => MentionParser.TryParse(value, out ulong parsedRoleId) ? parsedRoleId : 0)
             .Where(value => value != 0)
             .Distinct()
             .ToArray();

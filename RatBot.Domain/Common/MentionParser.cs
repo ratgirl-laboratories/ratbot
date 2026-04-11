@@ -8,6 +8,15 @@ public partial class MentionParser
 {
     public static bool TryParse(string mentionString, out ulong id)
     {
+        if (string.IsNullOrWhiteSpace(mentionString))
+        {
+            id = 0;
+            return false;
+        }
+
+        if (ulong.TryParse(mentionString, out id))
+            return true;
+
         Match match = MentionPattern().Match(mentionString);
 
         if (match.Success)

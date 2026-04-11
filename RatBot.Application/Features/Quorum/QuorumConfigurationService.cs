@@ -18,7 +18,7 @@ public sealed class QuorumConfigurationService(IQuorumConfigurationRepository re
         ArgumentOutOfRangeException.ThrowIfZero(guildId);
         ArgumentOutOfRangeException.ThrowIfZero(targetId);
         ArgumentNullException.ThrowIfNull(roleIds);
-
+        
         QuorumConfig config = new QuorumConfig(
             guildId,
             targetType,

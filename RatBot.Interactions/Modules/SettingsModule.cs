@@ -1,21 +1,23 @@
-namespace RatBot.Interactions.Modules.Configuration;
+using RatBot.Interactions.Common.Settings;
+
+namespace RatBot.Interactions.Modules.Settings;
 
 [Group("config", "Configuration commands.")]
 [DefaultMemberPermissions(GuildPermission.Administrator)]
-public sealed class ConfigurationModule : SlashCommandBase
+public sealed class SettingsModule : SlashCommandBase
 {
     [Group("quorum", "Quorum configuration.")]
-    public sealed class QuorumConfigurationModule(QuorumConfigurationService quorumConfigurationService)
-        : GuildConfigurationModuleBase
+    public sealed class QuorumSettingsModule(QuorumSettingsService quorumSettingsService)
+        : GuildSettingsModuleBase
     {
-        [SlashCommand("set", "Create or update a quorum config for a channel or category ID.")]
+        [SlashCommand("set", "Create or update a quorum settings for a channel or category ID.")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public Task SetAsync(string targetId, string roleIds, double proportion) =>
             ReplyAsync(() => SetResponseAsync(targetId, roleIds, proportion));
 
         [SlashCommand(
             "unset",
-            "Remove a quorum config for a channel or category. The target ID must be a channel or category ID.")]
+            "Remove a quorum settings for a channel or category. The target ID must be a channel or category ID.")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public Task UnsetAsync(string targetId) => ReplyAsync(() => UnsetResponseAsync(targetId));
 
@@ -29,7 +31,7 @@ public sealed class ConfigurationModule : SlashCommandBase
 
             try
             {
-                (bool created, _) = await quorumConfigurationService.UpsertAsync(
+                (bool created, _) = await quorumSettingsService.UpsertAsync(
                     Guild.Id,
                     resolvedTarget.TargetType,
                     resolvedTarget.Channel.Id,
@@ -45,10 +47,10 @@ public sealed class ConfigurationModule : SlashCommandBase
                 return resolvedTarget.Channel switch
                 {
                     SocketTextChannel textChannel =>
-                        $"Quorum config {action} for channel {textChannel.Mention} with roles {roleSummary} and proportion {proportion}.",
+                        $"Quorum settings {action} for channel {textChannel.Mention} with roles {roleSummary} and proportion {proportion}.",
                     SocketCategoryChannel categoryChannel =>
-                        $"Quorum config {action} for category \"{categoryChannel.Name}\" with roles {roleSummary} and proportion {proportion}.",
-                    _ => "Invalid channel type for quorum config."
+                        $"Quorum settings {action} for category \"{categoryChannel.Name}\" with roles {roleSummary} and proportion {proportion}.",
+                    _ => "Invalid channel type for quorum settings."
                 };
             }
             catch (ArgumentOutOfRangeException ex)
@@ -57,9 +59,9 @@ public sealed class ConfigurationModule : SlashCommandBase
                 {
                     "value" => "Invalid proportion provided. Please provide a value greater than 0 and at most 1.",
                     "roleIds" => "Invalid role IDs provided. Please provide a comma-separated list of valid role IDs.",
-                    "targetType" => "Invalid channel type for quorum config.",
+                    "targetType" => "Invalid channel type for quorum settings.",
                     "targetId" => "Invalid target ID provided.",
-                    _ => "Invalid quorum configuration provided."
+                    _ => "Invalid quorum settings provided."
                 };
             }
         }
@@ -69,20 +71,20 @@ public sealed class ConfigurationModule : SlashCommandBase
             if (!TryResolveQuorumTarget(targetId, out ResolvedQuorumTarget resolvedTarget, out string errorMessage))
                 return errorMessage;
 
-            bool deleted = await quorumConfigurationService.DeleteAsync(
+            bool deleted = await quorumSettingsService.DeleteAsync(
                 Guild.Id,
                 resolvedTarget.TargetType,
                 resolvedTarget.Channel.Id);
 
             if (!deleted)
-                return "No quorum config exists for that target.";
+                return "No quorum settings exist for that target.";
 
             return resolvedTarget.Channel switch
             {
-                SocketTextChannel textChannel => $"Quorum config removed for channel {textChannel.Mention}.",
+                SocketTextChannel textChannel => $"Quorum settings removed for channel {textChannel.Mention}.",
                 SocketCategoryChannel categoryChannel =>
-                    $"Quorum config removed for category \"{categoryChannel.Name}\".",
-                _ => "Invalid channel type for quorum config."
+                    $"Quorum settings removed for category \"{categoryChannel.Name}\".",
+                _ => "Invalid channel type for quorum settings."
             };
         }
 
@@ -96,16 +98,16 @@ public sealed class ConfigurationModule : SlashCommandBase
             if (!TryResolveGuildScope(targetId, out SocketGuildChannel? scope, out errorMessage))
                 return false;
 
-            QuorumConfigType? targetType = scope!.ChannelType switch
+            QuorumSettingsType? targetType = scope!.ChannelType switch
             {
-                ChannelType.Text => QuorumConfigType.Channel,
-                ChannelType.Category => QuorumConfigType.Category,
+                ChannelType.Text => QuorumSettingsType.Channel,
+                ChannelType.Category => QuorumSettingsType.Category,
                 _ => null
             };
 
             if (targetType is null)
             {
-                errorMessage = "Invalid channel type for quorum config.";
+                errorMessage = "Invalid channel type for quorum settings.";
                 return false;
             }
 
@@ -114,6 +116,6 @@ public sealed class ConfigurationModule : SlashCommandBase
             return true;
         }
 
-        private sealed record ResolvedQuorumTarget(SocketGuildChannel Channel, QuorumConfigType TargetType);
+        private sealed record ResolvedQuorumTarget(SocketGuildChannel Channel, QuorumSettingsType TargetType);
     }
 }

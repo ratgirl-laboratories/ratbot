@@ -4,8 +4,7 @@ namespace RatBot.Interactions.Modules.Quorum;
 
 [Group("quorum", "Quorum commands. Group restricted to moderators by default.")]
 [DefaultMemberPermissions(GuildPermission.MuteMembers)]
-public sealed class QuorumModule(ILogger logger, QuorumConfigurationService quorumConfigurationService)
-    : SlashCommandBase
+public sealed class QuorumModule(ILogger logger, QuorumSettingsService quorumSettingsService) : SlashCommandBase
 {
     private readonly ILogger _logger = logger.ForContext<QuorumModule>();
 
@@ -21,26 +20,28 @@ public sealed class QuorumModule(ILogger logger, QuorumConfigurationService quor
 
         ICategoryChannel? category = await currentChannel.GetCategoryAsync();
 
-        QuorumConfig? config = await quorumConfigurationService.GetEffectiveAsync(
+        QuorumSettings? config = await quorumSettingsService.GetEffectiveAsync(
             currentChannel.GuildId,
             currentChannel.Id,
             category?.Id);
 
         if (config is null)
             return InteractionResponse.Ephemeral(
-                "No quorum configuration found for this channel or category. Please use `/config quorum set` to configure one.");
+                "No quorum settings found for this channel or category. Please use `/config quorum set` to configure one.");
 
-        logger.Debug("Quorum config: {Config}", config);
+        logger.Debug("Quorum settings: {Config}", config);
 
         SocketGuild guild = Context.Guild!;
         SocketRole[] roles = config.RoleIds.Select(guild.GetRole).Where(role => role is not null).ToArray()!;
-        int membersWithRole = roles.SelectMany(role => role.Members).Select(member => member.Id).Distinct().Count();
-        int quorumCount = QuorumCalculator.CalculateRequiredMemberCount(membersWithRole, config.QuorumProportion);
+
+        HashSet<ulong> usersWithRoles = roles.SelectMany(x => x.Members).Select(y => y.Id).ToHashSet();
+
+        int quorumCount = QuorumCalculator.CalculateRequiredMemberCount(usersWithRoles.Count, config.QuorumProportion);
 
         _logger.Debug(
-            "Members with roles {RoleIds}: {MembersWithRole}, quorum count: {QuorumCount}, proportion: {ConfigQuorumProportion}",
+            "Members with roles {RoleIds}: {UsersWithRoles}, quorum count: {QuorumCount}, proportion: {ConfigQuorumProportion}",
             config.RoleIds,
-            membersWithRole,
+            usersWithRoles,
             quorumCount,
             config.QuorumProportion);
 

@@ -23,7 +23,7 @@ public sealed class EmojiModule(EmojiAnalyticsService emojiAnalyticsService, Dis
 
         foreach (EmojiUsageCount row in topUsage)
             text.AppendLine($"{FormatEmojiForDisplay(row.EmojiId)}: {row.UsageCount}");
-
+        
         return text.ToString();
     }
 

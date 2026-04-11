@@ -1,8 +1,8 @@
 using RatBot.Domain.Common;
 
-namespace RatBot.Interactions.Common.Configuration;
+namespace RatBot.Interactions.Common.Settings;
 
-public abstract class GuildConfigurationModuleBase : SlashCommandBase
+public abstract class GuildSettingsModuleBase : SlashCommandBase
 {
     protected SocketGuild Guild => Context.Guild!;
 

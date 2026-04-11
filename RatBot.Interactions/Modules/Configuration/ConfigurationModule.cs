@@ -95,7 +95,7 @@ public sealed class ConfigurationModule : SlashCommandBase
             if (!TryResolveGuildScope(targetId, out SocketGuildChannel? scope, out errorMessage))
                 return false;
 
-            QuorumConfigType? targetType = scope.ChannelType switch
+            QuorumConfigType? targetType = scope!.ChannelType switch
             {
                 ChannelType.Text => QuorumConfigType.Channel,
                 ChannelType.Category => QuorumConfigType.Category,

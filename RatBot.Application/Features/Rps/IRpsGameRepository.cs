@@ -1,10 +1,12 @@
+using ErrorOr;
+
 namespace RatBot.Application.Features.Rps;
 
 public interface IRpsGameRepository
 {
     Task CreateAsync(RpsGameSession game, CancellationToken ct = default);
 
-    Task<RpsPickSubmissionResult> SubmitPickAsync(
+    Task<ErrorOr<RpsPickSubmissionResult>> SubmitPickAsync(
         string gameId,
         ulong userId,
         RpsPick pick,

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ErrorOr;
 using RatBot.Application.Features.Rps;
 
 namespace RatBot.Infrastructure.Persistence;
@@ -15,7 +16,7 @@ public sealed class InMemoryRpsGameRepository : IRpsGameRepository
         return Task.CompletedTask;
     }
 
-    public Task<RpsPickSubmissionResult> SubmitPickAsync(
+    public Task<ErrorOr<RpsPickSubmissionResult>> SubmitPickAsync(
         string gameId,
         ulong userId,
         RpsPick pick,
@@ -25,20 +26,19 @@ public sealed class InMemoryRpsGameRepository : IRpsGameRepository
         while (true)
         {
             if (!_games.TryGetValue(gameId, out RpsGameSession? game))
-                return Task.FromResult(new RpsPickSubmissionResult(RpsPickSubmissionStatus.GameNotFound, null, null));
+                return Task.FromResult<ErrorOr<RpsPickSubmissionResult>>(Error.NotFound(description: "Game not found."));
 
             if (game.ExpiresAt <= utcNow)
             {
                 _games.TryRemove(gameId, out _);
-                return Task.FromResult(new RpsPickSubmissionResult(RpsPickSubmissionStatus.GameNotFound, null, null));
+                return Task.FromResult<ErrorOr<RpsPickSubmissionResult>>(Error.NotFound(description: "Game expired."));
             }
 
             bool isChallenger = userId == game.ChallengerId;
             bool isOpponent = userId == game.OpponentId;
 
             if (!isChallenger && !isOpponent)
-                return Task.FromResult(
-                    new RpsPickSubmissionResult(RpsPickSubmissionStatus.UnauthorizedUser, game, null));
+                return Task.FromResult<ErrorOr<RpsPickSubmissionResult>>(Error.Forbidden(description: "User not part of this game."));
 
             RpsGameSession updatedGame = isChallenger
                 ? game with { ChallengerPick = pick }
@@ -48,8 +48,7 @@ public sealed class InMemoryRpsGameRepository : IRpsGameRepository
                 continue;
 
             if (updatedGame.ChallengerPick is null || updatedGame.OpponentPick is null)
-                return Task.FromResult(
-                    new RpsPickSubmissionResult(RpsPickSubmissionStatus.PickRecorded, updatedGame, null));
+                return Task.FromResult<ErrorOr<RpsPickSubmissionResult>>(new RpsPickSubmissionResult(updatedGame, null));
 
             _games.TryRemove(gameId, out _);
 
@@ -57,8 +56,7 @@ public sealed class InMemoryRpsGameRepository : IRpsGameRepository
                 updatedGame.ChallengerPick.Value,
                 updatedGame.OpponentPick.Value);
 
-            return Task.FromResult(
-                new RpsPickSubmissionResult(RpsPickSubmissionStatus.GameCompleted, updatedGame, outcome));
+            return Task.FromResult<ErrorOr<RpsPickSubmissionResult>>(new RpsPickSubmissionResult(updatedGame, outcome));
         }
     }
 }

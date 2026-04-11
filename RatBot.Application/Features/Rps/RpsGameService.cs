@@ -1,3 +1,5 @@
+using ErrorOr;
+
 namespace RatBot.Application.Features.Rps;
 
 public sealed class RpsGameService(IRpsGameRepository repository, ILogger logger)
@@ -39,7 +41,7 @@ public sealed class RpsGameService(IRpsGameRepository repository, ILogger logger
         return game;
     }
 
-    public Task<RpsPickSubmissionResult> SubmitPickAsync(
+    public Task<ErrorOr<RpsPickSubmissionResult>> SubmitPickAsync(
         string gameId,
         ulong userId,
         RpsPick pick,

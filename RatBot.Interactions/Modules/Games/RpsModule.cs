@@ -1,3 +1,4 @@
+using ErrorOr;
 using RatBot.Application.Features.Rps;
 
 namespace RatBot.Interactions.Modules.Games;
@@ -105,33 +106,29 @@ public sealed class RpsModule(RpsGameService rpsGameService) : SlashCommandBase
             return;
         }
 
-        RpsPickSubmissionResult result = await rpsGameService.SubmitPickAsync(gameId, Context.User.Id, pick);
+        ErrorOr<RpsPickSubmissionResult> result = await rpsGameService.SubmitPickAsync(gameId, Context.User.Id, pick);
 
-        if (result.Status == RpsPickSubmissionStatus.GameNotFound)
-        {
-            await SendEphemeralAsync("That game is no longer active.");
-            return;
-        }
+        await result.Match(
+            async submission =>
+            {
+                await SendEphemeralAsync($"Locked in: **{pick}**.");
 
-        if (result.Status == RpsPickSubmissionStatus.UnauthorizedUser)
-        {
-            await SendEphemeralAsync("You are not part of this game.");
-            return;
-        }
-
-        await SendEphemeralAsync($"Locked in: **{pick}**.");
-
-        if (result.Status == RpsPickSubmissionStatus.PickRecorded)
-            return;
-
-        RpsGameSession completedGame =
-            result.Game ?? throw new InvalidOperationException("Completed RPS result missing game.");
-
-        RpsGameOutcome outcome =
-            result.Outcome ?? throw new InvalidOperationException("Completed RPS result missing outcome.");
-
-        await FollowupAsync(
-            $"Game complete: <@{completedGame.ChallengerId}> picked **{completedGame.ChallengerPick}**, <@{completedGame.OpponentId}> picked **{completedGame.OpponentPick}**.\n{GetResultText(outcome)}");
+                if (submission.Outcome is not null)
+                {
+                    await FollowupAsync(
+                        $"Game complete: <@{submission.Game.ChallengerId}> picked **{submission.Game.ChallengerPick}**, <@{submission.Game.OpponentId}> picked **{submission.Game.OpponentPick}**.\n{GetResultText(submission.Outcome.Value)}");
+                }
+            },
+            errors =>
+            {
+                Error firstError = errors[0];
+                return firstError.Type switch
+                {
+                    ErrorType.NotFound => SendEphemeralAsync("That game is no longer active."),
+                    ErrorType.Forbidden => SendEphemeralAsync("You are not part of this game."),
+                    _ => SendEphemeralAsync("An unexpected error occurred.")
+                };
+            });
     }
 
     private ILogger CreateTimingLogger(string operation) =>

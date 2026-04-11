@@ -1,5 +1,4 @@
 using Discord.Interactions;
-using Discord.Net;
 using Microsoft.Extensions.Options;
 using RatBot.Host.Configuration;
 

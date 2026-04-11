@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using RatBot.Domain.Enums;
 
 namespace RatBot.Domain.Features.Quorum;
 

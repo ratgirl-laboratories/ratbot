@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using JetBrains.Annotations;
 using RatBot.Application.Features.Rps;
 
 namespace RatBot.Interactions.Modules.Games;

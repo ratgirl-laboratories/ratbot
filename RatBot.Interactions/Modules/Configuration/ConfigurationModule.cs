@@ -1,12 +1,7 @@
-using JetBrains.Annotations;
-
-using RatBot.Domain.Enums;
-
 namespace RatBot.Interactions.Modules.Configuration;
 
 [Group("config", "Configuration commands.")]
 [DefaultMemberPermissions(GuildPermission.Administrator)]
-[UsedImplicitly]
 public sealed class ConfigurationModule : SlashCommandBase
 {
     [Group("quorum", "Quorum configuration.")]
@@ -18,7 +13,9 @@ public sealed class ConfigurationModule : SlashCommandBase
         public Task SetAsync(string targetId, string roleIds, double proportion) =>
             ReplyAsync(() => SetResponseAsync(targetId, roleIds, proportion));
 
-        [SlashCommand("unset", "Remove a quorum config for a channel or category. The target ID must be a channel or category ID.")]
+        [SlashCommand(
+            "unset",
+            "Remove a quorum config for a channel or category. The target ID must be a channel or category ID.")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public Task UnsetAsync(string targetId) => ReplyAsync(() => UnsetResponseAsync(targetId));
 
@@ -29,7 +26,7 @@ public sealed class ConfigurationModule : SlashCommandBase
 
             if (!TryResolveRoles(roleIds, out SocketRole[] roles, out errorMessage))
                 return errorMessage;
-            
+
             try
             {
                 (bool created, _) = await quorumConfigurationService.UpsertAsync(
@@ -39,7 +36,10 @@ public sealed class ConfigurationModule : SlashCommandBase
                     roles.Select(role => role.Id).ToArray(),
                     proportion);
 
-                string action = created ? "created" : "updated";
+                string action = created
+                    ? "created"
+                    : "updated";
+
                 string roleSummary = string.Join(", ", roles.Select(role => role.Mention));
 
                 return resolvedTarget.Channel switch
@@ -80,7 +80,8 @@ public sealed class ConfigurationModule : SlashCommandBase
             return resolvedTarget.Channel switch
             {
                 SocketTextChannel textChannel => $"Quorum config removed for channel {textChannel.Mention}.",
-                SocketCategoryChannel categoryChannel => $"Quorum config removed for category \"{categoryChannel.Name}\".",
+                SocketCategoryChannel categoryChannel =>
+                    $"Quorum config removed for category \"{categoryChannel.Name}\".",
                 _ => "Invalid channel type for quorum config."
             };
         }

@@ -1,4 +1,3 @@
-using JetBrains.Annotations;
 using RatBot.Interactions.Common.Responses;
 
 namespace RatBot.Interactions.Modules.Quorum;

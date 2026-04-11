@@ -2,7 +2,6 @@ using System.Text.Json;
 using RatBot.Domain.Enums;
 using RatBot.Domain.Features.Quorum;
 using Shouldly;
-using Xunit;
 
 namespace RatBot.Domain.Tests;
 

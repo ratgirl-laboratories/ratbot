@@ -1,11 +1,9 @@
-using JetBrains.Annotations;
 using RatBot.Application.Features.AdminSay;
 
 namespace RatBot.Interactions.Modules.Administration;
 
 [Group("admin", "Administrative commands.")]
 [DefaultMemberPermissions(GuildPermission.Administrator)]
-[UsedImplicitly]
 public sealed class AdminModule(AdminSayWorkflowService workflowService) : SlashCommandBase
 {
     private const string SayModalCustomIdPrefix = "admin-say";

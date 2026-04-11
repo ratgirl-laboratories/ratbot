@@ -1,6 +1,4 @@
 using Discord.Interactions;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application;
 using RatBot.Host.Configuration;
 using RatBot.Host.Discord;

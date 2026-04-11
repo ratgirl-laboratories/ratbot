@@ -1,6 +1,3 @@
-using RatBot.Domain.Enums;
-using RatBot.Domain.Features.Quorum;
-
 namespace RatBot.Application.Features.Quorum;
 
 public sealed class QuorumConfigurationService(IQuorumConfigurationRepository repository, ILogger logger)

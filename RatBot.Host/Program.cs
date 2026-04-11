@@ -1,6 +1,4 @@
-using RatBot.Host.Configuration;
 using Serilog.Debugging;
-using Serilog.Events;
 using Serilog.Sinks.OpenTelemetry;
 
 namespace RatBot.Host;

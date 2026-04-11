@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using LanguageExt;
 using RatBot.Domain.Enums;
 
 namespace RatBot.Domain.Features.Quorum;
@@ -7,7 +6,7 @@ namespace RatBot.Domain.Features.Quorum;
 /// <summary>
 /// Represents quorum behaviour for a guild target.
 /// </summary>
-public sealed class QuorumConfig
+public sealed record QuorumConfig
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="QuorumConfig"/> class.
@@ -18,7 +17,12 @@ public sealed class QuorumConfig
     /// <param name="roleIds">The role identifiers used for quorum counting.</param>
     /// <param name="quorumProportion">The quorum proportion.</param>
     [JsonConstructor]
-    public QuorumConfig(ulong guildId, QuorumConfigType targetType, ulong targetId, ulong[] roleIds, double quorumProportion)
+    public QuorumConfig(
+        ulong guildId,
+        QuorumConfigType targetType,
+        ulong targetId,
+        ulong[] roleIds,
+        double quorumProportion)
     {
         GuildId = RequireDiscordId(guildId, nameof(guildId));
         TargetType = RequireTargetType(targetType);
@@ -66,8 +70,7 @@ public sealed class QuorumConfig
         QuorumConfigType targetType,
         ulong targetId,
         ulong roleId,
-        double quorumProportion
-    ) => Create(guildId, targetType, targetId, new Arr<ulong>([roleId]), quorumProportion);
+        double quorumProportion) => Create(guildId, targetType, targetId, [roleId], quorumProportion);
 
     /// <summary>
     /// Creates a new config.
@@ -82,9 +85,9 @@ public sealed class QuorumConfig
         ulong guildId,
         QuorumConfigType targetType,
         ulong targetId,
-        Arr<ulong> roleIds,
-        double quorumProportion
-    ) => new QuorumConfig(guildId, targetType, targetId, roleIds.ToArray(), quorumProportion);
+        ulong[] roleIds,
+        double quorumProportion) =>
+        new QuorumConfig(guildId, targetType, targetId, roleIds.ToArray(), quorumProportion);
 
     private static ulong RequireDiscordId(ulong value, string paramName) =>
         value == 0
@@ -96,15 +99,16 @@ public sealed class QuorumConfig
             ? throw new ArgumentOutOfRangeException(nameof(targetType), "Invalid quorum configuration type.")
             : targetType;
 
-    private static Arr<ulong> RequireRoleIds(IEnumerable<ulong> roleIds)
+    private static ulong[] RequireRoleIds(IEnumerable<ulong> roleIds)
     {
         ArgumentNullException.ThrowIfNull(roleIds);
 
-        Arr<ulong> validatedRoleIds = new Arr<ulong>(roleIds
+        ulong[] validatedRoleIds = roleIds
             .Select(roleId => RequireDiscordId(roleId, nameof(roleIds)))
-            .Distinct());
+            .Distinct()
+            .ToArray();
 
-        return validatedRoleIds.IsEmpty
+        return validatedRoleIds.Length == 0
             ? throw new ArgumentOutOfRangeException(nameof(roleIds), "At least one role identifier must be provided.")
             : validatedRoleIds;
     }
@@ -117,8 +121,7 @@ public sealed class QuorumConfig
         if (value is <= 0 or > 1)
             throw new ArgumentOutOfRangeException(
                 nameof(value),
-                "Quorum proportion must be greater than 0 and at most 1."
-            );
+                "Quorum proportion must be greater than 0 and at most 1.");
 
         return value;
     }
@@ -130,7 +133,7 @@ public sealed class QuorumConfig
     /// <param name="quorumProportion">The quorum proportion.</param>
     /// <returns>The replacement config.</returns>
     public QuorumConfig Reconfigure(ulong roleId, double quorumProportion) =>
-        Reconfigure(new Arr<ulong>([roleId]), quorumProportion);
+        Reconfigure([roleId], quorumProportion);
 
     /// <summary>
     /// Creates a replacement config.
@@ -138,6 +141,6 @@ public sealed class QuorumConfig
     /// <param name="roleIds">The role identifiers.</param>
     /// <param name="quorumProportion">The quorum proportion.</param>
     /// <returns>The replacement config.</returns>
-    public QuorumConfig Reconfigure(Arr<ulong> roleIds, double quorumProportion) =>
+    public QuorumConfig Reconfigure(ulong[] roleIds, double quorumProportion) =>
         new QuorumConfig(GuildId, TargetType, TargetId, roleIds.ToArray(), quorumProportion);
 }

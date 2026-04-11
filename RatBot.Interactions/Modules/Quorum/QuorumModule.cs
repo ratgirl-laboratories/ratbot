@@ -30,6 +30,8 @@ public sealed class QuorumModule(ILogger logger, QuorumConfigurationService quor
         if (config is null)
             return InteractionResponse.Ephemeral(
                 "No quorum configuration found for this channel or category. Please use `/config quorum set` to configure one.");
+        
+        logger.Debug("Quorum config: {Config}", config);
 
         SocketGuild guild = Context.Guild!;
         SocketRole[] roles = config.RoleIds.Select(guild.GetRole).Where(role => role is not null).ToArray()!;

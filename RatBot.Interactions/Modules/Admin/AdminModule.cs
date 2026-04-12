@@ -1,12 +1,12 @@
-namespace RatBot.Interactions.Modules;
+using RatBot.Domain.Extensions;
+
+namespace RatBot.Interactions.Modules.Admin;
 
 [Group("admin", "Administrative commands.")]
 [DefaultMemberPermissions(GuildPermission.Administrator)]
 public sealed class AdminModule : SlashCommandBase
 {
     private const string SendModalCustomIdPrefix = "admin-send";
-    private const string MessageInputCustomId = "message";
-    private const int ModalMessageLimit = 4000;
 
     [SlashCommand("send", "Send a multiline message as the bot to a specific channel.")]
     [RequireUserPermission(GuildPermission.Administrator)]
@@ -20,20 +20,22 @@ public sealed class AdminModule : SlashCommandBase
             return;
         }
 
-        await RespondWithModalAsync(BuildSendModal(channel.Id));
+        string customId = $"{SendModalCustomIdPrefix}:{Context.User.Id}:{channel.Id}";
+
+        await Context.Interaction.RespondWithModalAsync<AdminSendModal>(customId);
     }
 
     [ModalInteraction($"{SendModalCustomIdPrefix}:*:*", true)]
     [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task SendModalAsync(ulong _, ulong channelId)
+    public async Task SendModalAsync(ulong invokerUserId, ulong channelId, AdminSendModal modal)
     {
-        SocketModal modal = (SocketModal)Context.Interaction;
+        if (Context.User.Id != invokerUserId)
+        {
+            await RespondEphemeralAsync("Only the user who opened this modal can submit it.");
+            return;
+        }
 
-        string message = modal.Data.Components
-            .Single(x => x.CustomId == MessageInputCustomId)
-            .Value;
-
-        ErrorOr<string> result = await ProcessAdminSendAsync(channelId, message);
+        ErrorOr<string> result = await ProcessAdminSendAsync(channelId, modal.Message);
 
         if (result.IsError)
         {
@@ -46,26 +48,12 @@ public sealed class AdminModule : SlashCommandBase
 
     private async Task<ErrorOr<string>> ProcessAdminSendAsync(ulong channelId, string message) =>
         await GetTextChannel(channelId)
-            .Then(channel => ValidateBotPermissions(channel).Then(_ => channel))
+            .Ensure(ValidateBotPermissions)
             .ThenDoAsync(_ => DeferAsync())
             .Then(channel => DiscordUtils
                 .SplitMessageIntoChunks(message)
                 .Then(chunks => (Channel: channel, Chunks: chunks)))
             .ThenAsync(x => SendChunksAsync(x.Channel, x.Chunks));
-
-    private Modal BuildSendModal(ulong channelId) =>
-        new ModalBuilder()
-            .WithTitle("Admin Send")
-            .WithCustomId($"{SendModalCustomIdPrefix}:{Context.User.Id}:{channelId}")
-            .AddTextInput(
-                "Message",
-                MessageInputCustomId,
-                TextInputStyle.Paragraph,
-                "Message to send as the bot.",
-                required: true,
-                minLength: 1,
-                maxLength: ModalMessageLimit)
-            .Build();
 
     private async static Task<string> SendChunksAsync(SocketTextChannel channel, string[] chunks)
     {
@@ -87,7 +75,8 @@ public sealed class AdminModule : SlashCommandBase
         return Result.Success;
     }
 
-    private ErrorOr<SocketTextChannel> GetTextChannel(ulong channelId) => Context.Guild.FetchTextChannel(channelId);
+    private ErrorOr<SocketTextChannel> GetTextChannel(ulong channelId) =>
+        Context.Guild.FetchTextChannel(channelId);
 
     private Task RespondEphemeralAsync(string message) =>
         Context.Interaction.HasResponded

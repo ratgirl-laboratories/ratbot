@@ -8,6 +8,7 @@ global using RatBot.Application.Features.Quorum;
 global using RatBot.Domain.Enums;
 global using RatBot.Domain.Features.Quorum;
 global using RatBot.Domain.Features.Rps;
-global using RatBot.Domain.Features.AdminSay;
+global using RatBot.Domain.Features.AdminSend;
 global using RatBot.Interactions.Common.Discord;
 global using Serilog;
+global using ErrorOr;

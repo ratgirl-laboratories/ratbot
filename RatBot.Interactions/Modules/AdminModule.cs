@@ -1,92 +1,96 @@
-using RatBot.Application.Features.AdminSay;
-
-namespace RatBot.Interactions.Modules.Administration;
+namespace RatBot.Interactions.Modules;
 
 [Group("admin", "Administrative commands.")]
 [DefaultMemberPermissions(GuildPermission.Administrator)]
-public sealed class AdminModule(AdminSayWorkflowService workflowService) : SlashCommandBase
+public sealed class AdminModule : SlashCommandBase
 {
-    private const string SayModalCustomIdPrefix = "admin-say";
+    private const string SendModalCustomIdPrefix = "admin-send";
+    private const string MessageInputCustomId = "message";
     private const int ModalMessageLimit = 4000;
 
-    [SlashCommand("say", "Send a multiline message as the bot to a specific channel.")]
+    [SlashCommand("send", "Send a multiline message as the bot to a specific channel.")]
     [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task SayAsync(ITextChannel channel)
+    public async Task SendAsync(ITextChannel channel)
     {
-        SocketGuild guild = Context.Guild!;
-        ChannelPermissions botPermissions = guild.CurrentUser.GetPermissions(channel);
+        ErrorOr<Success> permissions = ValidateBotPermissions(channel);
 
-        if (!botPermissions.ViewChannel || !botPermissions.SendMessages)
+        if (permissions.IsError)
         {
-            await RespondAsync($"I don't have permission to post in {channel.Mention}.", ephemeral: true);
+            await RespondEphemeralAsync(permissions.FirstError.Description);
             return;
         }
 
-        AdminSaySession session = await workflowService.CreateSessionAsync(guild.Id, Context.User.Id, channel.Id);
-        await RespondWithModalAsync<AdminSayModal>($"{SayModalCustomIdPrefix}:{session.SessionId}");
+        await RespondWithModalAsync(BuildSendModal(channel.Id));
     }
 
-    [ModalInteraction($"{SayModalCustomIdPrefix}:*", true)]
+    [ModalInteraction($"{SendModalCustomIdPrefix}:*:*", true)]
     [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task SayModalAsync(string sessionId, AdminSayModal modal)
+    public async Task SendModalAsync(ulong _, ulong channelId)
     {
-        SocketGuild guild = Context.Guild!;
-        AdminSaySession? session = await workflowService.ConsumeSessionAsync(sessionId, guild.Id, Context.User.Id);
+        SocketModal modal = (SocketModal)Context.Interaction;
 
-        if (session is null)
+        string message = modal.Data.Components
+            .Single(x => x.CustomId == MessageInputCustomId)
+            .Value;
+
+        ErrorOr<string> result = await ProcessAdminSendAsync(channelId, message);
+
+        if (result.IsError)
         {
-            await RespondAsync("No pending destination channel was found. Run `/admin say` again.", ephemeral: true);
+            await RespondEphemeralAsync(result.FirstError.Description);
             return;
         }
 
-        ITextChannel? channel = guild.GetTextChannel(session.ChannelId);
+        await RespondEphemeralAsync(result.Value);
+    }
 
-        if (channel is null)
-        {
-            await RespondAsync("I couldn't find that channel. Run `/admin say` again.", ephemeral: true);
-            return;
-        }
+    private async Task<ErrorOr<string>> ProcessAdminSendAsync(ulong channelId, string message) =>
+        await GetTextChannel(channelId)
+            .Then(channel => ValidateBotPermissions(channel).Then(_ => channel))
+            .ThenDoAsync(_ => DeferAsync())
+            .Then(channel => DiscordUtils
+                .SplitMessageIntoChunks(message)
+                .Then(chunks => (Channel: channel, Chunks: chunks)))
+            .ThenAsync(x => SendChunksAsync(x.Channel, x.Chunks));
 
-        ChannelPermissions botPermissions = guild.CurrentUser.GetPermissions(channel);
+    private Modal BuildSendModal(ulong channelId) =>
+        new ModalBuilder()
+            .WithTitle("Admin Send")
+            .WithCustomId($"{SendModalCustomIdPrefix}:{Context.User.Id}:{channelId}")
+            .AddTextInput(
+                "Message",
+                MessageInputCustomId,
+                TextInputStyle.Paragraph,
+                "Message to send as the bot.",
+                required: true,
+                minLength: 1,
+                maxLength: ModalMessageLimit)
+            .Build();
 
-        if (!botPermissions.ViewChannel || !botPermissions.SendMessages)
-        {
-            await RespondAsync($"I don't have permission to post in {channel.Mention}.", ephemeral: true);
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(modal.Message))
-        {
-            await RespondAsync("Message cannot be empty.", ephemeral: true);
-            return;
-        }
-
-        if (!await TryDeferEphemeralAsync())
-            return;
-
-        IReadOnlyList<string> messageChunks = DiscordMessageChunker.SplitForMessageLimit(modal.Message);
-
-        foreach (string chunk in messageChunks)
+    private async static Task<string> SendChunksAsync(SocketTextChannel channel, string[] chunks)
+    {
+        foreach (string chunk in chunks)
             await channel.SendMessageAsync(chunk);
 
-        string response = messageChunks.Count == 1
+        return chunks.Length == 1
             ? $"Sent your message to {channel.Mention}."
-            : $"Sent your message to {channel.Mention} in {messageChunks.Count} parts.";
-
-        await SendEphemeralAsync(response);
+            : $"Sent your message to {channel.Mention} in {chunks.Length} parts.";
     }
 
-    [UsedImplicitly]
-    public sealed record AdminSayModal : IModal
+    private ErrorOr<Success> ValidateBotPermissions(ITextChannel channel)
     {
-        [InputLabel("Message")]
-        [ModalTextInput(
-            "message",
-            TextInputStyle.Paragraph,
-            "Write the message exactly as it should be posted.",
-            maxLength: ModalMessageLimit)]
-        public string Message { get; set; } = string.Empty;
+        ChannelPermissions permissions = Context.Guild.CurrentUser.GetPermissions(channel);
 
-        public string Title => "Send Message";
+        if (!permissions.ViewChannel || !permissions.SendMessages)
+            return AdminSendErrors.InsufficientPermissions;
+
+        return Result.Success;
     }
+
+    private ErrorOr<SocketTextChannel> GetTextChannel(ulong channelId) => Context.Guild.FetchTextChannel(channelId);
+
+    private Task RespondEphemeralAsync(string message) =>
+        Context.Interaction.HasResponded
+            ? FollowupAsync(message, ephemeral: true)
+            : RespondAsync(message, ephemeral: true);
 }

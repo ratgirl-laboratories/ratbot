@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using RatBot.Application.Features.AdminSay;
+using RatBot.Application.Features.AdminSend;
 using RatBot.Application.Features.Emoji;
 using RatBot.Application.Features.Quorum;
 using RatBot.Application.Features.Rps;
@@ -14,7 +14,7 @@ public static class DependencyInjection
         {
             services.AddSingleton<EmojiAnalyticsBuffer>();
 
-            services.AddScoped<AdminSayWorkflowService>();
+            services.AddScoped<AdminSendService>();
             services.AddScoped<EmojiAnalyticsService>();
             services.AddScoped<QuorumSettingsService>();
             services.AddScoped<RpsGameService>();

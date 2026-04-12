@@ -22,11 +22,11 @@ public sealed class EmojiAnalyticsBackgroundWorker(
                     break;
 
                 // Collect a batch of items
-                List<string> emojiBatch = [];
+                Queue<string> emojiBatch = [];
 
                 while (buffer.Reader.TryRead(out string? emojiId))
                 {
-                    emojiBatch.Add(emojiId);
+                    emojiBatch.Enqueue(emojiId);
 
                     // Stop if batch size is reached (e.g., 100)
                     if (emojiBatch.Count >= 100)
@@ -52,7 +52,7 @@ public sealed class EmojiAnalyticsBackgroundWorker(
         }
     }
 
-    private async Task ProcessBatchAsync(List<string> emojiBatch, CancellationToken ct)
+    private async Task ProcessBatchAsync(Queue<string> emojiBatch, CancellationToken ct)
     {
         try
         {

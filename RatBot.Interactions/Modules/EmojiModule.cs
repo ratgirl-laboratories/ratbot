@@ -2,7 +2,7 @@ using System.Text;
 using RatBot.Application.Features.Emoji;
 using RatBot.Domain.Entities;
 
-namespace RatBot.Interactions.Modules.Emoji;
+namespace RatBot.Interactions.Modules;
 
 [Group("emoji", "Emoji analytics commands.")]
 [DefaultMemberPermissions(GuildPermission.MuteMembers)]
@@ -10,21 +10,22 @@ public sealed class EmojiModule(EmojiAnalyticsService emojiAnalyticsService, Dis
     : SlashCommandBase
 {
     [SlashCommand("usage", "Show the top 25 emojis by usage.")]
-    public Task UsageAsync() => ReplyAsync(GetUsageResponseAsync, true);
-
-    private async Task<string> GetUsageResponseAsync()
+    public async Task UsageAsync()
     {
         List<EmojiUsageCount> topUsage = await emojiAnalyticsService.GetTopUsageAsync();
 
         if (topUsage.Count == 0)
-            return "No emoji usage has been recorded yet.";
+        {
+            await RespondAsync("No emoji usage has been recorded yet.", ephemeral: true);
+            return;
+        }
 
         StringBuilder text = new StringBuilder("Top emoji usage:\n");
 
         foreach (EmojiUsageCount row in topUsage)
             text.AppendLine($"{FormatEmojiForDisplay(row.EmojiId)}: {row.UsageCount}");
         
-        return text.ToString();
+        await RespondAsync(text.ToString(), ephemeral: true);
     }
 
     private string FormatEmojiForDisplay(string emojiId)

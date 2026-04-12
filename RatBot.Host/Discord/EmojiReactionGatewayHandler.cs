@@ -85,6 +85,6 @@ public sealed class EmojiReactionGatewayHandler(
             .ForContext("EmojiName", emote.Name)
             .ForContext("EmojiId", emojiId)
             .ForContext("IsCustomEmoji", emojiId.HasValue)
-            .Information("Discord reaction event recorded.");
+            .Debug("Discord reaction event recorded.");
     }
 }

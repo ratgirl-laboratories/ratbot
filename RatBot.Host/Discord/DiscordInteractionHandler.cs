@@ -133,6 +133,7 @@ public sealed class DiscordInteractionHandler(
         _logger.Information(
             "Registered {InteractionModuleCount} interaction modules.",
             interactionService.Modules.Count);
+        LogRegisteredInteractionCommands();
 
         discordClient.InteractionCreated += HandleInteractionAsync;
         discordClient.Ready += RegisterCommandsAsync;
@@ -246,6 +247,75 @@ public sealed class DiscordInteractionHandler(
             .ForContext("invokee_username", usage.InvokeeUsername)
             .ForContext("invokee_source", usage.InvokeeSource)
             .Information("Command Invoked");
+    }
+
+    private void LogRegisteredInteractionCommands()
+    {
+        _logger.Information(
+            "Registered interaction commands. SlashCommandCount={SlashCommandCount} ContextCommandCount={ContextCommandCount} ComponentCommandCount={ComponentCommandCount} ModalCommandCount={ModalCommandCount}",
+            interactionService.SlashCommands.Count,
+            interactionService.ContextCommands.Count,
+            interactionService.ComponentCommands.Count,
+            interactionService.ModalCommands.Count);
+
+        foreach (ModuleInfo module in EnumerateModules(interactionService.Modules))
+        {
+            _logger.Information(
+                "Registered interaction module. Module={InteractionModule} SlashGroup={SlashGroup} SlashCommandCount={SlashCommandCount} ContextCommandCount={ContextCommandCount} ComponentCommandCount={ComponentCommandCount} ModalCommandCount={ModalCommandCount}",
+                module.Name,
+                module.SlashGroupName,
+                module.SlashCommands.Count,
+                module.ContextCommands.Count,
+                module.ComponentCommands.Count,
+                module.ModalCommands.Count);
+
+            foreach (SlashCommandInfo command in module.SlashCommands)
+                _logger.Information(
+                    "Registered interaction command. Type={InteractionCommandType} Module={InteractionModule} SlashGroup={SlashGroup} Name={InteractionCommandName} Method={InteractionCommandMethod}",
+                    "Slash",
+                    module.Name,
+                    module.SlashGroupName,
+                    command.Name,
+                    command.MethodName);
+
+            foreach (ContextCommandInfo command in module.ContextCommands)
+                _logger.Information(
+                    "Registered interaction command. Type={InteractionCommandType} Module={InteractionModule} Name={InteractionCommandName} Method={InteractionCommandMethod}",
+                    "Context",
+                    module.Name,
+                    command.Name,
+                    command.MethodName);
+
+            foreach (ComponentCommandInfo command in module.ComponentCommands)
+                _logger.Information(
+                    "Registered interaction command. Type={InteractionCommandType} Module={InteractionModule} Name={InteractionCommandName} Method={InteractionCommandMethod} SupportsWildCards={SupportsWildCards}",
+                    "Component",
+                    module.Name,
+                    command.Name,
+                    command.MethodName,
+                    command.SupportsWildCards);
+
+            foreach (ModalCommandInfo command in module.ModalCommands)
+                _logger.Information(
+                    "Registered interaction command. Type={InteractionCommandType} Module={InteractionModule} Name={InteractionCommandName} Method={InteractionCommandMethod} SupportsWildCards={SupportsWildCards} ModalType={ModalType}",
+                    "Modal",
+                    module.Name,
+                    command.Name,
+                    command.MethodName,
+                    command.SupportsWildCards,
+                    command.Modal.Type.FullName);
+        }
+    }
+
+    private static IEnumerable<ModuleInfo> EnumerateModules(IEnumerable<ModuleInfo> modules)
+    {
+        foreach (ModuleInfo module in modules)
+        {
+            yield return module;
+
+            foreach (ModuleInfo subModule in EnumerateModules(module.SubModules))
+                yield return subModule;
+        }
     }
 
     private ILogger CreateInteractionDiagnosticsLogger(SocketInteraction interaction) =>

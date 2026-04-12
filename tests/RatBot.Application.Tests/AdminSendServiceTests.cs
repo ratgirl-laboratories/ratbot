@@ -9,15 +9,15 @@ namespace RatBot.Application.Tests;
 [TestFixture]
 public sealed class AdminSendServiceTests
 {
+
+    private AdminSendService _service = null!;
+    private IDiscordChannelService _channelService = null!;
     [SetUp]
     public void SetUp()
     {
         _service = new AdminSendService();
         _channelService = Substitute.For<IDiscordChannelService>();
     }
-
-    private AdminSendService _service = null!;
-    private IDiscordChannelService _channelService = null!;
 
     [Test]
     public async Task SendAsync_WhenChannelIsMissing_ReturnsChannelNotFoundAndSendsNothing()
@@ -114,6 +114,24 @@ public sealed class AdminSendServiceTests
                 123,
                 Arg.Is<IReadOnlyList<string>>(messages =>
                     messages.Count == 2 && messages[0] == new string('a', 1999) + "\n" && messages[1] == "second"));
+    }
+
+    [Test]
+    public async Task SendAsync_WhenMessageSplitFails_ReturnsSplitErrorAndSendsNothing()
+    {
+        // Arrange
+        Error splitError = Error.Validation("AdminSend.SplitFailed", "split failed");
+        _service = new AdminSendService(_ => splitError);
+        _channelService.GetTextChannelAsync(123).Returns(new ResolvedTextChannel(123, "<#123>"));
+        _channelService.ValidateBotCanSendAsync(123).Returns(Result.Success);
+
+        // Act
+        ErrorOr<string> result = await _service.SendAsync(_channelService, 123, "hello");
+
+        // Assert
+        result.IsError.ShouldBeTrue();
+        result.FirstError.ShouldBe(splitError);
+        await _channelService.DidNotReceiveWithAnyArgs().SendMessagesAsync(default, default!);
     }
 
     [Test]

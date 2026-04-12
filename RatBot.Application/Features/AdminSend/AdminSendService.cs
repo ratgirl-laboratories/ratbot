@@ -5,6 +5,18 @@ namespace RatBot.Application.Features.AdminSend;
 
 public sealed class AdminSendService
 {
+    private readonly Func<string, ErrorOr<string[]>> _splitMessage;
+
+    public AdminSendService()
+        : this(message => DiscordUtils.SplitMessageIntoChunks(message))
+    {
+    }
+
+    internal AdminSendService(Func<string, ErrorOr<string[]>> splitMessage)
+    {
+        _splitMessage = splitMessage;
+    }
+
     public async Task<ErrorOr<string>> SendAsync(IDiscordChannelService channelService, ulong channelId, string message)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -20,7 +32,7 @@ public sealed class AdminSendService
         if (permissionsResult.IsError)
             return permissionsResult.Errors;
 
-        ErrorOr<string[]> chunksResult = DiscordUtils.SplitMessageIntoChunks(message);
+        ErrorOr<string[]> chunksResult = _splitMessage(message);
 
         if (chunksResult.IsError)
             return chunksResult.Errors;

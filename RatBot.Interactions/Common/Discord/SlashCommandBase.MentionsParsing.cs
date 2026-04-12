@@ -4,6 +4,13 @@ namespace RatBot.Interactions.Common.Discord;
 
 public abstract partial class SlashCommandBase
 {
+
+    private enum MentionKind
+    {
+        Channel,
+        Role,
+        User
+    }
     private static ErrorOr<ulong> ParseMentionId(
         string mentionString,
         MentionKind expectedKind,
@@ -90,12 +97,5 @@ public abstract partial class SlashCommandBase
         }
 
         return roles.ToArray();
-    }
-
-    private enum MentionKind
-    {
-        Channel,
-        Role,
-        User
     }
 }

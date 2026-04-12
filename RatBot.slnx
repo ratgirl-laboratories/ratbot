@@ -32,5 +32,7 @@
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/RatBot.Domain.Tests/RatBot.Domain.Tests.csproj"/>
+        <Project Path="tests/RatBot.Application.Tests/RatBot.Application.Tests.csproj"/>
+        <Project Path="tests/RatBot.Interactions.Tests/RatBot.Interactions.Tests.csproj"/>
     </Folder>
 </Solution>

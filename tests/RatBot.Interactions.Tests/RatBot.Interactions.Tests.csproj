@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="Discord.Net.Interactions" />
+        <PackageReference Include="Discord.Net.WebSocket" />
+        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NSubstitute" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\RatBot.Application\RatBot.Application.csproj" />
+        <ProjectReference Include="..\..\RatBot.Domain\RatBot.Domain.csproj" />
+        <ProjectReference Include="..\..\RatBot.Interactions\RatBot.Interactions.csproj" />
+    </ItemGroup>
+</Project>

@@ -1,11 +1,11 @@
+using ErrorOr;
 using RatBot.Application.Features.Rps;
 
-namespace RatBot.Interactions.Modules.Games;
+namespace RatBot.Interactions.Modules;
 
 [UsedImplicitly]
 public sealed class RpsModule(RpsGameService rpsGameService) : SlashCommandBase
 {
-    private const string DiagEventName = "interaction_diagnostics";
     private const string CustomIdPrefix = "rps";
 
     private static string GetCustomId(string gameId, RpsPick pick) =>
@@ -42,39 +42,38 @@ public sealed class RpsModule(RpsGameService rpsGameService) : SlashCommandBase
     [UserCommand("Challenge to RPS")]
     public async Task ChallengeAsync(IUser opponent)
     {
-        ILogger timingLogger = CreateTimingLogger("challenge");
-
-        timingLogger.Information(
-            "interaction_diag diag_stage={diag_stage} diag_outcome={diag_outcome} total_ms={total_ms} has_responded={has_responded}",
-            "challenge_start",
-            "start",
-            0,
-            Context.Interaction.HasResponded);
-
-        if (!await TryDeferPublicAsync())
-            return;
+        await DeferAsync();
 
         if (Context.User.Id == opponent.Id)
         {
-            await SendEphemeralAsync("You cannot challenge yourself.");
+            await RespondAsync("You cannot challenge yourself.", ephemeral: true);
             return;
         }
 
         if (opponent.IsBot)
         {
-            await SendEphemeralAsync("You cannot challenge a bot.");
+            await RespondAsync("You cannot challenge a bot.", ephemeral: true);
             return;
         }
 
         if (Context.Channel is not ITextChannel)
         {
-            await SendEphemeralAsync("This command can only be used in a guild text channel.");
+            await RespondAsync("This command can only be used in a guild text channel.", ephemeral: true);
             return;
         }
 
-        RpsGameSession game = await rpsGameService.CreateGameAsync(Context.User.Id, opponent.Id);
+        ErrorOr<RpsGameSession> gameResult = rpsGameService.CreateGameAsync(Context.User.Id, opponent.Id);
 
-        MessageComponent buttons = new ComponentBuilder().WithButton("Rock", GetCustomId(game.GameId, RpsPick.Rock))
+        if (gameResult.IsError)
+        {
+            await RespondAsync(gameResult.FirstError.Description, ephemeral: true);
+            return;
+        }
+
+        RpsGameSession game = gameResult.Value;
+
+        MessageComponent buttons = new ComponentBuilder()
+            .WithButton("Rock", GetCustomId(game.GameId, RpsPick.Rock))
             .WithButton("Paper", GetCustomId(game.GameId, RpsPick.Paper))
             .WithButton("Scissors", GetCustomId(game.GameId, RpsPick.Scissors))
             .Build();
@@ -87,59 +86,41 @@ public sealed class RpsModule(RpsGameService rpsGameService) : SlashCommandBase
     [ComponentInteraction($"{CustomIdPrefix}:*:*", true)]
     public async Task ChooseAsync(string gameId, string pickRaw)
     {
-        ILogger timingLogger = CreateTimingLogger("choose");
-
-        timingLogger.Information(
-            "interaction_diag diag_stage={diag_stage} diag_outcome={diag_outcome} total_ms={total_ms} has_responded={has_responded}",
-            "choose_start",
-            "start",
-            0,
-            Context.Interaction.HasResponded);
-
-        if (!await TryDeferEphemeralAsync())
-            return;
+        await DeferAsync();
 
         if (!TryParsePick(pickRaw, out RpsPick pick))
         {
-            await SendEphemeralAsync("Invalid pick.");
+            await RespondAsync(
+                "Invalid pick. Somehow. Like, you should really not be seeing this error.",
+                ephemeral: true);
+
             return;
         }
 
-        RpsPickSubmissionResult result = await rpsGameService.SubmitPickAsync(gameId, Context.User.Id, pick);
+        ErrorOr<RpsPickSubmissionResult> result = await rpsGameService.SubmitPickAsync(gameId, Context.User.Id, pick);
 
-        if (result.Status == RpsPickSubmissionStatus.GameNotFound)
-        {
-            await SendEphemeralAsync("That game is no longer active.");
-            return;
-        }
+        await result.SwitchFirstAsync(
+            async success =>
+            {
+                if (success.Outcome is null)
+                {
+                    await RespondAsync($"Locked in: **{pick}**.", ephemeral: true);
+                    return;
+                }
 
-        if (result.Status == RpsPickSubmissionStatus.UnauthorizedUser)
-        {
-            await SendEphemeralAsync("You are not part of this game.");
-            return;
-        }
+                await RespondAsync("Game complete.", ephemeral: true);
 
-        await SendEphemeralAsync($"Locked in: **{pick}**.");
+                ulong challengerId = success.Game.ChallengerId;
+                RpsPick? challengerPick = success.Game.ChallengerPick;
 
-        if (result.Status == RpsPickSubmissionStatus.PickRecorded)
-            return;
+                ulong opponentId = success.Game.OpponentId;
+                RpsPick? opponentPick = success.Game.OpponentPick;
 
-        RpsGameSession completedGame =
-            result.Game ?? throw new InvalidOperationException("Completed RPS result missing game.");
+                string resultText = GetResultText(success.Outcome.Value);
 
-        RpsGameOutcome outcome =
-            result.Outcome ?? throw new InvalidOperationException("Completed RPS result missing outcome.");
-
-        await FollowupAsync(
-            $"Game complete: <@{completedGame.ChallengerId}> picked **{completedGame.ChallengerPick}**, <@{completedGame.OpponentId}> picked **{completedGame.OpponentPick}**.\n{GetResultText(outcome)}");
+                await FollowupAsync(
+                    $"Game complete: <@{challengerId}> picked **{challengerPick}**, <@{opponentId}> picked **{opponentPick}**.\n{resultText}");
+            },
+            async error => await RespondAsync(error.Description, ephemeral: true));
     }
-
-    private ILogger CreateTimingLogger(string operation) =>
-        CreateMethodLogger(nameof(CreateTimingLogger))
-            .ForContext("diag_event", DiagEventName)
-            .ForContext("diag_component", "rps_module")
-            .ForContext("rps_operation", operation)
-            .ForContext(
-                "interaction_age_ms",
-                Math.Round(DateTimeOffset.UtcNow.Subtract(Context.Interaction.CreatedAt).TotalMilliseconds, 2));
 }

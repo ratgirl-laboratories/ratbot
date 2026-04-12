@@ -5,51 +5,48 @@ namespace RatBot.Infrastructure.Persistence;
 
 public sealed class RpsGameStore : IRpsGameStore
 {
+    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     private readonly ConcurrentDictionary<string, RpsGameSession> _games =
         new ConcurrentDictionary<string, RpsGameSession>(StringComparer.Ordinal);
 
-    public Task CreateAsync(RpsGameSession game, CancellationToken ct = default)
+    public void Create(RpsGameSession game)
     {
-        ArgumentNullException.ThrowIfNull(game);
         _games[game.GameId] = game;
-        return Task.CompletedTask;
     }
 
-    public Task<RpsPickSubmissionResult> SubmitPickAsync(
+    public async Task<ErrorOr<RpsPickSubmissionResult>> SubmitPickAsync(
         string gameId,
         ulong userId,
         RpsPick pick,
-        DateTimeOffset utcNow,
-        CancellationToken ct = default)
+        DateTimeOffset utcNow)
     {
-        while (true)
+        await _semaphore.WaitAsync();
+
+        try
         {
             if (!_games.TryGetValue(gameId, out RpsGameSession? game))
-                return Task.FromResult(new RpsPickSubmissionResult(RpsPickSubmissionStatus.GameNotFound, null, null));
+                return RpsErrors.GameNotFound;
 
             if (game.ExpiresAt <= utcNow)
             {
                 _games.TryRemove(gameId, out _);
-                return Task.FromResult(new RpsPickSubmissionResult(RpsPickSubmissionStatus.GameNotFound, null, null));
+                return RpsErrors.GameNotFound;
             }
 
             bool isChallenger = userId == game.ChallengerId;
             bool isOpponent = userId == game.OpponentId;
 
             if (!isChallenger && !isOpponent)
-                return Task.FromResult(
-                    new RpsPickSubmissionResult(RpsPickSubmissionStatus.UnauthorizedUser, game, null));
+                return RpsErrors.UnauthorizedUser;
 
             RpsGameSession updatedGame = isChallenger
                 ? game with { ChallengerPick = pick }
                 : game with { OpponentPick = pick };
 
-            if (!_games.TryUpdate(gameId, updatedGame, game))
-                continue;
+            _games[gameId] = updatedGame;
 
             if (updatedGame.ChallengerPick is null || updatedGame.OpponentPick is null)
-                return Task.FromResult(
-                    new RpsPickSubmissionResult(RpsPickSubmissionStatus.PickRecorded, updatedGame, null));
+                return new RpsPickSubmissionResult(updatedGame, null);
 
             _games.TryRemove(gameId, out _);
 
@@ -57,8 +54,11 @@ public sealed class RpsGameStore : IRpsGameStore
                 updatedGame.ChallengerPick.Value,
                 updatedGame.OpponentPick.Value);
 
-            return Task.FromResult(
-                new RpsPickSubmissionResult(RpsPickSubmissionStatus.GameCompleted, updatedGame, outcome));
+            return new RpsPickSubmissionResult(updatedGame, outcome);
+        }
+        finally
+        {
+            _semaphore.Release();
         }
     }
 }

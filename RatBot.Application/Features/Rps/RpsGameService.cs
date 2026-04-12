@@ -1,3 +1,5 @@
+using ErrorOr;
+
 namespace RatBot.Application.Features.Rps;
 
 public sealed class RpsGameService(IRpsGameStore store, ILogger logger)
@@ -6,18 +8,12 @@ public sealed class RpsGameService(IRpsGameStore store, ILogger logger)
 
     private readonly ILogger _logger = logger.ForContext<RpsGameService>();
 
-    public async Task<RpsGameSession> CreateGameAsync(
-        ulong challengerId,
-        ulong opponentId,
-        CancellationToken ct = default)
+    public ErrorOr<RpsGameSession> CreateGameAsync(ulong challengerId, ulong opponentId)
     {
-        ArgumentOutOfRangeException.ThrowIfZero(challengerId);
-        ArgumentOutOfRangeException.ThrowIfZero(opponentId);
-
         if (challengerId == opponentId)
-            throw new ArgumentException("Challenger and opponent must be different users.", nameof(opponentId));
+            return RpsErrors.SameUser;
 
-        DateTimeOffset createdAt = DateTimeOffset.UtcNow;
+        DateTime createdAt = DateTime.UtcNow;
 
         RpsGameSession game = new RpsGameSession(
             Guid.NewGuid().ToString("N"),
@@ -28,7 +24,7 @@ public sealed class RpsGameService(IRpsGameStore store, ILogger logger)
             null,
             null);
 
-        await store.CreateAsync(game, ct);
+        store.Create(game);
 
         _logger.Information(
             "Created RPS game {GameId} between challenger {ChallengerId} and opponent {OpponentId}.",
@@ -39,15 +35,6 @@ public sealed class RpsGameService(IRpsGameStore store, ILogger logger)
         return game;
     }
 
-    public Task<RpsPickSubmissionResult> SubmitPickAsync(
-        string gameId,
-        ulong userId,
-        RpsPick pick,
-        CancellationToken ct = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(gameId);
-        ArgumentOutOfRangeException.ThrowIfZero(userId);
-
-        return store.SubmitPickAsync(gameId, userId, pick, DateTimeOffset.UtcNow, ct);
-    }
+    public Task<ErrorOr<RpsPickSubmissionResult>> SubmitPickAsync(string gameId, ulong userId, RpsPick pick) =>
+        store.SubmitPickAsync(gameId, userId, pick, DateTime.UtcNow);
 }

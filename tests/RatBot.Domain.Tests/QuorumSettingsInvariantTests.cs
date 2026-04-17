@@ -3,6 +3,8 @@ using RatBot.Domain.Enums;
 using RatBot.Domain.Features.Quorum;
 using Shouldly;
 
+using RatBot.Domain.Primitives;
+
 namespace RatBot.Domain.Tests;
 
 /// <summary>
@@ -20,14 +22,14 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         QuorumSettings config = QuorumSettings.Create(
-            123,
+            new GuildSnowflake(123),
             QuorumSettingsType.Channel,
             456,
             RoleIds(10UL, 20UL, 10UL, 30UL),
             0.75);
 
         // Assert
-        config.GuildId.ShouldBe(123UL);
+        config.GuildId.Id.ShouldBe(123UL);
         config.TargetType.ShouldBe(QuorumSettingsType.Channel);
         config.TargetId.ShouldBe(456UL);
         config.RoleIds.ShouldBe(RoleIds(10UL, 20UL, 30UL));
@@ -40,7 +42,7 @@ public sealed class QuorumSettingsInvariantTests
         // Arrange
 
         // Act
-        QuorumSettings config = QuorumSettings.Create(123, QuorumSettingsType.Category, 456, 99, 0.6);
+        QuorumSettings config = QuorumSettings.Create(new GuildSnowflake(123), QuorumSettingsType.Category, 456, 99, 0.6);
 
         // Assert
         config.RoleIds.ShouldBe(RoleIds(99UL));
@@ -54,10 +56,10 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         ArgumentOutOfRangeException ex = Should.Throw<ArgumentOutOfRangeException>(() =>
-            QuorumSettings.Create(0, QuorumSettingsType.Channel, 1, RoleIds(1UL), 0.5));
+            QuorumSettings.Create(new GuildSnowflake(0), QuorumSettingsType.Channel, 1, RoleIds(1UL), 0.5));
 
         // Assert
-        ex.ParamName.ShouldBe("guildId");
+        ex.ParamName.ShouldBe("value");
     }
 
     [Test]
@@ -67,7 +69,7 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         ArgumentOutOfRangeException ex = Should.Throw<ArgumentOutOfRangeException>(() =>
-            QuorumSettings.Create(1, QuorumSettingsType.Channel, 0, RoleIds(1UL), 0.5));
+            QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 0, RoleIds(1UL), 0.5));
 
         // Assert
         ex.ParamName.ShouldBe("targetId");
@@ -80,7 +82,7 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         ArgumentOutOfRangeException ex = Should.Throw<ArgumentOutOfRangeException>(() =>
-            QuorumSettings.Create(1, (QuorumSettingsType)999, 2, RoleIds(1UL), 0.5));
+            QuorumSettings.Create(new GuildSnowflake(1), (QuorumSettingsType)999, 2, RoleIds(1UL), 0.5));
 
         // Assert
         ex.ParamName.ShouldBe("targetType");
@@ -94,7 +96,7 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         ArgumentOutOfRangeException ex = Should.Throw<ArgumentOutOfRangeException>(() =>
-            QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, roleIds, 0.5));
+            QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, roleIds, 0.5));
 
         // Assert
         ex.ParamName.ShouldBe("roleIds");
@@ -107,7 +109,7 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         ArgumentOutOfRangeException ex = Should.Throw<ArgumentOutOfRangeException>(() =>
-            QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, RoleIds(), 0.5));
+            QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, RoleIds(), 0.5));
 
         // Assert
         ex.ParamName.ShouldBe("roleIds");
@@ -120,7 +122,7 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         ArgumentOutOfRangeException ex = Should.Throw<ArgumentOutOfRangeException>(() =>
-            QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, RoleIds(5UL, 0UL), 0.5));
+            QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, RoleIds(5UL, 0UL), 0.5));
 
         // Assert
         ex.ParamName.ShouldBe("roleIds");
@@ -136,7 +138,7 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         ArgumentOutOfRangeException ex = Should.Throw<ArgumentOutOfRangeException>(() =>
-            QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, RoleIds(10UL), quorumProportion));
+            QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, RoleIds(10UL), quorumProportion));
 
         // Assert
         ex.ParamName.ShouldBe("value");
@@ -149,7 +151,7 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         ArgumentOutOfRangeException ex = Should.Throw<ArgumentOutOfRangeException>(() =>
-            QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, RoleIds(10UL), double.NaN));
+            QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, RoleIds(10UL), double.NaN));
 
         // Assert
         ex.ParamName.ShouldBe("value");
@@ -164,7 +166,7 @@ public sealed class QuorumSettingsInvariantTests
 
         // Act
         ArgumentOutOfRangeException ex = Should.Throw<ArgumentOutOfRangeException>(() =>
-            QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, RoleIds(10UL), quorumProportion));
+            QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, RoleIds(10UL), quorumProportion));
 
         // Assert
         ex.ParamName.ShouldBe("value");
@@ -174,13 +176,13 @@ public sealed class QuorumSettingsInvariantTests
     public void Reconfigure_WithValidInputs_UpdatesRolesAndProportion()
     {
         // Arrange
-        QuorumSettings config = QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, RoleIds(11UL), 0.5);
+        QuorumSettings config = QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, RoleIds(11UL), 0.5);
 
         // Act
         QuorumSettings reconfigured = config.Reconfigure(RoleIds(3UL, 2UL, 2UL, 1UL), 0.9);
 
         // Assert
-        reconfigured.GuildId.ShouldBe(1UL);
+        reconfigured.GuildId.Id.ShouldBe(1UL);
         reconfigured.TargetType.ShouldBe(QuorumSettingsType.Channel);
         reconfigured.TargetId.ShouldBe(2UL);
         reconfigured.RoleIds.ShouldBe(RoleIds(3UL, 2UL, 1UL));
@@ -191,13 +193,13 @@ public sealed class QuorumSettingsInvariantTests
     public void Reconfigure_WithSingleRoleOverload_UpdatesRolesAndProportion()
     {
         // Arrange
-        QuorumSettings config = QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, RoleIds(11UL), 0.5);
+        QuorumSettings config = QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, RoleIds(11UL), 0.5);
 
         // Act
         QuorumSettings reconfigured = config.Reconfigure(42UL, 1.0);
 
         // Assert
-        reconfigured.GuildId.ShouldBe(1UL);
+        reconfigured.GuildId.Id.ShouldBe(1UL);
         reconfigured.TargetType.ShouldBe(QuorumSettingsType.Channel);
         reconfigured.TargetId.ShouldBe(2UL);
         reconfigured.RoleIds.ShouldBe(RoleIds(42UL));
@@ -211,7 +213,7 @@ public sealed class QuorumSettingsInvariantTests
     public void Reconfigure_WithOutOfRangeProportion_ThrowsArgumentOutOfRange(double quorumProportion)
     {
         // Arrange
-        QuorumSettings config = QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, RoleIds(10UL), 0.5);
+        QuorumSettings config = QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, RoleIds(10UL), 0.5);
 
         // Act
         ArgumentOutOfRangeException ex =
@@ -225,7 +227,7 @@ public sealed class QuorumSettingsInvariantTests
     public void Reconfigure_WithEmptyRoles_ThrowsArgumentOutOfRange()
     {
         // Arrange
-        QuorumSettings config = QuorumSettings.Create(1, QuorumSettingsType.Channel, 2, RoleIds(10UL), 0.5);
+        QuorumSettings config = QuorumSettings.Create(new GuildSnowflake(1), QuorumSettingsType.Channel, 2, RoleIds(10UL), 0.5);
 
         // Act
         ArgumentOutOfRangeException ex =
@@ -240,7 +242,7 @@ public sealed class QuorumSettingsInvariantTests
     {
         // Arrange
         QuorumSettings original = QuorumSettings.Create(
-            123,
+            new GuildSnowflake(123),
             QuorumSettingsType.Channel,
             456,
             RoleIds(10UL, 20UL, 30UL),

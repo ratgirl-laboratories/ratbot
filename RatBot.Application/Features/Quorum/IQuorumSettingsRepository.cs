@@ -1,5 +1,3 @@
-using ErrorOr;
-
 namespace RatBot.Application.Features.Quorum;
 
 public interface IQuorumSettingsRepository

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using RatBot.Application.Features.Meta.Interfaces;
+using RatBot.Domain.Primitives;
 using RatBot.Infrastructure.Data;
 
 namespace RatBot.Infrastructure.Settings.Meta;
@@ -20,20 +21,22 @@ public sealed class MetaSuggestionRepository(BotDbContext dbContext) : IMetaSugg
 
     public async Task<ErrorOr<Success>> AttachThreadLinkageAsync(
         long suggestionId,
-        ulong threadChannelId,
+        ChannelSnowflake threadChannelId,
         CancellationToken ct = default)
     {
-        int updatedRows = await dbContext
+        MetaSuggestion? suggestion = await dbContext
             .Set<MetaSuggestion>()
-            .Where(x => x.Id == suggestionId)
-            .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(x => x.ThreadChannelId, threadChannelId),
-                ct);
+            .SingleOrDefaultAsync(x => x.Id == suggestionId, ct);
 
-        if (updatedRows == 0)
+        if (suggestion is null)
             return Error.NotFound(description: "Meta suggestion not found.");
 
+        ErrorOr<Success> attachResult = suggestion.AttachThread(threadChannelId);
+
+        if (attachResult.IsError)
+            return attachResult.Errors;
+
+        await dbContext.SaveChangesAsync(ct);
         return Result.Success;
     }
 }

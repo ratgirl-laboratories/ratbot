@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using RatBot.Domain.Primitives;
 
 namespace RatBot.Domain.Features.Quorum;
 
@@ -17,13 +18,13 @@ public sealed record QuorumSettings
     /// <param name="quorumProportion">The quorum proportion.</param>
     [JsonConstructor]
     public QuorumSettings(
-        ulong guildId,
+        GuildSnowflake guildId,
         QuorumSettingsType targetType,
         ulong targetId,
         ulong[] roleIds,
         double quorumProportion)
     {
-        GuildId = RequireDiscordId(guildId, nameof(guildId));
+        GuildId = RequireGuildId(guildId);
         TargetType = RequireTargetType(targetType);
         TargetId = RequireDiscordId(targetId, nameof(targetId));
         RoleIds = RequireRoleIds(roleIds).ToArray();
@@ -32,7 +33,7 @@ public sealed record QuorumSettings
 
     // EF binds this constructor from QuorumConfigs columns and role IDs are loaded separately.
     private QuorumSettings(
-        ulong guildId,
+        GuildSnowflake guildId,
         QuorumSettingsType targetType,
         ulong targetId,
         double quorumProportion)
@@ -43,7 +44,7 @@ public sealed record QuorumSettings
     /// <summary>
     ///     Gets the guild identifier.
     /// </summary>
-    public ulong GuildId { get; }
+    public GuildSnowflake GuildId { get; }
 
     /// <summary>
     ///     Gets the configuration target type.
@@ -75,7 +76,7 @@ public sealed record QuorumSettings
     /// <param name="quorumProportion">The quorum proportion.</param>
     /// <returns>The created config.</returns>
     public static QuorumSettings Create(
-        ulong guildId,
+        GuildSnowflake guildId,
         QuorumSettingsType targetType,
         ulong targetId,
         ulong roleId,
@@ -91,12 +92,17 @@ public sealed record QuorumSettings
     /// <param name="quorumProportion">The quorum proportion.</param>
     /// <returns>The created config.</returns>
     public static QuorumSettings Create(
-        ulong guildId,
+        GuildSnowflake guildId,
         QuorumSettingsType targetType,
         ulong targetId,
         ulong[] roleIds,
         double quorumProportion) =>
         new QuorumSettings(guildId, targetType, targetId, roleIds, quorumProportion);
+
+    private static GuildSnowflake RequireGuildId(GuildSnowflake value) =>
+        value.Id == 0
+            ? throw new ArgumentOutOfRangeException(nameof(value), "Discord identifiers must be non-zero.")
+            : value;
 
     private static ulong RequireDiscordId(ulong value, string paramName) =>
         value == 0

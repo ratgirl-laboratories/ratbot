@@ -2,6 +2,7 @@ using RatBot.Application.Common.Discord;
 using RatBot.Application.Features.Meta.Errors;
 using RatBot.Application.Features.Meta.Interfaces;
 using RatBot.Application.Features.Meta.Models;
+using RatBot.Domain.Primitives;
 
 namespace RatBot.Application.Features.Meta.Services;
 
@@ -14,42 +15,38 @@ public sealed class MetaSuggestionService(
 
     public async Task<ErrorOr<Success>> SubmitAsync(
         IDiscordMetaSuggestionForumService forumService,
-        MetaSuggestionSubmissionRequest request,
+        MetaSuggestionDraft draft,
+        MetaSuggestionAnonymity anonymity,
         CancellationToken ct = default)
     {
-        ErrorOr<NormalisedSubmission> normalizedResult = Normalize(request);
-
-        if (normalizedResult.IsError)
-            return normalizedResult.Errors;
-
-        NormalisedSubmission normalised = normalizedResult.Value;
-
         _logger.Information(
             "Received meta suggestion submission for guild {GuildId} from author {AuthorUserId}.",
-            normalised.GuildId,
-            normalised.AuthorUserId);
+            draft.GuildId,
+            draft.AuthorUserId);
 
-        ErrorOr<ulong> forumChannelResult =
-            await settingsRepository.GetSuggestForumChannelIdAsync(normalised.GuildId, ct);
+        ErrorOr<MetaSuggestionSettings> settingsResult =
+            await settingsRepository.GetSettingsAsync(new GuildSnowflake(draft.GuildId), ct);
 
-        if (forumChannelResult.IsError)
-            return forumChannelResult.Errors;
+        if (settingsResult.IsError)
+            return settingsResult.Errors;
 
-        MetaSuggestion suggestion = new MetaSuggestion
-        {
-            Id = 0,
-            GuildId = normalised.GuildId,
-            AuthorUserId = normalised.AuthorUserId,
-            SubmittedAtUtc = DateTimeOffset.UtcNow,
-            Title = normalised.Title,
-            Summary = normalised.Summary,
-            Motivation = normalised.Motivation,
-            Specification = normalised.Specification,
-            Anonymity = normalised.Anonymity,
-            State = MetaSuggestionState.New,
-            ForumChannelId = forumChannelResult.Value,
-            ThreadChannelId = null
-        };
+        MetaSuggestionSettings settings = settingsResult.Value;
+
+        ErrorOr<MetaSuggestion> suggestionResult = MetaSuggestion.CreateNew(
+            new GuildSnowflake(draft.GuildId),
+            new UserSnowflake(draft.AuthorUserId),
+            settings.SuggestForumChannelId,
+            draft.Title,
+            draft.Summary,
+            draft.Motivation,
+            draft.Specification,
+            anonymity,
+            DateTimeOffset.UtcNow);
+
+        if (suggestionResult.IsError)
+            return suggestionResult.Errors;
+
+        MetaSuggestion suggestion = suggestionResult.Value;
 
         ErrorOr<MetaSuggestion> persistedResult = await suggestionRepository.CreateAsync(suggestion, ct);
 
@@ -95,7 +92,7 @@ public sealed class MetaSuggestionService(
 
         ErrorOr<Success> linkageResult = await suggestionRepository.AttachThreadLinkageAsync(
             persisted.Id,
-            createdThread.ThreadChannelId,
+            new ChannelSnowflake(createdThread.ThreadChannelId),
             ct);
 
         if (linkageResult.IsError)
@@ -149,14 +146,4 @@ public sealed class MetaSuggestionService(
             MetaSuggestionAnonymity.Public => "public",
             _ => throw new ArgumentOutOfRangeException(nameof(anonymity), anonymity, null)
         };
-
-    private static ErrorOr<NormalisedSubmission> Normalize(MetaSuggestionSubmissionRequest request) =>
-        new NormalisedSubmission(
-            request.GuildId,
-            request.AuthorUserId,
-            request.Title.Trim(),
-            request.Summary.Trim(),
-            request.Motivation.Trim(),
-            request.Specification.Trim(),
-            request.Anonymity);
 }

@@ -40,7 +40,7 @@ public sealed class MetaModule(
         }
 
         string token = pendingStore.Save(
-            new MetaSuggestionPending(
+            new MetaSuggestionDraft(
                 Context.Guild.Id,
                 Context.User.Id,
                 modal.SuggestionTitle,
@@ -73,7 +73,7 @@ public sealed class MetaModule(
             return;
         }
 
-        if (!pendingStore.TryTake(token, out MetaSuggestionPending? draft) || draft is null)
+        if (!pendingStore.TryTake(token, out MetaSuggestionDraft? draft) || draft is null)
         {
             await RespondAsync(
                 "This suggestion draft has expired. Please submit `/meta suggest` again.",
@@ -92,17 +92,8 @@ public sealed class MetaModule(
 
         await DeferAsync(true);
 
-        MetaSuggestionSubmissionRequest submissionRequest = new MetaSuggestionSubmissionRequest(
-            draft.GuildId,
-            draft.AuthorUserId,
-            draft.Title,
-            draft.Summary,
-            draft.Motivation,
-            draft.Specification,
-            anonymityResult.Value);
-
         ErrorOr<Success> submitResult =
-            await metaSuggestionService.SubmitAsync(forumServiceFactory(Context.Guild), submissionRequest);
+            await metaSuggestionService.SubmitAsync(forumServiceFactory(Context.Guild), draft, anonymityResult.Value);
 
         await submitResult.SwitchFirstAsync(
             async _ => await FollowupAsync("Your suggestion has been noted and will now be reviewed by the committee <a:wrattendown:1494139087614120076>", ephemeral: true),

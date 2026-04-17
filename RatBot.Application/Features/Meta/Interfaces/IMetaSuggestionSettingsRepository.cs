@@ -1,11 +1,12 @@
+using RatBot.Domain.Primitives;
+
 namespace RatBot.Application.Features.Meta.Interfaces;
 
 public interface IMetaSuggestionSettingsRepository
 {
-    Task<ErrorOr<ulong>> GetSuggestForumChannelIdAsync(ulong guildId, CancellationToken ct = default);
+    Task<ErrorOr<MetaSuggestionSettings>> GetSettingsAsync(GuildSnowflake guildId, CancellationToken ct = default);
 
-    Task<ErrorOr<bool>> UpsertSuggestForumChannelAsync(
-        ulong guildId,
-        ulong forumChannelId,
+    Task<ErrorOr<Success>> SaveSettingsAsync(
+        MetaSuggestionSettings settings,
         CancellationToken ct = default);
 }

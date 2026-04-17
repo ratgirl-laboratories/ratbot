@@ -1,5 +1,3 @@
-using ErrorOr;
-
 namespace RatBot.Application.Features.AdminSend;
 
 public static class AdminSendErrors

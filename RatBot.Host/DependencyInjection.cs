@@ -4,7 +4,6 @@ using RatBot.Application;
 using RatBot.Host.Configuration;
 using RatBot.Host.Discord;
 using RatBot.Infrastructure;
-using RatBot.Interactions.Modules.Meta;
 using RatBot.Interactions.Modules.Meta.Services;
 using RatBot.Interactions.Modules.Meta.State;
 

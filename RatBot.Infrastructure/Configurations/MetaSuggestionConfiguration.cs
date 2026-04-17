@@ -1,6 +1,6 @@
+using RatBot.Domain.Primitives;
+using RatBot.Infrastructure.Converters;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using RatBot.Infrastructure.Settings;
-using RatBot.Infrastructure.Settings.Meta;
 
 namespace RatBot.Infrastructure.Configurations;
 
@@ -12,8 +12,8 @@ public sealed class MetaSuggestionConfiguration : IEntityTypeConfiguration<MetaS
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Id).ValueGeneratedOnAdd();
-        builder.Property(x => x.GuildId).HasColumnType("bigint").HasConversion<long>();
-        builder.Property(x => x.AuthorUserId).HasColumnType("bigint").HasConversion<long>();
+        builder.Property(x => x.GuildId).HasColumnType("bigint").HasConversion<SnowflakeValueConverter<GuildSnowflake>>();
+        builder.Property(x => x.AuthorUserId).HasColumnType("bigint").HasConversion<SnowflakeValueConverter<UserSnowflake>>();
         builder.Property(x => x.SubmittedAtUtc).HasColumnType("timestamp with time zone");
 
         builder.Property(x => x.Title).HasMaxLength(75);
@@ -24,8 +24,8 @@ public sealed class MetaSuggestionConfiguration : IEntityTypeConfiguration<MetaS
         builder.Property(x => x.Anonymity).HasColumnType("integer");
         builder.Property(x => x.State).HasColumnType("integer");
 
-        builder.Property(x => x.ForumChannelId).HasColumnType("bigint").HasConversion<long>();
-        builder.Property(x => x.ThreadChannelId).HasColumnType("bigint").HasConversion<long?>();
+        builder.Property(x => x.ForumChannelId).HasColumnType("bigint").HasConversion<SnowflakeValueConverter<ChannelSnowflake>>();
+        builder.Property(x => x.ThreadChannelId).HasColumnType("bigint").HasConversion<SnowflakeValueConverter<ChannelSnowflake>>();
 
         builder.HasIndex(x => x.GuildId);
         builder.HasIndex(x => new { x.GuildId, x.State });

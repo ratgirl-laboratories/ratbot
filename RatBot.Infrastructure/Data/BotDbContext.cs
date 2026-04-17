@@ -1,6 +1,7 @@
-using RatBot.Infrastructure.Settings;
-using RatBot.Infrastructure.Settings.Meta;
-using RatBot.Infrastructure.Settings.Quorum;
+using RatBot.Domain.Features.Emoji;
+using RatBot.Domain.Features.Meta;
+using RatBot.Domain.Features.Quorum;
+using RatBot.Domain.Primitives;
 
 namespace RatBot.Infrastructure.Data;
 
@@ -20,14 +21,14 @@ public sealed class BotDbContext : DbContext, IBotDataContext
     public DbSet<QuorumSettings> QuorumSettings =>
         Set<QuorumSettings>();
 
-    public DbSet<RoleEntity> QuorumSettingsRoles =>
-        Set<RoleEntity>();
+    public DbSet<RoleSnowflake> QuorumSettingsRoles =>
+        Set<RoleSnowflake>();
 
     public DbSet<EmojiUsageCount> EmojiUsageCounts => Set<EmojiUsageCount>();
 
     public DbSet<MetaSuggestion> MetaSuggestions => Set<MetaSuggestion>();
 
-    public DbSet<MetaSuggestionSettingsEntity> MetaSuggestionSettings => Set<MetaSuggestionSettingsEntity>();
+    public DbSet<MetaSuggestionSettings> MetaSuggestionSettings => Set<MetaSuggestionSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BotDbContext).Assembly);

@@ -1,5 +1,3 @@
-using ErrorOr;
-
 namespace RatBot.Application.Common.Extensions;
 
 public static class ErrorOrExtensions

@@ -1,4 +1,4 @@
-using ErrorOr;
+using RatBot.Domain.Primitives;
 
 namespace RatBot.Application.Features.Quorum;
 
@@ -18,7 +18,7 @@ public sealed class QuorumSettingsService(IQuorumSettingsRepository repository, 
         bool created = existingResult.IsError;
 
         QuorumSettings config = new QuorumSettings(
-            guildId,
+            new GuildSnowflake(guildId),
             targetType,
             targetId,
             roleIds.Distinct().ToArray(),

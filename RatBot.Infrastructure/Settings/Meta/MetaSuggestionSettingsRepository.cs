@@ -1,46 +1,42 @@
 using RatBot.Application.Features.Meta.Errors;
 using RatBot.Application.Features.Meta.Interfaces;
+using RatBot.Domain.Primitives;
 using RatBot.Infrastructure.Data;
 
 namespace RatBot.Infrastructure.Settings.Meta;
 
 public sealed class MetaSuggestionSettingsRepository(BotDbContext dbContext) : IMetaSuggestionSettingsRepository
 {
-    public async Task<ErrorOr<ulong>> GetSuggestForumChannelIdAsync(ulong guildId, CancellationToken ct = default)
+    public async Task<ErrorOr<MetaSuggestionSettings>> GetSettingsAsync(GuildSnowflake guildId, CancellationToken ct = default)
     {
-        MetaSuggestionSettingsEntity? entity = await dbContext
-            .Set<MetaSuggestionSettingsEntity>()
+        MetaSuggestionSettings? settings = await dbContext
+            .Set<MetaSuggestionSettings>()
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.GuildId == guildId, ct);
 
-        return entity is null
+        return settings is null
             ? MetaSuggestionErrors.ForumNotConfigured
-            : entity.SuggestForumChannelId;
+            : settings;
     }
 
-    public async Task<ErrorOr<bool>> UpsertSuggestForumChannelAsync(
-        ulong guildId,
-        ulong forumChannelId,
+    public async Task<ErrorOr<Success>> SaveSettingsAsync(
+        MetaSuggestionSettings settings,
         CancellationToken ct = default)
     {
-        MetaSuggestionSettingsEntity? existing = await dbContext
-            .Set<MetaSuggestionSettingsEntity>()
-            .SingleOrDefaultAsync(x => x.GuildId == guildId, ct);
+        bool exists = await dbContext
+            .Set<MetaSuggestionSettings>()
+            .AnyAsync(x => x.GuildId == settings.GuildId, ct);
 
-        if (existing is null)
+        if (!exists)
         {
-            dbContext.Add(new MetaSuggestionSettingsEntity
-            {
-                GuildId = guildId,
-                SuggestForumChannelId = forumChannelId
-            });
-
-            await dbContext.SaveChangesAsync(ct);
-            return true;
+            dbContext.Add(settings);
+        }
+        else
+        {
+            dbContext.Update(settings);
         }
 
-        dbContext.Update(existing with { SuggestForumChannelId = forumChannelId });
         await dbContext.SaveChangesAsync(ct);
-        return false;
+        return Result.Success;
     }
 }

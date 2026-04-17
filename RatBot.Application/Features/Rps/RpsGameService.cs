@@ -1,5 +1,3 @@
-using ErrorOr;
-
 namespace RatBot.Application.Features.Rps;
 
 public sealed class RpsGameService(IRpsGameStore store, ILogger logger)

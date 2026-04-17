@@ -1,5 +1,3 @@
-using ErrorOr;
-
 namespace RatBot.Application.Features.Rps;
 
 public static class RpsErrors

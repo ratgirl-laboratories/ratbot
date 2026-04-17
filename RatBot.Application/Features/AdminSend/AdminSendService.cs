@@ -1,4 +1,3 @@
-using ErrorOr;
 using RatBot.Application.Common.Discord;
 
 namespace RatBot.Application.Features.AdminSend;

@@ -1,5 +1,6 @@
+using RatBot.Domain.Primitives;
+using RatBot.Infrastructure.Converters;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using RatBot.Infrastructure.Settings.Quorum;
 
 namespace RatBot.Infrastructure.Configurations;
 
@@ -10,7 +11,7 @@ public sealed class QuorumSettingsConfiguration : IEntityTypeConfiguration<Quoru
         builder.ToTable("QuorumConfigs");
         builder.HasKey(x => new { x.GuildId, x.TargetType, x.TargetId });
 
-        builder.Property(x => x.GuildId).HasColumnType("bigint").HasConversion<long>();
+        builder.Property(x => x.GuildId).HasColumnType("bigint").HasConversion<SnowflakeValueConverter<GuildSnowflake>>();
         builder.Property(x => x.TargetType).HasColumnType("integer");
         builder.Property(x => x.TargetId).HasColumnType("bigint").HasConversion<long>();
         builder.Property(x => x.QuorumProportion).HasColumnType("double precision").HasPrecision(6, 4);

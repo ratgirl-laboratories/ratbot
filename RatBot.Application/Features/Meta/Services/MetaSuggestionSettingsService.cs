@@ -1,5 +1,6 @@
 using RatBot.Application.Features.Meta.Errors;
 using RatBot.Application.Features.Meta.Interfaces;
+using RatBot.Domain.Primitives;
 
 namespace RatBot.Application.Features.Meta.Services;
 
@@ -15,18 +16,15 @@ public sealed class MetaSuggestionSettingsService(IMetaSuggestionSettingsReposit
         if (forumChannelId == 0)
             return MetaSuggestionErrors.ForumNotFound;
 
-        ErrorOr<bool> result = await repository.UpsertSuggestForumChannelAsync(guildId, forumChannelId, ct);
+        ErrorOr<Success> result = await repository.SaveSettingsAsync(
+            new MetaSuggestionSettings(new GuildSnowflake(guildId), new ChannelSnowflake(forumChannelId)),
+            ct);
 
         if (result.IsError)
             return result.Errors;
 
-        bool created = result.Value;
-
         _logger.Information(
-            "Meta suggestion forum settings {Action} for guild {GuildId}. ForumChannelId={ForumChannelId}",
-            created
-                ? "created"
-                : "updated",
+            "Meta suggestion forum settings updated for guild {GuildId}. ForumChannelId={ForumChannelId}",
             guildId,
             forumChannelId);
 

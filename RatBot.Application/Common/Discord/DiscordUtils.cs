@@ -1,5 +1,3 @@
-using ErrorOr;
-
 namespace RatBot.Application.Common.Discord;
 
 public static class DiscordUtils

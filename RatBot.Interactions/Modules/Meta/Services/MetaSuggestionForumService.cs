@@ -1,19 +1,18 @@
 using RatBot.Application.Common.Discord;
 using RatBot.Application.Features.Meta.Errors;
-using RatBot.Domain.Primitives;
 
 namespace RatBot.Interactions.Modules.Meta.Services;
 
 public sealed class MetaSuggestionForumService(IGuild guild) : IMetaSuggestionForumService
 {
     public async Task<ErrorOr<CreatedMetaSuggestionThread>> CreateSuggestionThreadAsync(
-        ChannelSnowflake forumChannelId,
+        ulong forumChannelId,
         string title,
         string firstPost,
         string secondPost,
         string thirdPost)
     {
-        IForumChannel? forumChannel = await guild.GetForumChannelAsync(forumChannelId.Id);
+        IForumChannel? forumChannel = await guild.GetForumChannelAsync(forumChannelId);
 
         if (forumChannel is null)
             return MetaSuggestionErrors.ForumNotFound;

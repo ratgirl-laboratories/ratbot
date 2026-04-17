@@ -1,4 +1,4 @@
-using RatBot.Domain.Primitives;
+using RatBot.Infrastructure.Settings.Quorum;
 
 namespace RatBot.Infrastructure.Data;
 
@@ -16,7 +16,7 @@ public sealed class BotDbContext : DbContext
     }
 
     public DbSet<QuorumSettings> QuorumSettings => Set<QuorumSettings>();
-    public DbSet<RoleSnowflake> QuorumSettingsRoles => Set<RoleSnowflake>();
+    public DbSet<QuorumSettingsRole> QuorumSettingsRoles => Set<QuorumSettingsRole>();
     public DbSet<EmojiUsageCount> EmojiUsageCounts => Set<EmojiUsageCount>();
     public DbSet<MetaSuggestion> MetaSuggestions => Set<MetaSuggestion>();
     public DbSet<MetaSuggestionSettings> MetaSuggestionSettings => Set<MetaSuggestionSettings>();

@@ -1,6 +1,5 @@
 using RatBot.Application.Features.Meta.Errors;
 using RatBot.Application.Features.Meta.Interfaces;
-using RatBot.Domain.Primitives;
 
 namespace RatBot.Application.Features.Meta.Services;
 
@@ -17,7 +16,7 @@ public sealed class MetaSuggestionSettingsService(IMetaSuggestionSettingsReposit
             return MetaSuggestionErrors.ForumNotFound;
 
         ErrorOr<Success> result = await repository.SaveSettingsAsync(
-            new MetaSuggestionSettings(new GuildSnowflake(guildId), new ChannelSnowflake(forumChannelId)),
+            new MetaSuggestionSettings(guildId, forumChannelId),
             ct);
 
         if (result.IsError)

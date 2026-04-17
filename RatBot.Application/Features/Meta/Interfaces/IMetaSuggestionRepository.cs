@@ -1,5 +1,3 @@
-using RatBot.Domain.Primitives;
-
 namespace RatBot.Application.Features.Meta.Interfaces;
 
 public interface IMetaSuggestionRepository
@@ -8,6 +6,6 @@ public interface IMetaSuggestionRepository
 
     Task<ErrorOr<Success>> AttachThreadLinkageAsync(
         long suggestionId,
-        ChannelSnowflake threadChannelId,
+        ulong threadChannelId,
         CancellationToken ct = default);
 }

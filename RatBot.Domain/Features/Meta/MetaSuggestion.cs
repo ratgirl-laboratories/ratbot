@@ -1,5 +1,3 @@
-using RatBot.Domain.Primitives;
-
 namespace RatBot.Domain.Features.Meta;
 
 using ErrorOr;
@@ -12,8 +10,8 @@ public sealed class MetaSuggestion
     }
 
     public long Id { get; private init; }
-    public GuildSnowflake GuildId { get; private init; }
-    public UserSnowflake AuthorUserId { get; private init; }
+    public ulong GuildId { get; private init; }
+    public ulong AuthorUserId { get; private init; }
     public DateTimeOffset SubmittedAtUtc { get; private init; }
     public string Title { get; private init; } = string.Empty;
     public string Summary { get; private init; } = string.Empty;
@@ -21,13 +19,13 @@ public sealed class MetaSuggestion
     public string Specification { get; private init; } = string.Empty;
     public MetaSuggestionAnonymity Anonymity { get; private init; }
     public MetaSuggestionState State { get; private init; }
-    public ChannelSnowflake ForumChannelId { get; private init; }
-    public ChannelSnowflake? ThreadChannelId { get; private set; }
+    public ulong ForumChannelId { get; private init; }
+    public ulong? ThreadChannelId { get; private set; }
 
     public static ErrorOr<MetaSuggestion> CreateNew(
-        GuildSnowflake guildId,
-        UserSnowflake authorUserId,
-        ChannelSnowflake forumChannelId,
+        ulong guildId,
+        ulong authorUserId,
+        ulong forumChannelId,
         string title,
         string summary,
         string motivation,
@@ -78,7 +76,7 @@ public sealed class MetaSuggestion
             $"MetaSuggestion.{fieldName}Required",
             $"Meta suggestion {fieldName.ToLowerInvariant()} is required.");
 
-    public ErrorOr<Success> AttachThread(ChannelSnowflake threadChannelId)
+    public ErrorOr<Success> AttachThread(ulong threadChannelId)
     {
         if (ThreadChannelId is not null)
             return Error.Conflict(

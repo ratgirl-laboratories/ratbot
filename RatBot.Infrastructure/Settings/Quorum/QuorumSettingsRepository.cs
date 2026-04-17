@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using RatBot.Application.Features.Quorum;
-using RatBot.Domain.Primitives;
 using RatBot.Infrastructure.Data;
 
 namespace RatBot.Infrastructure.Settings.Quorum;
@@ -9,21 +8,20 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
 {
     public async Task<ErrorOr<QuorumSettings>> GetAsync(ulong guildId, QuorumSettingsType targetType, ulong targetId)
     {
-        GuildSnowflake guildSnowflake = new GuildSnowflake(guildId);
         QuorumSettings? config = await dbContext
             .Set<QuorumSettings>()
             .AsNoTracking()
             .SingleOrDefaultAsync(config =>
-                config.GuildId == guildSnowflake && config.TargetType == targetType && config.TargetId == targetId);
+                config.GuildId == guildId && config.TargetType == targetType && config.TargetId == targetId);
 
         if (config is null)
             return Error.NotFound(description: "Quorum settings not found");
 
         List<ulong> roleIds = await dbContext
-            .Set<RoleSnowflake>()
+            .Set<QuorumSettingsRole>()
             .AsNoTracking()
             .Where(role =>
-                EF.Property<GuildSnowflake>(role, "GuildId") == guildSnowflake
+                EF.Property<ulong>(role, "GuildId") == guildId
                 && EF.Property<QuorumSettingsType>(role, "TargetType") == targetType
                 && EF.Property<ulong>(role, "TargetId") == targetId)
             .Select(role => role.Id)
@@ -55,17 +53,17 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
         }
 
         await dbContext
-            .Set<RoleSnowflake>()
+            .Set<QuorumSettingsRole>()
             .Where(role =>
-                EF.Property<GuildSnowflake>(role, "GuildId") == config.GuildId
+                EF.Property<ulong>(role, "GuildId") == config.GuildId
                 && EF.Property<QuorumSettingsType>(role, "TargetType") == config.TargetType
                 && EF.Property<ulong>(role, "TargetId") == config.TargetId)
             .ExecuteDeleteAsync();
 
-        List<RoleSnowflake> roleRows = config.RoleIds.Select(roleId => new RoleSnowflake(roleId)).ToList();
+        List<QuorumSettingsRole> roleRows = config.RoleIds.Select(roleId => new QuorumSettingsRole(roleId)).ToList();
         dbContext.AddRange(roleRows);
 
-        foreach (EntityEntry<RoleSnowflake> entry in roleRows.Select(dbContext.Entry))
+        foreach (EntityEntry<QuorumSettingsRole> entry in roleRows.Select(dbContext.Entry))
         {
             entry.Property("GuildId").CurrentValue = config.GuildId;
             entry.Property("TargetType").CurrentValue = config.TargetType;
@@ -78,19 +76,18 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
 
     public async Task<ErrorOr<Deleted>> DeleteAsync(ulong guildId, QuorumSettingsType targetType, ulong targetId)
     {
-        GuildSnowflake guildSnowflake = new GuildSnowflake(guildId);
         QuorumSettings? entity = await dbContext
             .Set<QuorumSettings>()
             .SingleOrDefaultAsync(existing =>
-                existing.GuildId == guildSnowflake && existing.TargetType == targetType && existing.TargetId == targetId);
+                existing.GuildId == guildId && existing.TargetType == targetType && existing.TargetId == targetId);
 
         if (entity is null)
             return Error.NotFound(description: "Quorum settings not found");
 
         await dbContext
-            .Set<RoleSnowflake>()
+            .Set<QuorumSettingsRole>()
             .Where(role =>
-                EF.Property<GuildSnowflake>(role, "GuildId") == guildSnowflake
+                EF.Property<ulong>(role, "GuildId") == guildId
                 && EF.Property<QuorumSettingsType>(role, "TargetType") == targetType
                 && EF.Property<ulong>(role, "TargetId") == targetId)
             .ExecuteDeleteAsync();

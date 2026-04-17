@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using RatBot.Application.Features.Meta.Interfaces;
-using RatBot.Domain.Primitives;
 using RatBot.Infrastructure.Data;
 
 namespace RatBot.Infrastructure.Settings.Meta;
@@ -21,7 +20,7 @@ public sealed class MetaSuggestionRepository(BotDbContext dbContext) : IMetaSugg
 
     public async Task<ErrorOr<Success>> AttachThreadLinkageAsync(
         long suggestionId,
-        ChannelSnowflake threadChannelId,
+        ulong threadChannelId,
         CancellationToken ct = default)
     {
         MetaSuggestion? suggestion = await dbContext

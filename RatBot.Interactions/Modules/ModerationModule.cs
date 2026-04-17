@@ -1,6 +1,5 @@
 using RatBot.Application.Features.Moderation.Interfaces;
 using RatBot.Domain.Features.Moderation;
-using RatBot.Domain.Primitives;
 
 namespace RatBot.Interactions.Modules;
 
@@ -21,7 +20,7 @@ public static class ModerationModule
                 return;
             }
 
-            UserSnowflake bannedUser = parsedUserId;
+            ulong bannedUser = parsedUserId;
 
             if (Context.Guild.GetUser(bannedUser) is not null)
             {
@@ -32,8 +31,8 @@ public static class ModerationModule
                 return;
             }
 
-            GuildSnowflake guildId = Context.Guild.Id;
-            UserSnowflake moderator = Context.User.Id;
+            ulong guildId = Context.Guild.Id;
+            ulong moderator = Context.User.Id;
 
             ErrorOr<AutobannedUser> result = await moderationService.RegisterAutobanAsync(
                 guildId,
@@ -53,7 +52,7 @@ public static class ModerationModule
                 bannedUser,
                 guildId);
 
-            await RespondAsync($"Registered {bannedUser.ToMention()} for autoban.", ephemeral: true);
+            await RespondAsync($"Registered <@{bannedUser}> for autoban.", ephemeral: true);
         }
     }
 

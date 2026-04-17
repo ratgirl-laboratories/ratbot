@@ -171,7 +171,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.ToTable("QuorumConfigs", (string)null);
                 });
 
-            modelBuilder.Entity("RatBot.Domain.Primitives.RoleSnowflake", b =>
+            modelBuilder.Entity("RatBot.Infrastructure.Settings.Quorum.QuorumSettingsRole", b =>
                 {
                     b.Property<long>("GuildId")
                         .HasColumnType("bigint");
@@ -191,7 +191,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.ToTable("QuorumConfigRoles", (string)null);
                 });
 
-            modelBuilder.Entity("RatBot.Domain.Primitives.RoleSnowflake", b =>
+            modelBuilder.Entity("RatBot.Infrastructure.Settings.Quorum.QuorumSettingsRole", b =>
                 {
                     b.HasOne("RatBot.Domain.Features.Quorum.QuorumSettings", null)
                         .WithMany()

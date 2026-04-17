@@ -1,17 +1,15 @@
-using RatBot.Infrastructure.Converters;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using RatBot.Domain.Primitives;
+using RatBot.Infrastructure.Settings.Quorum;
 
 namespace RatBot.Infrastructure.Configurations;
 
-public sealed class QuorumSettingsRoleConfiguration : IEntityTypeConfiguration<RoleSnowflake>
+public sealed class QuorumSettingsRoleConfiguration : IEntityTypeConfiguration<QuorumSettingsRole>
 {
-    public void Configure(EntityTypeBuilder<RoleSnowflake> builder)
+    public void Configure(EntityTypeBuilder<QuorumSettingsRole> builder)
     {
         builder.ToTable("QuorumConfigRoles");
 
-        // Shadow properties for composite key from parent
-        builder.Property<GuildSnowflake>("GuildId").HasColumnType("bigint").HasConversion<SnowflakeValueConverter<GuildSnowflake>>();
+        builder.Property<ulong>("GuildId").HasColumnType("bigint").HasConversion<long>();
         builder.Property<QuorumSettingsType>("TargetType").HasColumnType("integer");
         builder.Property<ulong>("TargetId").HasColumnType("bigint").HasConversion<long>();
 

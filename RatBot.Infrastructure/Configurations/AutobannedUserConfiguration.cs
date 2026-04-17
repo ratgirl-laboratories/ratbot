@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RatBot.Domain.Features.Moderation;
-using RatBot.Domain.Primitives;
-using RatBot.Infrastructure.Converters;
 
 namespace RatBot.Infrastructure.Configurations;
 
@@ -16,19 +14,19 @@ public class AutobannedUserConfiguration : IEntityTypeConfiguration<AutobannedUs
         builder
             .Property(x => x.GuildId)
             .IsRequired()
-            .HasConversion<SnowflakeValueConverter<GuildSnowflake>>()
+            .HasConversion<long>()
             .HasColumnType("bigint");
 
         builder
             .Property(x => x.BannedUser)
             .IsRequired()
-            .HasConversion<SnowflakeValueConverter<UserSnowflake>>()
+            .HasConversion<long>()
             .HasColumnType("bigint");
 
         builder
             .Property(x => x.Moderator)
             .IsRequired()
-            .HasConversion<SnowflakeValueConverter<UserSnowflake>>()
+            .HasConversion<long>()
             .HasColumnType("bigint");
 
         builder

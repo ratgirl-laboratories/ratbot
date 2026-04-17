@@ -1,11 +1,9 @@
-using RatBot.Domain.Primitives;
-
 namespace RatBot.Application.Common.Discord;
 
 public interface IMetaSuggestionForumService
 {
     Task<ErrorOr<CreatedMetaSuggestionThread>> CreateSuggestionThreadAsync(
-        ChannelSnowflake forumChannelId,
+        ulong forumChannelId,
         string title,
         string firstPost,
         string secondPost,

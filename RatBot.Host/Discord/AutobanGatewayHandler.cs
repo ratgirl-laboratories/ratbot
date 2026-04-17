@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application.Features.Moderation.Interfaces;
 using RatBot.Domain.Features.Moderation;
-using RatBot.Domain.Primitives;
 
 namespace RatBot.Host.Discord;
 
@@ -24,8 +23,8 @@ public sealed class AutobanGatewayHandler(
 
     private async Task HandleUserJoinedAsync(SocketGuildUser user)
     {
-        GuildSnowflake guildId = user.Guild.Id;
-        UserSnowflake userId = user.Id;
+        ulong guildId = user.Guild.Id;
+        ulong userId = user.Id;
 
         try
         {

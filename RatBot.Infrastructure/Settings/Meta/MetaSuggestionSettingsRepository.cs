@@ -1,13 +1,12 @@
 using RatBot.Application.Features.Meta.Errors;
 using RatBot.Application.Features.Meta.Interfaces;
-using RatBot.Domain.Primitives;
 using RatBot.Infrastructure.Data;
 
 namespace RatBot.Infrastructure.Settings.Meta;
 
 public sealed class MetaSuggestionSettingsRepository(BotDbContext dbContext) : IMetaSuggestionSettingsRepository
 {
-    public async Task<ErrorOr<MetaSuggestionSettings>> GetSettingsAsync(GuildSnowflake guildId, CancellationToken ct = default)
+    public async Task<ErrorOr<MetaSuggestionSettings>> GetSettingsAsync(ulong guildId, CancellationToken ct = default)
     {
         MetaSuggestionSettings? settings = await dbContext
             .Set<MetaSuggestionSettings>()

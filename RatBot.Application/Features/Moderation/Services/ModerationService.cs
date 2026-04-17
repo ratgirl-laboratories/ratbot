@@ -1,7 +1,5 @@
-using RatBot.Application.Features.Moderation;
 using RatBot.Application.Features.Moderation.Interfaces;
 using RatBot.Domain.Features.Moderation;
-using RatBot.Domain.Primitives;
 
 namespace RatBot.Application.Features.Moderation.Services;
 
@@ -10,36 +8,36 @@ public sealed class ModerationService(IAutobannedUserRepository autobannedUsers,
     private readonly ILogger _logger = logger.ForContext<ModerationService>();
 
     public async Task<ErrorOr<AutobannedUser>> RegisterAutobanAsync(
-        GuildSnowflake guildId,
-        UserSnowflake bannedUser,
-        UserSnowflake moderator,
+        ulong guildId,
+        ulong userId,
+        ulong modId,
         CancellationToken ct = default)
     {
-        AutobannedUser? existing = await autobannedUsers.GetAsync(guildId, bannedUser, ct);
+        AutobannedUser? existing = await autobannedUsers.GetAsync(guildId, userId, ct);
 
         if (existing is not null)
-            return ModerationErrors.UserAlreadyAutobanned(bannedUser);
+            return ModerationErrors.UserAlreadyAutobanned(userId);
 
         AutobannedUser autobannedUser = AutobannedUser.Create(
             guildId,
-            bannedUser,
-            moderator,
+            userId,
+            modId,
             DateTimeOffset.UtcNow);
 
         await autobannedUsers.AddAsync(autobannedUser, ct);
 
         _logger.Information(
             "Registered user {BannedUserId} for autoban in guild {GuildId} by moderator {ModeratorId}.",
-            bannedUser,
+            userId,
             guildId,
-            moderator);
+            modId);
 
         return autobannedUser;
     }
 
     public Task<AutobannedUser?> GetAutobanAsync(
-        GuildSnowflake guildId,
-        UserSnowflake userId,
+        ulong guildId,
+        ulong userId,
         CancellationToken ct = default) =>
         autobannedUsers.GetAsync(guildId, userId, ct);
 }

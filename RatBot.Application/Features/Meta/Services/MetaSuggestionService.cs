@@ -2,7 +2,6 @@ using RatBot.Application.Common.Discord;
 using RatBot.Application.Features.Meta.Errors;
 using RatBot.Application.Features.Meta.Interfaces;
 using RatBot.Application.Features.Meta.Models;
-using RatBot.Domain.Primitives;
 
 namespace RatBot.Application.Features.Meta.Services;
 
@@ -60,7 +59,7 @@ public sealed class MetaSuggestionService(
             draft.AuthorUserId);
 
         ErrorOr<MetaSuggestionSettings> settingsResult =
-            await settingsRepository.GetSettingsAsync(new GuildSnowflake(draft.GuildId), ct);
+            await settingsRepository.GetSettingsAsync(draft.GuildId, ct);
 
         if (settingsResult.IsError)
             return settingsResult.Errors;
@@ -68,8 +67,8 @@ public sealed class MetaSuggestionService(
         MetaSuggestionSettings settings = settingsResult.Value;
 
         ErrorOr<MetaSuggestion> suggestionResult = MetaSuggestion.CreateNew(
-            new GuildSnowflake(draft.GuildId),
-            new UserSnowflake(draft.AuthorUserId),
+            draft.GuildId,
+            draft.AuthorUserId,
             settings.SuggestForumChannelId,
             draft.Title,
             draft.Summary,

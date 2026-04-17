@@ -1,5 +1,3 @@
-using RatBot.Domain.Primitives;
-
 namespace RatBot.Application.Features.Quorum;
 
 public sealed class QuorumSettingsService(IQuorumSettingsRepository repository, ILogger logger)
@@ -18,7 +16,7 @@ public sealed class QuorumSettingsService(IQuorumSettingsRepository repository, 
         bool created = existingResult.IsError;
 
         QuorumSettings config = new QuorumSettings(
-            new GuildSnowflake(guildId),
+            guildId,
             targetType,
             targetId,
             roleIds.Distinct().ToArray(),

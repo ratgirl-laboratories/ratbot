@@ -9,8 +9,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Discord.Net.Interactions"/>
-        <PackageReference Include="Discord.Net.WebSocket"/>
         <PackageReference Include="DotNetEnv"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
             <PrivateAssets>all</PrivateAssets>
@@ -27,8 +25,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\RatBot.Application\RatBot.Application.csproj"/>
+        <ProjectReference Include="..\RatBot.Discord\RatBot.Discord.csproj"/>
         <ProjectReference Include="..\RatBot.Domain\RatBot.Domain.csproj"/>
         <ProjectReference Include="..\RatBot.Infrastructure\RatBot.Infrastructure.csproj"/>
-        <ProjectReference Include="..\RatBot.Interactions\RatBot.Interactions.csproj"/>
     </ItemGroup>
 </Project>

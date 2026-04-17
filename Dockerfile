@@ -6,7 +6,7 @@ COPY Directory.Packages.props ./
 COPY RatBot.Application/RatBot.Application.csproj RatBot.Application/
 COPY RatBot.Host/RatBot.Host.csproj RatBot.Host/
 COPY RatBot.Infrastructure/RatBot.Infrastructure.csproj RatBot.Infrastructure/
-COPY RatBot.Interactions/RatBot.Interactions.csproj RatBot.Interactions/
+COPY RatBot.Discord/RatBot.Discord.csproj RatBot.Discord/
 COPY RatBot.Domain/RatBot.Domain.csproj RatBot.Domain/
 
 RUN dotnet restore RatBot.Host/RatBot.Host.csproj

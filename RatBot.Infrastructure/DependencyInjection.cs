@@ -1,13 +1,12 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using RatBot.Application.Features.Meta.Interfaces;
-using RatBot.Application.Features.Moderation.Interfaces;
-using RatBot.Application.Features.Quorum;
-using RatBot.Application.Features.Rps;
+using RatBot.Application.Meta;
+using RatBot.Application.Moderation;
+using RatBot.Application.Quorum;
+using RatBot.Application.Rps;
 using RatBot.Infrastructure.Data;
-using RatBot.Infrastructure.Persistence;
-using RatBot.Infrastructure.Settings.Meta;
-using RatBot.Infrastructure.Settings.Quorum;
+using RatBot.Infrastructure.Persistence.Repositories;
+using RatBot.Infrastructure.Stores;
 
 namespace RatBot.Infrastructure;
 

@@ -1,10 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using RatBot.Application.Features.Administration;
-using RatBot.Application.Features.Meta.Services;
-using RatBot.Application.Features.Moderation.Interfaces;
-using RatBot.Application.Features.Moderation.Services;
-using RatBot.Application.Features.Quorum;
-using RatBot.Application.Features.Rps;
+using RatBot.Application.Administration;
+using RatBot.Application.Meta;
+using RatBot.Application.Moderation;
+using RatBot.Application.Quorum;
+using RatBot.Application.Rps;
 
 namespace RatBot.Application;
 

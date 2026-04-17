@@ -22,7 +22,7 @@ namespace RatBot.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("RatBot.Domain.Features.Emoji.EmojiUsageCount", b =>
+            modelBuilder.Entity("RatBot.Domain.Emoji.EmojiUsageCount", b =>
                 {
                     b.Property<string>("EmojiId")
                         .HasMaxLength(128)
@@ -36,7 +36,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.ToTable("EmojiUsageCounts", (string)null);
                 });
 
-            modelBuilder.Entity("RatBot.Domain.Features.Meta.MetaSuggestion", b =>
+            modelBuilder.Entity("RatBot.Domain.Meta.MetaSuggestion", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -106,7 +106,7 @@ namespace RatBot.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("RatBot.Domain.Features.Meta.MetaSuggestionSettings", b =>
+            modelBuilder.Entity("RatBot.Domain.Meta.MetaSuggestionSettings", b =>
                 {
                     b.Property<long>("GuildId")
                         .HasColumnType("bigint");
@@ -119,7 +119,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.ToTable("MetaSuggestionSettings", (string)null);
                 });
 
-            modelBuilder.Entity("RatBot.Domain.Features.Moderation.AutobannedUser", b =>
+            modelBuilder.Entity("RatBot.Domain.Moderation.AutobannedUser", b =>
                 {
                     b.Property<long>("GuildId")
                         .HasColumnType("bigint");
@@ -144,7 +144,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.ToTable("AutobannedUsers", (string)null);
                 });
 
-            modelBuilder.Entity("RatBot.Domain.Features.Quorum.QuorumSettings", b =>
+            modelBuilder.Entity("RatBot.Domain.Quorum.QuorumSettings", b =>
                 {
                     b.Property<long>("GuildId")
                         .HasColumnType("bigint");
@@ -168,7 +168,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.ToTable("QuorumConfigs", (string)null);
                 });
 
-            modelBuilder.Entity("RatBot.Infrastructure.Settings.Quorum.QuorumSettingsRole", b =>
+            modelBuilder.Entity("RatBot.Infrastructure.Persistence.Models.QuorumSettingsRole", b =>
                 {
                     b.Property<long>("GuildId")
                         .HasColumnType("bigint");
@@ -188,9 +188,9 @@ namespace RatBot.Infrastructure.Migrations
                     b.ToTable("QuorumConfigRoles", (string)null);
                 });
 
-            modelBuilder.Entity("RatBot.Infrastructure.Settings.Quorum.QuorumSettingsRole", b =>
+            modelBuilder.Entity("RatBot.Infrastructure.Persistence.Models.QuorumSettingsRole", b =>
                 {
-                    b.HasOne("RatBot.Domain.Features.Quorum.QuorumSettings", null)
+                    b.HasOne("RatBot.Domain.Quorum.QuorumSettings", null)
                         .WithMany()
                         .HasForeignKey("GuildId", "TargetType", "TargetId")
                         .OnDelete(DeleteBehavior.Cascade)

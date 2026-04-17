@@ -2,7 +2,7 @@
     <Folder Name="/src/">
         <Project Path="RatBot.Host/RatBot.Host.csproj"/>
         <Project Path="RatBot.Application/RatBot.Application.csproj"/>
-        <Project Path="RatBot.Interactions/RatBot.Interactions.csproj"/>
+        <Project Path="RatBot.Discord/RatBot.Discord.csproj"/>
         <Project Path="RatBot.Domain/RatBot.Domain.csproj"/>
         <Project Path="RatBot.Infrastructure/RatBot.Infrastructure.csproj"/>
     </Folder>
@@ -19,9 +19,9 @@
     </Folder>
     <Folder Name="/ops/"/>
     <Folder Name="/ops/cicd/">
-        <File Path=".github/workflows/ci-format.yml"/>
         <File Path=".github/workflows/build-image.yml"/>
         <File Path=".github/workflows/deploy-vps.yml"/>
+        <File Path=".github/workflows/sonarqube.yml"/>
         <File Path="scripts/deploy-vps-stack.sh"/>
         <File Path="ops/github-actions-deploy.md"/>
     </Folder>
@@ -33,6 +33,6 @@
     <Folder Name="/tests/">
         <Project Path="tests/RatBot.Domain.Tests/RatBot.Domain.Tests.csproj"/>
         <Project Path="tests/RatBot.Application.Tests/RatBot.Application.Tests.csproj"/>
-        <Project Path="tests/RatBot.Interactions.Tests/RatBot.Interactions.Tests.csproj"/>
+        <Project Path="tests/RatBot.Discord.Tests/RatBot.Discord.Tests.csproj"/>
     </Folder>
 </Solution>

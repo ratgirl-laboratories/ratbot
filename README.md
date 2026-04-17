@@ -86,7 +86,7 @@ Grafana will be accessible at `http://localhost:3000` (Default: `admin`/`admin`)
 - `RatBot.Application`: Business logic and service interfaces.
 - `RatBot.Domain`: Core domain models and logic.
 - `RatBot.Infrastructure`: Database persistence (EF Core) and external service implementations.
-- `RatBot.Interactions`: Discord command modules and interaction handlers.
+- `RatBot.Discord`: Discord command modules and interaction handlers.
 - `RatBot.Host`: Entry point and DI configuration.
 
 ### Running Tests

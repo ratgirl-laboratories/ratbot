@@ -1,4 +1,4 @@
 ﻿// Global using directives
 
-global using RatBot.Domain.Enums;
+global using RatBot.Domain.Meta;
 global using ErrorOr;

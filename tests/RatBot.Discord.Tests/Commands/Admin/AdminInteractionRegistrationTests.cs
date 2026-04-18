@@ -20,8 +20,7 @@ public sealed class AdminInteractionRegistrationTests
 
         // Act
         GroupAttribute group =
-            moduleType.GetCustomAttribute<GroupAttribute>()
-            ?? throw new InvalidOperationException("Expected admin group attribute.");
+            moduleType.GetCustomAttribute<GroupAttribute>() ?? throw new InvalidOperationException("Expected admin group attribute.");
 
         DefaultMemberPermissionsAttribute permissions =
             moduleType.GetCustomAttribute<DefaultMemberPermissionsAttribute>()
@@ -38,13 +37,11 @@ public sealed class AdminInteractionRegistrationTests
     {
         // Arrange
         MethodInfo sendMethod =
-            typeof(AdminModule).GetMethod(nameof(AdminModule.SendAsync))
-            ?? throw new InvalidOperationException("Expected SendAsync method.");
+            typeof(AdminModule).GetMethod(nameof(AdminModule.SendAsync)) ?? throw new InvalidOperationException("Expected SendAsync method.");
 
         // Act
         SlashCommandAttribute slashCommand =
-            sendMethod.GetCustomAttribute<SlashCommandAttribute>()
-            ?? throw new InvalidOperationException("Expected slash command attribute.");
+            sendMethod.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
 
         RequireUserPermissionAttribute userPermission =
             sendMethod.GetCustomAttribute<RequireUserPermissionAttribute>()
@@ -87,17 +84,14 @@ public sealed class AdminInteractionRegistrationTests
         AdminSendModal modal = new AdminSendModal { Message = "hello" };
 
         PropertyInfo messageProperty =
-            typeof(AdminSendModal).GetProperty(nameof(AdminSendModal.Message))
-            ?? throw new InvalidOperationException("Expected Message property.");
+            typeof(AdminSendModal).GetProperty(nameof(AdminSendModal.Message)) ?? throw new InvalidOperationException("Expected Message property.");
 
         // Act
         InputLabelAttribute inputLabel =
-            messageProperty.GetCustomAttribute<InputLabelAttribute>()
-            ?? throw new InvalidOperationException("Expected input label attribute.");
+            messageProperty.GetCustomAttribute<InputLabelAttribute>() ?? throw new InvalidOperationException("Expected input label attribute.");
 
         ModalTextInputAttribute textInput =
-            messageProperty.GetCustomAttribute<ModalTextInputAttribute>()
-            ?? throw new InvalidOperationException("Expected text input attribute.");
+            messageProperty.GetCustomAttribute<ModalTextInputAttribute>() ?? throw new InvalidOperationException("Expected text input attribute.");
 
         // Assert
         modal.Title.ShouldBe("Send message as ratbot to a channel");
@@ -116,7 +110,8 @@ public sealed class AdminInteractionRegistrationTests
 
         InteractionService interactionService = new InteractionService(
             new DiscordSocketClient(),
-            new InteractionServiceConfig { AutoServiceScopes = true });
+            new InteractionServiceConfig { AutoServiceScopes = true }
+        );
 
         // Act
         await interactionService.AddModuleAsync<AdminModule>(services);

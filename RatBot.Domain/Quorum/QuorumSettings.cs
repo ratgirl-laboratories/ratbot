@@ -14,11 +14,7 @@ public sealed class QuorumSettings
     /// <param name="targetType">The configuration target type.</param>
     /// <param name="targetId">The configuration target identifier.</param>
     /// <param name="quorumProportion">The quorum proportion.</param>
-    public QuorumSettings(
-        ulong guildId,
-        QuorumSettingsType targetType,
-        ulong targetId,
-        double quorumProportion)
+    public QuorumSettings(ulong guildId, QuorumSettingsType targetType, ulong targetId, double quorumProportion)
     {
         GuildId = guildId;
         TargetType = targetType;
@@ -40,7 +36,7 @@ public sealed class QuorumSettings
     ///     Gets the configuration target identifier.
     /// </summary>
     public ulong TargetId { get; }
-    
+
     /// <summary>
     ///     Gets the role rows used for persistence.
     /// </summary>
@@ -64,6 +60,7 @@ public sealed class QuorumSettings
                     GuildId = GuildId,
                     TargetType = TargetType,
                     TargetId = TargetId
-                }));
+                })
+        );
     }
 }

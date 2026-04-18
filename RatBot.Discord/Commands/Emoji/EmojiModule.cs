@@ -24,7 +24,8 @@ public sealed class EmojiModule(EmojiAnalyticsService emojiAnalyticsService, Dis
 
                 await RespondAsync(text.ToString(), ephemeral: true);
             },
-            async error => await RespondAsync(error.Description, ephemeral: true));
+            async error => await RespondAsync(error.Description, ephemeral: true)
+        );
     }
 
     private string FormatEmojiForDisplay(string emojiId)

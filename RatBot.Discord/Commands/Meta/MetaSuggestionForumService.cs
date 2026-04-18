@@ -9,7 +9,8 @@ public sealed class MetaSuggestionForumService(IGuild guild) : ISuggestionThread
         string title,
         string firstPost,
         string secondPost,
-        string thirdPost)
+        string thirdPost
+    )
     {
         IForumChannel? forumChannel = await guild.GetForumChannelAsync(forumChannelId);
 

@@ -23,9 +23,8 @@ public sealed class MetaSuggestionRepository(BotDbContext dbContext) : IMetaSugg
         ulong threadChannelId,
         CancellationToken ct = default)
     {
-        MetaSuggestion? suggestion = await dbContext
-            .Set<MetaSuggestion>()
-            .SingleOrDefaultAsync(x => x.Id == suggestionId, ct);
+        MetaSuggestion? suggestion =
+            await dbContext.Set<MetaSuggestion>().SingleOrDefaultAsync(x => x.Id == suggestionId, ct);
 
         if (suggestion is null)
             return Error.NotFound(description: "Meta suggestion not found.");

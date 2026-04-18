@@ -6,7 +6,9 @@ namespace RatBot.Discord.Gateway;
 public sealed class AutobanGatewayHandler(
     DiscordSocketClient discordClient,
     IServiceScopeFactory scopeFactory,
-    ILogger logger) : IDiscordGatewayHandler
+    IModerationService moderationService,
+    ILogger logger)
+    : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<AutobanGatewayHandler>();
 
@@ -16,9 +18,9 @@ public sealed class AutobanGatewayHandler(
         return Task.CompletedTask;
     }
 
-    public void Subscribe() => discordClient.UserJoined += HandleUserJoinedAsync;
-
     public void Unsubscribe() => discordClient.UserJoined -= HandleUserJoinedAsync;
+
+    private void Subscribe() => discordClient.UserJoined += HandleUserJoinedAsync;
 
     private async Task HandleUserJoinedAsync(SocketGuildUser user)
     {
@@ -28,7 +30,6 @@ public sealed class AutobanGatewayHandler(
         try
         {
             using IServiceScope scope = scopeFactory.CreateScope();
-            IModerationService moderationService = scope.ServiceProvider.GetRequiredService<IModerationService>();
 
             AutobannedUser? autobannedUser = await moderationService.GetAutobanAsync(guildId, userId);
 

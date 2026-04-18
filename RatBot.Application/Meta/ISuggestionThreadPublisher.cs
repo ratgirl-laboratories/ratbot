@@ -7,5 +7,6 @@ public interface ISuggestionThreadPublisher
         string title,
         string firstPost,
         string secondPost,
-        string thirdPost);
+        string thirdPost
+    );
 }

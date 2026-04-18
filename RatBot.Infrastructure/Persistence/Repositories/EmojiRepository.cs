@@ -37,8 +37,7 @@ public sealed class EmojiRepository(BotDbContext dbContext) : IEmojiRepository
     }
 
     public async Task<ErrorOr<List<EmojiUsageCount>>> GetTopUsageAsync(int limit, CancellationToken ct = default) =>
-        await dbContext
-            .Set<EmojiUsageCount>()
+        await dbContext.Set<EmojiUsageCount>()
             .AsNoTracking()
             .OrderByDescending(x => x.UsageCount)
             .ThenBy(x => x.EmojiId)

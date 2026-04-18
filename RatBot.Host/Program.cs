@@ -10,8 +10,7 @@ public static class Program
         Env.TraversePath().Load();
         EnableSerilogSelfDiagnostics();
 
-        using IHost host = Microsoft
-            .Extensions.Hosting.Host.CreateDefaultBuilder(args)
+        using IHost host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration((_, configurationBuilder) => configurationBuilder.AddEnvironmentVariables())
             .UseSerilog((ctx, _, loggerConfiguration) => ConfigureSerilog(ctx.Configuration, loggerConfiguration))
             .ConfigureServices((ctx, services) => services.AddHostServices(ctx.Configuration))
@@ -32,23 +31,19 @@ public static class Program
             .Enrich.FromLogContext()
             .Enrich.WithProperty("service_name", config["OTEL:Resource:ServiceName"] ?? "ratbot")
             .Enrich.WithProperty("service_instance_id", serviceInstanceId)
-            .Enrich
-            .WithProperty(
+            .Enrich.WithProperty(
                 "environment",
                 config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production")
             .WriteTo.Console(LogEventLevel.Debug)
-            .WriteTo
-            .File(
+            .WriteTo.File(
                 "logs/verbose-.log",
                 rollingInterval: RollingInterval.Day,
                 restrictedToMinimumLevel: LogEventLevel.Verbose)
-            .WriteTo
-            .File(
+            .WriteTo.File(
                 "logs/debug-.log",
                 rollingInterval: RollingInterval.Day,
                 restrictedToMinimumLevel: LogEventLevel.Debug)
-            .WriteTo
-            .File(
+            .WriteTo.File(
                 "logs/info-.log",
                 rollingInterval: RollingInterval.Day,
                 restrictedToMinimumLevel: LogEventLevel.Information)
@@ -76,10 +71,11 @@ public static class Program
         string environment = config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production";
         string configuredProtocol = config["OTEL:Logs:Protocol"] ?? "grpc";
 
-        OtlpProtocol protocol = configuredProtocol.Equals("http", StringComparison.OrdinalIgnoreCase)
-                                || configuredProtocol.Equals("http/protobuf", StringComparison.OrdinalIgnoreCase)
-            ? OtlpProtocol.HttpProtobuf
-            : OtlpProtocol.Grpc;
+        OtlpProtocol protocol =
+            configuredProtocol.Equals("http", StringComparison.OrdinalIgnoreCase)
+            || configuredProtocol.Equals("http/protobuf", StringComparison.OrdinalIgnoreCase)
+                ? OtlpProtocol.HttpProtobuf
+                : OtlpProtocol.Grpc;
 
         loggerConfiguration.WriteTo.OpenTelemetry(options =>
         {
@@ -121,6 +117,7 @@ public static class Program
             protocol,
             serviceName,
             serviceInstanceId,
-            environment);
+            environment
+        );
     }
 }

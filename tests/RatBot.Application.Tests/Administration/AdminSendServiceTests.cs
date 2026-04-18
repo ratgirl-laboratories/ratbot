@@ -1,7 +1,7 @@
 using ErrorOr;
 using NSubstitute;
-using RatBot.Application.Common;
 using RatBot.Application.Administration;
+using RatBot.Application.Common;
 using Shouldly;
 
 namespace RatBot.Application.Tests.Administration;
@@ -9,9 +9,9 @@ namespace RatBot.Application.Tests.Administration;
 [TestFixture]
 public sealed class AdminSendServiceTests
 {
-
     private AdminSendService _service = null!;
     private IMessageChannelWriter _channelWriter = null!;
+
     [SetUp]
     public void SetUp()
     {
@@ -87,9 +87,7 @@ public sealed class AdminSendServiceTests
 
         await _channelWriter
             .Received(1)
-            .SendMessagesAsync(
-                123,
-                Arg.Is<IReadOnlyList<string>>(messages => messages.Count == 1 && messages[0] == "hello"));
+            .SendMessagesAsync(123, Arg.Is<IReadOnlyList<string>>(messages => messages.Count == 1 && messages[0] == "hello"));
     }
 
     [Test]
@@ -113,7 +111,9 @@ public sealed class AdminSendServiceTests
             .SendMessagesAsync(
                 123,
                 Arg.Is<IReadOnlyList<string>>(messages =>
-                    messages.Count == 2 && messages[0] == new string('a', 1999) + "\n" && messages[1] == "second"));
+                    messages.Count == 2 && messages[0] == new string('a', 1999) + "\n" && messages[1] == "second"
+                )
+            );
     }
 
     [Test]
@@ -147,7 +147,8 @@ public sealed class AdminSendServiceTests
 
         // Act & Assert
         InvalidOperationException exception = await Should.ThrowAsync<InvalidOperationException>(() =>
-            _service.SendAsync(_channelWriter, 123, "hello"));
+            _service.SendAsync(_channelWriter, 123, "hello")
+        );
 
         exception.Message.ShouldBe("send failed");
     }

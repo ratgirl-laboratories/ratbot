@@ -6,8 +6,8 @@ namespace RatBot.Discord.Commands.Meta;
 public sealed class MetaModule(
     MetaSuggestionService metaSuggestionService,
     MetaSuggestionPendingStore pendingStore,
-    DiscordMetaSuggestionForumServiceFactory forumServiceFactory)
-    : SlashCommandBase
+    DiscordMetaSuggestionForumServiceFactory forumServiceFactory
+) : SlashCommandBase
 {
     private const string ModalCustomIdPrefix = "meta-suggest";
     private const string AnonymityCustomIdPrefix = "meta-suggest-anon";
@@ -49,7 +49,8 @@ public sealed class MetaModule(
                 modal.SuggestionTitle,
                 modal.Summary,
                 modal.Motivation,
-                modal.Specification));
+                modal.Specification)
+        );
 
         ComponentBuilder components = new ComponentBuilder()
             .WithButton("Anonymous", $"{AnonymityCustomIdPrefix}:{Context.User.Id}:{token}:anonymous")
@@ -58,7 +59,8 @@ public sealed class MetaModule(
         await RespondAsync(
             "Choose how your identity should be treated if this suggestion is later accepted.",
             components: components.Build(),
-            ephemeral: true);
+            ephemeral: true
+        );
     }
 
     [ComponentInteraction($"{AnonymityCustomIdPrefix}:*:*:*", true)]
@@ -95,13 +97,18 @@ public sealed class MetaModule(
 
         await DeferAsync(true);
 
-        ErrorOr<Success> submitResult =
-            await metaSuggestionService.SubmitAsync(forumServiceFactory(Context.Guild), draft, anonymityResult.Value);
+        ErrorOr<Success> submitResult = await metaSuggestionService.SubmitAsync(
+            forumServiceFactory(Context.Guild),
+            draft,
+            anonymityResult.Value);
 
         await submitResult.SwitchFirstAsync(
-            async _ => await FollowupAsync(
-                "Your suggestion has been noted and will now be reviewed by the committee <a:wrattendown:1494139087614120076>",
-                ephemeral: true),
-            async error => await FollowupAsync(error.Description, ephemeral: true));
+            async _ =>
+                await FollowupAsync(
+                    "Your suggestion has been noted and will now be reviewed by the committee <a:wrattendown:1494139087614120076>",
+                    ephemeral: true
+                ),
+            async error => await FollowupAsync(error.Description, ephemeral: true)
+        );
     }
 }

@@ -3,12 +3,12 @@ namespace RatBot.Application.Meta;
 public sealed class MetaSuggestionService(
     IMetaSuggestionRepository suggestionRepository,
     IMetaSuggestionSettingsRepository settingsRepository,
-    ILogger logger)
+    ILogger logger
+)
 {
     private readonly ILogger _logger = logger.ForContext<MetaSuggestionService>();
 
-    private static string FormatThreadTitle(long suggestionId, string title) =>
-        $"#{suggestionId:D3} - {title}";
+    private static string FormatThreadTitle(long suggestionId, string title) => $"#{suggestionId:D3} - {title}";
 
     private static string BuildFirstPost(MetaSuggestion suggestion) =>
         $"""
@@ -46,15 +46,15 @@ public sealed class MetaSuggestionService(
         ISuggestionThreadPublisher threadPublisher,
         MetaSuggestionDraft draft,
         MetaSuggestionAnonymity anonymity,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         _logger.Information(
             "Received meta suggestion submission for guild {GuildId} from author {AuthorUserId}.",
             draft.GuildId,
             draft.AuthorUserId);
 
-        ErrorOr<MetaSuggestionSettings> settingsResult =
-            await settingsRepository.GetSettingsAsync(draft.GuildId, ct);
+        ErrorOr<MetaSuggestionSettings> settingsResult = await settingsRepository.GetSettingsAsync(draft.GuildId, ct);
 
         if (settingsResult.IsError)
             return settingsResult.Errors;
@@ -70,7 +70,8 @@ public sealed class MetaSuggestionService(
             draft.Motivation,
             draft.Specification,
             anonymity,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow
+        );
 
         if (suggestionResult.IsError)
             return suggestionResult.Errors;
@@ -99,7 +100,8 @@ public sealed class MetaSuggestionService(
             threadTitle,
             firstPost,
             secondPost,
-            thirdPost);
+            thirdPost
+        );
 
         if (threadResult.IsError)
         {
@@ -107,7 +109,8 @@ public sealed class MetaSuggestionService(
                 "Forum thread creation failed for suggestion {SuggestionId} in forum {ForumChannelId}. Error={ErrorCode}",
                 persisted.Id,
                 persisted.ForumChannelId,
-                threadResult.FirstError.Code);
+                threadResult.FirstError.Code
+            );
 
             return MetaSuggestionErrors.ForumThreadCreationFailed(persisted.Id);
         }
@@ -119,24 +122,21 @@ public sealed class MetaSuggestionService(
             createdThread.ThreadChannelId,
             persisted.Id);
 
-        ErrorOr<Success> linkageResult = await suggestionRepository.AttachThreadLinkageAsync(
-            persisted.Id,
-            createdThread.ThreadChannelId,
-            ct);
+        ErrorOr<Success> linkageResult =
+            await suggestionRepository.AttachThreadLinkageAsync(persisted.Id, createdThread.ThreadChannelId, ct);
 
         if (linkageResult.IsError)
         {
             _logger.Error(
                 "Failed persisting suggestion-thread linkage for suggestion {SuggestionId}, thread {ThreadChannelId}.",
                 persisted.Id,
-                createdThread.ThreadChannelId);
+                createdThread.ThreadChannelId
+            );
 
             return MetaSuggestionErrors.LinkagePersistFailed(persisted.Id);
         }
 
-        _logger.Information(
-            "Persisted suggestion-thread linkage for suggestion {SuggestionId}.",
-            persisted.Id);
+        _logger.Information("Persisted suggestion-thread linkage for suggestion {SuggestionId}.", persisted.Id);
 
         return Result.Success;
     }

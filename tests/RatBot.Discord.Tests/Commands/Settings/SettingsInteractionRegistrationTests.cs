@@ -17,8 +17,7 @@ public sealed class SettingsInteractionRegistrationTests
 
         // Act
         GroupAttribute group =
-            moduleType.GetCustomAttribute<GroupAttribute>()
-            ?? throw new InvalidOperationException("Expected meta group attribute.");
+            moduleType.GetCustomAttribute<GroupAttribute>() ?? throw new InvalidOperationException("Expected meta group attribute.");
 
         // Assert
         group.Name.ShouldBe("meta");
@@ -30,8 +29,7 @@ public sealed class SettingsInteractionRegistrationTests
     {
         // Arrange
         MethodInfo method =
-            typeof(SettingsModule.MetaSettingsModule)
-                .GetMethod(nameof(SettingsModule.MetaSettingsModule.SetSuggestForumChannelAsync))
+            typeof(SettingsModule.MetaSettingsModule).GetMethod(nameof(SettingsModule.MetaSettingsModule.SetSuggestForumChannelAsync))
             ?? throw new InvalidOperationException("Expected SetSuggestForumChannelAsync method.");
 
         // Act
@@ -41,8 +39,7 @@ public sealed class SettingsInteractionRegistrationTests
         parameter.ParameterType.ShouldBe(typeof(IForumChannel));
 
         SlashCommandAttribute slashCommand =
-            method.GetCustomAttribute<SlashCommandAttribute>()
-            ?? throw new InvalidOperationException("Expected slash command attribute.");
+            method.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
 
         slashCommand.Name.ShouldBe("suggest");
     }

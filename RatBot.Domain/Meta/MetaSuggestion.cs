@@ -29,7 +29,8 @@ public sealed class MetaSuggestion
         string motivation,
         string specification,
         MetaSuggestionAnonymity anonymity,
-        DateTimeOffset submittedAtUtc)
+        DateTimeOffset submittedAtUtc
+    )
     {
         title = title.Trim();
         summary = summary.Trim();
@@ -49,9 +50,7 @@ public sealed class MetaSuggestion
             return RequiredFieldMissing(nameof(Specification));
 
         if (!Enum.IsDefined(anonymity))
-            return Error.Validation(
-                "MetaSuggestion.InvalidAnonymity",
-                "Meta suggestion anonymity is invalid.");
+            return Error.Validation("MetaSuggestion.InvalidAnonymity", "Meta suggestion anonymity is invalid.");
 
         return new MetaSuggestion
         {

@@ -27,7 +27,8 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
             .AnyAsync(existing =>
                 existing.GuildId == config.GuildId
                 && existing.TargetType == config.TargetType
-                && existing.TargetId == config.TargetId);
+                && existing.TargetId == config.TargetId
+            );
 
         if (!exists)
         {
@@ -40,7 +41,8 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
                 .Where(existing =>
                     existing.GuildId == config.GuildId
                     && existing.TargetType == config.TargetType
-                    && existing.TargetId == config.TargetId)
+                    && existing.TargetId == config.TargetId
+                )
                 .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.QuorumProportion, config.QuorumProportion));
 
             await dbContext
@@ -70,10 +72,7 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
 
         await dbContext
             .Set<QuorumSettingsRole>()
-            .Where(role =>
-                role.GuildId == guildId
-                && role.TargetType == targetType
-                && role.TargetId == targetId)
+            .Where(role => role.GuildId == guildId && role.TargetType == targetType && role.TargetId == targetId)
             .ExecuteDeleteAsync();
 
         dbContext.Remove(entity);

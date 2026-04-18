@@ -23,12 +23,8 @@ public sealed class QuorumSettingsTests
         settings.QuorumProportion.ShouldBe(0.75);
         settings.Roles.Select(role => role.GuildId).ShouldBe([123UL, 123UL, 123UL]);
 
-        settings.Roles
-            .Select(role => role.TargetType)
-            .ShouldBe([QuorumSettingsType.Channel, QuorumSettingsType.Channel, QuorumSettingsType.Channel]);
+        settings.Roles.Select(role => role.TargetType).ShouldBe([QuorumSettingsType.Channel, QuorumSettingsType.Channel, QuorumSettingsType.Channel]);
 
-        settings.Roles
-            .Select(role => role.TargetId)
-            .ShouldBe([456UL, 456UL, 456UL]);
+        settings.Roles.Select(role => role.TargetId).ShouldBe([456UL, 456UL, 456UL]);
     }
 }

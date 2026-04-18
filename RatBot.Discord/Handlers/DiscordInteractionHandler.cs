@@ -16,7 +16,8 @@ public sealed class DiscordInteractionHandler(
     IServiceProvider services,
     IOptions<DiscordOptions> options,
     IConfiguration configuration,
-    ILogger logger) : IDiscordGatewayHandler
+    ILogger logger
+) : IDiscordGatewayHandler
 {
     private const string DiagEventName = "interaction_diagnostics";
     private readonly ConcurrentDictionary<ulong, Stopwatch> _interactionStopwatches = [];
@@ -26,6 +27,29 @@ public sealed class DiscordInteractionHandler(
 
     private readonly string _serviceInstanceId =
         configuration["OTEL:Resource:ServiceInstanceId"] ?? Environment.MachineName;
+
+    public async Task InitializeAsync(CancellationToken ct)
+    {
+        Assembly interactionsAssembly = typeof(HelloModule).Assembly;
+        await interactionService.AddModulesAsync(interactionsAssembly, services);
+
+        _logger.Information(
+            "Registered {InteractionModuleCount} interaction modules.",
+            interactionService.Modules.Count);
+
+        LogRegisteredInteractionCommands();
+
+        discordClient.InteractionCreated += HandleInteractionAsync;
+        discordClient.Ready += RegisterCommandsAsync;
+        interactionService.InteractionExecuted += HandleInteractionExecutedAsync;
+    }
+
+    public void Unsubscribe()
+    {
+        discordClient.InteractionCreated -= HandleInteractionAsync;
+        discordClient.Ready -= RegisterCommandsAsync;
+        interactionService.InteractionExecuted -= HandleInteractionExecutedAsync;
+    }
 
     private static string GetInteractionName(SocketInteraction interaction) =>
         interaction switch
@@ -46,7 +70,8 @@ public sealed class DiscordInteractionHandler(
         while (true)
         {
             SocketSlashCommandDataOption? subCommandOption = options.FirstOrDefault(option =>
-                option.Type is ApplicationCommandOptionType.SubCommand or ApplicationCommandOptionType.SubCommandGroup);
+                option.Type is ApplicationCommandOptionType.SubCommand or ApplicationCommandOptionType.SubCommandGroup
+            );
 
             if (subCommandOption is null)
                 return string.Join(" ", parts);
@@ -138,27 +163,63 @@ public sealed class DiscordInteractionHandler(
         }
     }
 
-    public async Task InitializeAsync(CancellationToken ct)
+    private async static Task TryRespondToUnmetPreconditionAsync(
+        IInteractionContext context,
+        IResult result,
+        ILogger interactionLogger)
     {
-        Assembly interactionsAssembly = typeof(HelloModule).Assembly;
-        await interactionService.AddModulesAsync(interactionsAssembly, services);
+        if (result.Error != InteractionCommandError.UnmetPrecondition)
+            return;
 
-        _logger.Information(
-            "Registered {InteractionModuleCount} interaction modules.",
-            interactionService.Modules.Count);
+        if (context.Interaction.HasResponded)
+            return;
 
-        LogRegisteredInteractionCommands();
+        string reason = string.IsNullOrWhiteSpace(result.ErrorReason)
+            ? "Command precondition failed."
+            : result.ErrorReason;
 
-        discordClient.InteractionCreated += HandleInteractionAsync;
-        discordClient.Ready += RegisterCommandsAsync;
-        interactionService.InteractionExecuted += HandleInteractionExecutedAsync;
+        try
+        {
+            await context.Interaction.RespondAsync($"Command failed: {reason}", ephemeral: true);
+
+            interactionLogger.Debug(
+                "interaction_diag diag_stage={DiagStage} diag_outcome={DiagOutcome} has_responded={HasResponded}",
+                "precondition_response",
+                "success",
+                context.Interaction.HasResponded
+            );
+        }
+        catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
+        {
+            interactionLogger.Warning(ex, "Unknown interaction while responding to unmet precondition.");
+        }
+        catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
+        {
+            interactionLogger.Information(
+                ex,
+                "Interaction was already acknowledged while responding to unmet precondition.");
+        }
+        catch (Exception ex)
+        {
+            interactionLogger.Warning(ex, "Failed to send unmet precondition response.");
+        }
     }
 
-    public void Unsubscribe()
+    private static void LogCommandUsage(
+        ILogger interactionLogger,
+        IInteractionContext context,
+        SocketInteraction interaction)
     {
-        discordClient.InteractionCreated -= HandleInteractionAsync;
-        discordClient.Ready -= RegisterCommandsAsync;
-        interactionService.InteractionExecuted -= HandleInteractionExecutedAsync;
+        CommandUsageDetails usage = GetCommandUsageDetails(interaction);
+
+        interactionLogger
+            .ForContext("method_context", $"{nameof(DiscordInteractionHandler)}.{nameof(LogCommandUsage)}")
+            .ForContext("command_name", usage.CommandName)
+            .ForContext("invoker_user_id", context.User.Id)
+            .ForContext("invokee_user_id", usage.InvokeeUserId)
+            .ForContext("invokee_username", usage.InvokeeUsername)
+            .ForContext("invokee_source", usage.InvokeeSource)
+            .Debug("Command invoked");
     }
 
     private async Task RegisterCommandsAsync()
@@ -207,7 +268,8 @@ public sealed class DiscordInteractionHandler(
                     "dispatch",
                     "success",
                     Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2),
-                    interaction.HasResponded);
+                    interaction.HasResponded
+                );
 
                 return;
             }
@@ -217,7 +279,8 @@ public sealed class DiscordInteractionHandler(
                 "dispatch",
                 "failed",
                 result.Error?.ToString() ?? "None",
-                result.ErrorReason ?? string.Empty);
+                result.ErrorReason ?? string.Empty
+            );
 
             _interactionStopwatches.TryRemove(interaction.Id, out _);
 
@@ -259,10 +322,7 @@ public sealed class DiscordInteractionHandler(
         }
     }
 
-    private async Task HandleInteractionExecutedAsync(
-        ICommandInfo command,
-        IInteractionContext context,
-        IResult result)
+    private async Task HandleInteractionExecutedAsync(ICommandInfo command, IInteractionContext context, IResult result)
     {
         _interactionStopwatches.TryRemove(context.Interaction.Id, out Stopwatch? stopwatch);
 
@@ -292,7 +352,8 @@ public sealed class DiscordInteractionHandler(
                 "execute_complete",
                 "success",
                 totalMs,
-                context.Interaction.HasResponded);
+                context.Interaction.HasResponded
+            );
 
             return;
         }
@@ -307,7 +368,8 @@ public sealed class DiscordInteractionHandler(
                 totalMs,
                 context.Interaction.HasResponded,
                 result.Error?.ToString() ?? "None",
-                result.ErrorReason ?? string.Empty);
+                result.ErrorReason ?? string.Empty
+            );
 
             await TryRespondToUnmetPreconditionAsync(context, result, interactionLogger);
             return;
@@ -320,67 +382,10 @@ public sealed class DiscordInteractionHandler(
             totalMs,
             context.Interaction.HasResponded,
             result.Error?.ToString() ?? "None",
-            result.ErrorReason ?? string.Empty);
+            result.ErrorReason ?? string.Empty
+        );
 
         await TryRespondToUnmetPreconditionAsync(context, result, interactionLogger);
-    }
-
-    private async static Task TryRespondToUnmetPreconditionAsync(
-        IInteractionContext context,
-        IResult result,
-        ILogger interactionLogger)
-    {
-        if (result.Error != InteractionCommandError.UnmetPrecondition)
-            return;
-
-        if (context.Interaction.HasResponded)
-            return;
-
-        string reason = string.IsNullOrWhiteSpace(result.ErrorReason)
-            ? "Command precondition failed."
-            : result.ErrorReason;
-
-        try
-        {
-            await context.Interaction.RespondAsync($"Command failed: {reason}", ephemeral: true);
-
-            interactionLogger.Debug(
-                "interaction_diag diag_stage={DiagStage} diag_outcome={DiagOutcome} has_responded={HasResponded}",
-                "precondition_response",
-                "success",
-                context.Interaction.HasResponded);
-        }
-        catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
-        {
-            interactionLogger.Warning(ex, "Unknown interaction while responding to unmet precondition.");
-        }
-        catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
-        {
-            interactionLogger.Information(
-                ex,
-                "Interaction was already acknowledged while responding to unmet precondition.");
-        }
-        catch (Exception ex)
-        {
-            interactionLogger.Warning(ex, "Failed to send unmet precondition response.");
-        }
-    }
-
-    private static void LogCommandUsage(
-        ILogger interactionLogger,
-        IInteractionContext context,
-        SocketInteraction interaction)
-    {
-        CommandUsageDetails usage = GetCommandUsageDetails(interaction);
-
-        interactionLogger
-            .ForContext("method_context", $"{nameof(DiscordInteractionHandler)}.{nameof(LogCommandUsage)}")
-            .ForContext("command_name", usage.CommandName)
-            .ForContext("invoker_user_id", context.User.Id)
-            .ForContext("invokee_user_id", usage.InvokeeUserId)
-            .ForContext("invokee_username", usage.InvokeeUsername)
-            .ForContext("invokee_source", usage.InvokeeSource)
-            .Debug("Command invoked");
     }
 
     private void LogRegisteredInteractionCommands()
@@ -413,7 +418,8 @@ public sealed class DiscordInteractionHandler(
                     Method = command.MethodName,
                     SupportsWildCards = (bool?)null,
                     ModalType = (string?)null
-                }));
+                })
+            );
 
             commandDetails.AddRange(
                 module.ContextCommands.Select(command => new
@@ -425,7 +431,8 @@ public sealed class DiscordInteractionHandler(
                     Method = command.MethodName,
                     SupportsWildCards = (bool?)null,
                     ModalType = (string?)null
-                }));
+                })
+            );
 
             commandDetails.AddRange(
                 module.ComponentCommands.Select(command => new
@@ -437,7 +444,8 @@ public sealed class DiscordInteractionHandler(
                     Method = command.MethodName,
                     SupportsWildCards = (bool?)command.SupportsWildCards,
                     ModalType = (string?)null
-                }));
+                })
+            );
 
             commandDetails.AddRange(
                 module.ModalCommands.Select(command => new
@@ -449,7 +457,8 @@ public sealed class DiscordInteractionHandler(
                     Method = command.MethodName,
                     SupportsWildCards = (bool?)command.SupportsWildCards,
                     ModalType = command.Modal.Type.FullName
-                }));
+                })
+            );
         }
 
         _logger.Information(
@@ -458,12 +467,14 @@ public sealed class DiscordInteractionHandler(
             interactionService.ContextCommands.Count,
             interactionService.ComponentCommands.Count,
             interactionService.ModalCommands.Count,
-            moduleDetails.Length);
+            moduleDetails.Length
+        );
 
         _logger.Information(
             "Registered interaction command details. Modules={@InteractionModules} Commands={@InteractionCommands}",
             moduleDetails,
-            commandDetails);
+            commandDetails
+        );
     }
 
     private ILogger CreateInteractionDiagnosticsLogger(SocketInteraction interaction) =>

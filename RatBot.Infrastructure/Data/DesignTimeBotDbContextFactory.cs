@@ -20,10 +20,11 @@ public sealed class DesignTimeBotDbContextFactory : IDesignTimeDbContextFactory<
 
         IConfigurationRoot configurationRoot = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
-        string? connectionString = configurationRoot.GetConnectionString("BotDb")
-                                   ?? configurationRoot["DB:ConnectionString"]
-                                   ?? Environment.GetEnvironmentVariable("DB__CONNECTION_STRING")
-                                   ?? BuildFromDiscrete(configurationRoot);
+        string? connectionString =
+            configurationRoot.GetConnectionString("BotDb")
+            ?? configurationRoot["DB:ConnectionString"]
+            ?? Environment.GetEnvironmentVariable("DB__CONNECTION_STRING")
+            ?? BuildFromDiscrete(configurationRoot);
 
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException(

@@ -14,6 +14,12 @@ public sealed class QuorumSettingsRoleConfiguration : IEntityTypeConfiguration<Q
 
         builder.Property(x => x.Id).HasColumnName("RoleId").HasColumnType("bigint").HasConversion<long>();
 
-        builder.HasKey(x => new { x.GuildId, x.TargetType, x.TargetId, x.Id });
+        builder.HasKey(x => new
+        {
+            x.GuildId,
+            x.TargetType,
+            x.TargetId,
+            x.Id
+        });
     }
 }

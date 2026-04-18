@@ -29,7 +29,8 @@ public sealed class QuorumModule(ILogger logger, QuorumSettingsService quorumSet
 
         await configResult.SwitchFirstAsync(
             async config => await RespondAsync(GetQuorumCount(config), ephemeral: false),
-            async error => await RespondAsync(DescribeError(error), ephemeral: true));
+            async error => await RespondAsync(DescribeError(error), ephemeral: true)
+        );
     }
 
     private string GetQuorumCount(QuorumSettings config)
@@ -38,25 +39,19 @@ public sealed class QuorumModule(ILogger logger, QuorumSettingsService quorumSet
 
         SocketGuild guild = Context.Guild!;
 
-        SocketRole[] roles = config
-            .Roles
-            .Select(role => guild.GetRole(role.Id))
+        SocketRole[] roles = config.Roles.Select(role => guild.GetRole(role.Id))
             .Where(role => role is not null)
             .ToArray();
 
-        HashSet<ulong> usersWithRoles = roles
-            .SelectMany(role => role.Members)
-            .Select(user => user.Id)
-            .ToHashSet();
+        HashSet<ulong> usersWithRoles = roles.SelectMany(role => role.Members).Select(user => user.Id).ToHashSet();
 
         if (!guild.HasAllMembers)
-        {
             _logger.Warning(
                 "Quorum count is using an incomplete guild member cache. GuildId={GuildId}, DownloadedMemberCount={DownloadedMemberCount}, MemberCount={MemberCount}",
                 guild.Id,
                 guild.DownloadedMemberCount,
-                guild.MemberCount);
-        }
+                guild.MemberCount
+            );
 
         int quorumCount = QuorumCalculator.CalculateRequiredMemberCount(usersWithRoles.Count, config.QuorumProportion);
 
@@ -67,7 +62,8 @@ public sealed class QuorumModule(ILogger logger, QuorumSettingsService quorumSet
             guild.DownloadedMemberCount,
             guild.MemberCount,
             quorumCount,
-            config.QuorumProportion);
+            config.QuorumProportion
+        );
 
         return $"{quorumCount} votes are needed for quorum.";
     }

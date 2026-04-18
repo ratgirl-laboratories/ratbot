@@ -11,10 +11,8 @@ public sealed class EmojiAnalyticsService(IEmojiRepository emojiRepository, ILog
 
     public async Task RecordBatchUsageAsync(IEnumerable<string> emojiIds, CancellationToken ct = default)
     {
-        List<(string Id, int N)> usages = emojiIds
-            .GroupBy(x => x)
-            .Select(g => (EmojiId: g.Key, Count: g.Count()))
-            .ToList();
+        List<(string Id, int N)> usages =
+            emojiIds.GroupBy(x => x).Select(g => (EmojiId: g.Key, Count: g.Count())).ToList();
 
         await emojiRepository.RecordBatchUsageAsync(usages, ct);
 

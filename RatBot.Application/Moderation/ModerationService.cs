@@ -17,11 +17,7 @@ public sealed class ModerationService(IAutobannedUserRepository autobannedUsers,
         if (existing is not null)
             return ModerationErrors.UserAlreadyAutobanned(userId);
 
-        AutobannedUser autobannedUser = AutobannedUser.Create(
-            guildId,
-            userId,
-            modId,
-            DateTimeOffset.UtcNow);
+        AutobannedUser autobannedUser = AutobannedUser.Create(guildId, userId, modId, DateTimeOffset.UtcNow);
 
         await autobannedUsers.AddAsync(autobannedUser, ct);
 
@@ -34,9 +30,6 @@ public sealed class ModerationService(IAutobannedUserRepository autobannedUsers,
         return autobannedUser;
     }
 
-    public Task<AutobannedUser?> GetAutobanAsync(
-        ulong guildId,
-        ulong userId,
-        CancellationToken ct = default) =>
+    public Task<AutobannedUser?> GetAutobanAsync(ulong guildId, ulong userId, CancellationToken ct = default) =>
         autobannedUsers.GetAsync(guildId, userId, ct);
 }

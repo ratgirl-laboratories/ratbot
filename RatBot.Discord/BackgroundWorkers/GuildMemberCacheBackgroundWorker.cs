@@ -8,7 +8,8 @@ public sealed class GuildMemberCacheBackgroundWorker(
     DiscordSocketClient discordClient,
     GuildMemberCacheService memberCacheService,
     IOptions<DiscordOptions> options,
-    ILogger logger) : BackgroundService
+    ILogger logger
+) : BackgroundService
 {
     private readonly ILogger _logger = logger.ForContext<GuildMemberCacheBackgroundWorker>();
     private readonly DiscordOptions _options = options.Value;
@@ -20,11 +21,12 @@ public sealed class GuildMemberCacheBackgroundWorker(
         _logger.Information(
             "Guild member cache background worker started. GuildId={GuildId}, IntervalMinutes={IntervalMinutes}",
             _options.GuildId,
-            _options.MemberCacheRefreshIntervalMinutes);
+            _options.MemberCacheRefreshIntervalMinutes
+        );
 
         try
         {
-            using PeriodicTimer timer = new(interval);
+            using PeriodicTimer timer = new PeriodicTimer(interval);
 
             while (await timer.WaitForNextTickAsync(stoppingToken))
                 await CheckGuildMemberCacheAsync(stoppingToken);

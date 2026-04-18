@@ -27,7 +27,8 @@ public sealed class RpsGameService(IRpsGameStore store, ILogger logger)
             "Created RPS game {GameId} between challenger {ChallengerId} and opponent {OpponentId}.",
             game.GameId,
             game.ChallengerId,
-            game.OpponentId);
+            game.OpponentId
+        );
 
         return game;
     }

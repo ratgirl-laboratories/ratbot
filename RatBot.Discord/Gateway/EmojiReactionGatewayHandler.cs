@@ -5,7 +5,8 @@ namespace RatBot.Discord.Gateway;
 public sealed class EmojiReactionGatewayHandler(
     DiscordSocketClient discordClient,
     EmojiAnalyticsBuffer buffer,
-    ILogger logger) : IDiscordGatewayHandler
+    ILogger logger)
+    : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<EmojiReactionGatewayHandler>();
 
@@ -13,14 +14,6 @@ public sealed class EmojiReactionGatewayHandler(
     {
         Subscribe();
         return Task.CompletedTask;
-    }
-
-    public void Subscribe()
-    {
-        discordClient.ReactionAdded += HandleReactionAddedAsync;
-        discordClient.ReactionRemoved += HandleReactionRemovedAsync;
-        discordClient.ReactionsCleared += HandleReactionsClearedAsync;
-        discordClient.ReactionsRemovedForEmote += HandleReactionsRemovedForEmoteAsync;
     }
 
     public void Unsubscribe()
@@ -31,10 +24,19 @@ public sealed class EmojiReactionGatewayHandler(
         discordClient.ReactionsRemovedForEmote -= HandleReactionsRemovedForEmoteAsync;
     }
 
+    public void Subscribe()
+    {
+        discordClient.ReactionAdded += HandleReactionAddedAsync;
+        discordClient.ReactionRemoved += HandleReactionRemovedAsync;
+        discordClient.ReactionsCleared += HandleReactionsClearedAsync;
+        discordClient.ReactionsRemovedForEmote += HandleReactionsRemovedForEmoteAsync;
+    }
+
     private async Task HandleReactionAddedAsync(
         Cacheable<IUserMessage, ulong> message,
         Cacheable<IMessageChannel, ulong> channel,
-        SocketReaction reaction)
+        SocketReaction reaction
+    )
     {
         _ = message;
         _ = channel;
@@ -52,7 +54,8 @@ public sealed class EmojiReactionGatewayHandler(
     private Task HandleReactionRemovedAsync(
         Cacheable<IUserMessage, ulong> cachedMessage,
         Cacheable<IMessageChannel, ulong> cachedChannel,
-        SocketReaction reaction)
+        SocketReaction reaction
+    )
     {
         _ = cachedMessage;
         _ = cachedChannel;

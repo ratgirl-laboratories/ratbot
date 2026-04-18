@@ -12,9 +12,7 @@ public sealed class TextChannelServiceTests
 {
     private const ulong ChannelId = 456;
 
-    private readonly ChannelPermissions _canSendPermissions = new ChannelPermissions(
-        viewChannel: true,
-        sendMessages: true);
+    private readonly ChannelPermissions _canSendPermissions = new ChannelPermissions(viewChannel: true, sendMessages: true);
 
     private IGuild _guild = null!;
     private IGuildUser _botUser = null!;
@@ -48,14 +46,10 @@ public sealed class TextChannelServiceTests
     [Test]
     [TestCase(false, true)]
     [TestCase(true, false)]
-    public async Task ValidateBotCanSendAsync_WhenBotLacksRequiredPermission_ReturnsInsufficientPermissions(
-        bool canView,
-        bool canSendMessages)
+    public async Task ValidateBotCanSendAsync_WhenBotLacksRequiredPermission_ReturnsInsufficientPermissions(bool canView, bool canSendMessages)
     {
         // Arrange
-        _botUser
-            .GetPermissions(_channel)
-            .Returns(new ChannelPermissions(viewChannel: canView, sendMessages: canSendMessages));
+        _botUser.GetPermissions(_channel).Returns(new ChannelPermissions(viewChannel: canView, sendMessages: canSendMessages));
 
         // Act
         ErrorOr<Success> result = await _service.ValidateBotCanSendAsync(ChannelId);
@@ -85,9 +79,7 @@ public sealed class TextChannelServiceTests
     {
         // Arrange
         List<string> sentMessages = [];
-        _channel
-            .SendMessageAsync(Arg.Do<string>(sentMessages.Add))
-            .Returns(Substitute.For<IUserMessage>());
+        _channel.SendMessageAsync(Arg.Do<string>(sentMessages.Add)).Returns(Substitute.For<IUserMessage>());
 
         // Act
         ErrorOr<int> result = await _service.SendMessagesAsync(ChannelId, ["first", "second"]);

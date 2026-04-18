@@ -22,9 +22,7 @@ public static class ModerationModule
 
             if (Context.Guild.GetUser(parsedUserId) is not null)
             {
-                await RespondAsync(
-                    "That user is currently in the server. Use a regular ban instead.",
-                    ephemeral: true);
+                await RespondAsync("That user is currently in the server. Use a regular ban instead.", ephemeral: true);
 
                 return;
             }
@@ -32,10 +30,8 @@ public static class ModerationModule
             ulong guildId = Context.Guild.Id;
             ulong moderator = Context.User.Id;
 
-            ErrorOr<AutobannedUser> result = await moderationService.RegisterAutobanAsync(
-                guildId,
-                parsedUserId,
-                moderator);
+            ErrorOr<AutobannedUser> result =
+                await moderationService.RegisterAutobanAsync(guildId, parsedUserId, moderator);
 
             if (result.IsError)
             {
@@ -48,7 +44,8 @@ public static class ModerationModule
                 Context.User.Username,
                 Context.User.Id,
                 parsedUserId,
-                guildId);
+                guildId
+            );
 
             await RespondAsync($"Registered <@{parsedUserId}> for autoban.", ephemeral: true);
         }

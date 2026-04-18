@@ -6,4 +6,5 @@ public sealed record RpsGameSession(
     ulong OpponentId,
     DateTimeOffset ExpiresAt,
     RpsPick? ChallengerPick,
-    RpsPick? OpponentPick);
+    RpsPick? OpponentPick
+);

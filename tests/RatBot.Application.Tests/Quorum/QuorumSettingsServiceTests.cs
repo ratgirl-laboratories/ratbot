@@ -35,12 +35,7 @@ public sealed class QuorumSettingsServiceTests
         _repository.UpsertAsync(Arg.Any<QuorumSettings>()).Returns(Task.FromResult<ErrorOr<Success>>(Result.Success));
 
         // Act
-        ErrorOr<QuorumSettingsUpsertResult> result = await _service.UpsertAsync(
-            123,
-            QuorumSettingsType.Channel,
-            456,
-            [10, 20, 10],
-            0.75);
+        ErrorOr<QuorumSettingsUpsertResult> result = await _service.UpsertAsync(123, QuorumSettingsType.Channel, 456, [10, 20, 10], 0.75);
 
         // Assert
         result.IsError.ShouldBeFalse();
@@ -55,8 +50,9 @@ public sealed class QuorumSettingsServiceTests
                     settings.GuildId == 123
                     && settings.TargetType == QuorumSettingsType.Channel
                     && settings.TargetId == 456
-                    && settings.Roles.Select(role => role.Id)
-                        .SequenceEqual(new List<ulong> { 10UL, 20UL })));
+                    && settings.Roles.Select(role => role.Id).SequenceEqual(new List<ulong> { 10UL, 20UL })
+                )
+            );
     }
 
     [Test]
@@ -65,12 +61,7 @@ public sealed class QuorumSettingsServiceTests
         // Arrange
 
         // Act
-        ErrorOr<QuorumSettingsUpsertResult> result = await _service.UpsertAsync(
-            123,
-            QuorumSettingsType.Channel,
-            456,
-            [],
-            0.75);
+        ErrorOr<QuorumSettingsUpsertResult> result = await _service.UpsertAsync(123, QuorumSettingsType.Channel, 456, [], 0.75);
 
         // Assert
         result.IsError.ShouldBeTrue();
@@ -92,12 +83,7 @@ public sealed class QuorumSettingsServiceTests
         // Arrange
 
         // Act
-        ErrorOr<QuorumSettingsUpsertResult> result = await _service.UpsertAsync(
-            123,
-            QuorumSettingsType.Channel,
-            456,
-            [10],
-            quorumProportion);
+        ErrorOr<QuorumSettingsUpsertResult> result = await _service.UpsertAsync(123, QuorumSettingsType.Channel, 456, [10], quorumProportion);
 
         // Assert
         result.IsError.ShouldBeTrue();

@@ -2,9 +2,7 @@ namespace RatBot.Application.Rps;
 
 public static class RpsErrors
 {
-    public static readonly Error GameNotFound = Error.NotFound(
-        "Rps.GameNotFound",
-        "That game is no longer active.");
+    public static readonly Error GameNotFound = Error.NotFound("Rps.GameNotFound", "That game is no longer active.");
 
     public static readonly Error UnauthorizedUser = Error.Forbidden(
         "Rps.UnauthorizedUser",

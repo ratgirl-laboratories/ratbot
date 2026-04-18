@@ -10,7 +10,8 @@ public sealed class EmojiAnalyticsBuffer
             SingleReader = true,
             SingleWriter = false,
             AllowSynchronousContinuations = false
-        });
+        }
+    );
 
     public ChannelWriter<string> Writer => _channel.Writer;
     public ChannelReader<string> Reader => _channel.Reader;

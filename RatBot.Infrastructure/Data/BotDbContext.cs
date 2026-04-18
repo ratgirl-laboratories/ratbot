@@ -9,7 +9,8 @@ public sealed class BotDbContext : DbContext
     ///     Initializes a new instance of the <see cref="BotDbContext" /> class.
     /// </summary>
     /// <param name="options">The DbContext options.</param>
-    public BotDbContext(DbContextOptions<BotDbContext> options) : base(options)
+    public BotDbContext(DbContextOptions<BotDbContext> options)
+        : base(options)
     {
     }
 

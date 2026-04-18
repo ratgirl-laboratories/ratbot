@@ -19,7 +19,8 @@ public sealed class DiscordBotHostedService : IHostedService
         IEnumerable<IDiscordGatewayHandler> gatewayHandlers,
         GuildMemberCacheService guildMemberCacheService,
         IOptions<DiscordOptions> options,
-        ILogger logger)
+        ILogger logger
+    )
     {
         _discordClient = discordClient;
         _gatewayHandlers = gatewayHandlers;
@@ -104,7 +105,8 @@ public sealed class DiscordBotHostedService : IHostedService
             guild.Id,
             guild.DownloadedMemberCount,
             guild.MemberCount,
-            guild.HasAllMembers);
+            guild.HasAllMembers
+        );
 
         return Task.CompletedTask;
     }

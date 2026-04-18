@@ -16,15 +16,13 @@ public sealed class SettingsModule : SlashCommandBase
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetSuggestForumChannelAsync(IForumChannel channel)
         {
-            ErrorOr<Success> result = await metaSuggestionSettingsService
-                .UpsertSuggestForumChannelAsync(Context.Guild.Id, channel.Id);
+            ErrorOr<Success> result =
+                await metaSuggestionSettingsService.UpsertSuggestForumChannelAsync(Context.Guild.Id, channel.Id);
 
             await result.SwitchFirstAsync(
-                async _ =>
-                    await RespondAsync(
-                        $"Meta suggestion forum set to {channel.Mention}.",
-                        ephemeral: true),
-                async error => await RespondAsync(error.Description, ephemeral: true));
+                async _ => await RespondAsync($"Meta suggestion forum set to {channel.Mention}.", ephemeral: true),
+                async error => await RespondAsync(error.Description, ephemeral: true)
+            );
         }
     }
 
@@ -40,7 +38,8 @@ public sealed class SettingsModule : SlashCommandBase
             [Summary("roles", "Comma-separated role mentions or role IDs.")]
             string roles,
             [Summary("proportion", "The quorum proportion, from 0 to 1.")]
-            double proportion)
+            double proportion
+        )
         {
             if (target is not SocketGuildChannel guildChannel)
             {
@@ -78,13 +77,16 @@ public sealed class SettingsModule : SlashCommandBase
                 resolvedTarget.TargetType,
                 resolvedTarget.Channel.Id,
                 resolvedRoles.Select(role => role.Id),
-                proportion);
+                proportion
+            );
 
             await upsertResult.SwitchFirstAsync(
-                onValue: async result => await RespondAsync(
-                    BuildSetResponse(resolvedTarget.Channel, resolvedRoles, result.Created, proportion),
-                    ephemeral: true),
-                onFirstError: async error => await RespondAsync(DescribeError(error), ephemeral: true));
+                async result =>
+                    await RespondAsync(
+                        BuildSetResponse(resolvedTarget.Channel, resolvedRoles, result.Created, proportion),
+                        ephemeral: true),
+                async error => await RespondAsync(DescribeError(error), ephemeral: true)
+            );
         }
 
         [SlashCommand(
@@ -121,18 +123,21 @@ public sealed class SettingsModule : SlashCommandBase
             ErrorOr<Deleted> deleteResult = await quorumSettingsService.DeleteAsync(
                 Context.Guild.Id,
                 resolvedTarget.TargetType,
-                resolvedTarget.Channel.Id);
+                resolvedTarget.Channel.Id
+            );
 
             await deleteResult.SwitchFirstAsync(
                 async _ => await RespondAsync(BuildUnsetResponse(resolvedTarget.Channel), ephemeral: true),
-                async error => await RespondAsync(DescribeError(error), ephemeral: true));
+                async error => await RespondAsync(DescribeError(error), ephemeral: true)
+            );
         }
 
         [SlashCommand("view", "View the quorum settings for a channel or category.")]
         public async Task ViewAsync(
             [Summary("target", "The target channel or category.")]
             [ChannelTypes(ChannelType.Text, ChannelType.Category)]
-            IChannel target)
+            IChannel target
+        )
         {
             if (target is not SocketGuildChannel targetChannel)
             {
@@ -153,13 +158,14 @@ public sealed class SettingsModule : SlashCommandBase
             ErrorOr<QuorumSettings> getResult = await quorumSettingsService.GetAsync(
                 Context.Guild.Id,
                 resolvedTarget.TargetType,
-                resolvedTarget.Channel.Id);
+                resolvedTarget.Channel.Id
+            );
 
             await getResult.SwitchFirstAsync(
                 async settings =>
                 {
-                    SocketRole[] resolvedRoles = settings.Roles
-                        .Select(role => Context.Guild.GetRole(role.Id))
+                    SocketRole[] resolvedRoles = settings
+                        .Roles.Select(role => Context.Guild.GetRole(role.Id))
                         .Where(role => role is not null)
                         .Select(role => role!)
                         .ToArray();
@@ -168,7 +174,8 @@ public sealed class SettingsModule : SlashCommandBase
                         BuildViewResponse(resolvedTarget.Channel, resolvedRoles, settings.QuorumProportion),
                         ephemeral: true);
                 },
-                async error => await RespondAsync(DescribeError(error), ephemeral: true));
+                async error => await RespondAsync(DescribeError(error), ephemeral: true)
+            );
         }
 
         private static string BuildSetResponse(
@@ -247,9 +254,7 @@ public sealed class SettingsModule : SlashCommandBase
 
         private static ErrorOr<ImmutableArray<SocketRole>> ParseRolesCsv(SocketGuild guild, string roles)
         {
-            string[] entries = roles.Split(
-                ',',
-                StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            string[] entries = roles.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
             if (entries.Length == 0)
                 return Error.Validation(description: "At least one role must be provided.");

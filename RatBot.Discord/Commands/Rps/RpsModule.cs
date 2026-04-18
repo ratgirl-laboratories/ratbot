@@ -79,7 +79,8 @@ public sealed class RpsModule(RpsGameService rpsGameService) : SlashCommandBase
 
         await FollowupAsync(
             $"{Context.User.Mention} challenged {opponent.Mention} to Rock-Paper-Scissors.\nBoth players choose using the buttons below.",
-            components: buttons);
+            components: buttons
+        );
     }
 
     [ComponentInteraction($"{CustomIdPrefix}:*:*", true)]
@@ -118,8 +119,10 @@ public sealed class RpsModule(RpsGameService rpsGameService) : SlashCommandBase
                 string resultText = GetResultText(success.Outcome.Value);
 
                 await FollowupAsync(
-                    $"Game complete: <@{challengerId}> picked **{challengerPick}**, <@{opponentId}> picked **{opponentPick}**.\n{resultText}");
+                    $"Game complete: <@{challengerId}> picked **{challengerPick}**, <@{opponentId}> picked **{opponentPick}**.\n{resultText}"
+                );
             },
-            async error => await RespondAsync(error.Description, ephemeral: true));
+            async error => await RespondAsync(error.Description, ephemeral: true)
+        );
     }
 }

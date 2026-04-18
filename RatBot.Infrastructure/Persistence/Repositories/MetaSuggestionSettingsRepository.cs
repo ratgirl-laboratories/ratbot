@@ -21,9 +21,7 @@ public sealed class MetaSuggestionSettingsRepository(BotDbContext dbContext) : I
         MetaSuggestionSettings settings,
         CancellationToken ct = default)
     {
-        bool exists = await dbContext
-            .Set<MetaSuggestionSettings>()
-            .AnyAsync(x => x.GuildId == settings.GuildId, ct);
+        bool exists = await dbContext.Set<MetaSuggestionSettings>().AnyAsync(x => x.GuildId == settings.GuildId, ct);
 
         if (!exists)
             dbContext.Add(settings);

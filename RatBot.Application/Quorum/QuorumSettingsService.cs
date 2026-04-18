@@ -4,13 +4,39 @@ public sealed class QuorumSettingsService(IQuorumSettingsRepository repository, 
 {
     private readonly ILogger _logger = logger.ForContext<QuorumSettingsService>();
 
+    private static ErrorOr<ValidatedQuorumSettingsInput> ValidateInput(
+        ulong guildId,
+        QuorumSettingsType targetType,
+        ulong targetId,
+        IEnumerable<ulong> roleIds,
+        double quorumProportion
+    )
+    {
+        if (!Enum.IsDefined(targetType))
+            return Error.Validation(description: "Invalid quorum configuration type.");
+
+        if (double.IsNaN(quorumProportion) || double.IsInfinity(quorumProportion))
+            return Error.Validation(description: "Quorum proportion must be a finite number.");
+
+        if (quorumProportion is <= 0 or > 1)
+            return Error.Validation(description: "Quorum proportion must be greater than 0 and at most 1.");
+
+        ulong[] validatedRoleIds = roleIds.Distinct().ToArray();
+
+        if (validatedRoleIds.Length == 0)
+            return Error.Validation(description: "At least one role must be provided.");
+
+        return new ValidatedQuorumSettingsInput(guildId, targetType, targetId, validatedRoleIds, quorumProportion);
+    }
+
     public async Task<ErrorOr<QuorumSettingsUpsertResult>> UpsertAsync(
         ulong guildId,
         QuorumSettingsType targetType,
         ulong targetId,
         IEnumerable<ulong> roleIds,
         double quorumProportion,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ErrorOr<ValidatedQuorumSettingsInput> validationResult = ValidateInput(
             guildId,
@@ -27,14 +53,17 @@ public sealed class QuorumSettingsService(IQuorumSettingsRepository repository, 
         ErrorOr<QuorumSettings> existingResult = await repository.GetAsync(
             validatedInput.GuildId,
             validatedInput.TargetType,
-            validatedInput.TargetId);
+            validatedInput.TargetId
+        );
+
         bool created = existingResult.IsError;
 
         QuorumSettings config = new QuorumSettings(
             validatedInput.GuildId,
             validatedInput.TargetType,
             validatedInput.TargetId,
-            validatedInput.QuorumProportion);
+            validatedInput.QuorumProportion
+        );
 
         config.ReplaceRoles(validatedInput.RoleIds);
 
@@ -50,35 +79,10 @@ public sealed class QuorumSettingsService(IQuorumSettingsRepository repository, 
                 : "updated",
             guildId,
             targetType,
-            targetId);
+            targetId
+        );
 
         return new QuorumSettingsUpsertResult(created, config);
-    }
-
-    private static ErrorOr<ValidatedQuorumSettingsInput> ValidateInput(
-        ulong guildId,
-        QuorumSettingsType targetType,
-        ulong targetId,
-        IEnumerable<ulong> roleIds,
-        double quorumProportion)
-    {
-        if (!Enum.IsDefined(targetType))
-            return Error.Validation(description: "Invalid quorum configuration type.");
-
-        if (double.IsNaN(quorumProportion) || double.IsInfinity(quorumProportion))
-            return Error.Validation(description: "Quorum proportion must be a finite number.");
-
-        if (quorumProportion is <= 0 or > 1)
-            return Error.Validation(description: "Quorum proportion must be greater than 0 and at most 1.");
-
-        ulong[] validatedRoleIds = roleIds
-            .Distinct()
-            .ToArray();
-
-        if (validatedRoleIds.Length == 0)
-            return Error.Validation(description: "At least one role must be provided.");
-        
-        return new ValidatedQuorumSettingsInput(guildId, targetType, targetId, validatedRoleIds, quorumProportion);
     }
 
     public async Task<ErrorOr<Deleted>> DeleteAsync(
@@ -94,7 +98,8 @@ public sealed class QuorumSettingsService(IQuorumSettingsRepository repository, 
             guildId,
             targetType,
             targetId,
-            !result.IsError);
+            !result.IsError
+        );
 
         return result;
     }
@@ -130,5 +135,6 @@ public sealed class QuorumSettingsService(IQuorumSettingsRepository repository, 
         QuorumSettingsType TargetType,
         ulong TargetId,
         ulong[] RoleIds,
-        double QuorumProportion);
+        double QuorumProportion
+    );
 }

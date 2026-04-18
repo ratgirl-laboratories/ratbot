@@ -17,12 +17,21 @@ namespace RatBot.Infrastructure.Migrations
                     GuildId = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
                     ScopeType = table.Column<int>(type: "integer", nullable: false),
                     ScopeId = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
-                    QuorumProportion = table.Column<double>(type: "double precision", precision: 6, scale: 4, nullable: false)
+                    QuorumProportion = table.Column<double>(type: "double precision", precision: 6, scale: 4, nullable: false),
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_QuorumScopeConfigs", x => new { x.GuildId, x.ScopeType, x.ScopeId });
-                });
+                    table.PrimaryKey(
+                        "PK_QuorumScopeConfigs",
+                        x => new
+                        {
+                            x.GuildId,
+                            x.ScopeType,
+                            x.ScopeId,
+                        }
+                    );
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "QuorumScopeConfigRoles",
@@ -31,28 +40,42 @@ namespace RatBot.Infrastructure.Migrations
                     GuildId = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
                     ScopeType = table.Column<int>(type: "integer", nullable: false),
                     ScopeId = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
-                    RoleId = table.Column<decimal>(type: "numeric(20,0)", nullable: false)
+                    RoleId = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_QuorumScopeConfigRoles", x => new { x.GuildId, x.ScopeType, x.ScopeId, x.RoleId });
+                    table.PrimaryKey(
+                        "PK_QuorumScopeConfigRoles",
+                        x => new
+                        {
+                            x.GuildId,
+                            x.ScopeType,
+                            x.ScopeId,
+                            x.RoleId,
+                        }
+                    );
                     table.ForeignKey(
                         name: "FK_QuorumScopeConfigRoles_QuorumScopeConfigs_GuildId_ScopeType~",
-                        columns: x => new { x.GuildId, x.ScopeType, x.ScopeId },
+                        columns: x => new
+                        {
+                            x.GuildId,
+                            x.ScopeType,
+                            x.ScopeId,
+                        },
                         principalTable: "QuorumScopeConfigs",
                         principalColumns: new[] { "GuildId", "ScopeType", "ScopeId" },
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_QuorumScopeConfigs_GuildId",
-                table: "QuorumScopeConfigs",
-                column: "GuildId");
+            migrationBuilder.CreateIndex(name: "IX_QuorumScopeConfigs_GuildId", table: "QuorumScopeConfigs", column: "GuildId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_QuorumScopeConfigs_GuildId_ScopeType",
                 table: "QuorumScopeConfigs",
-                columns: new[] { "GuildId", "ScopeType" });
+                columns: new[] { "GuildId", "ScopeType" }
+            );
 
             migrationBuilder.Sql(
                 """
@@ -64,7 +87,8 @@ namespace RatBot.Infrastructure.Migrations
                     ("Value"->>'QuorumProportion')::double precision
                 FROM "Configs"
                 WHERE "Key" = 'Quorum:GuildScopeConfig';
-                """);
+                """
+            );
 
             migrationBuilder.Sql(
                 """
@@ -77,32 +101,31 @@ namespace RatBot.Infrastructure.Migrations
                 FROM "Configs" AS config,
                      LATERAL jsonb_array_elements_text(config."Value"->'RoleIds') AS role_id
                 WHERE config."Key" = 'Quorum:GuildScopeConfig';
-                """);
+                """
+            );
 
-            migrationBuilder.DropTable(
-                name: "Configs");
+            migrationBuilder.DropTable(name: "Configs");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "QuorumScopeConfigRoles");
+            migrationBuilder.DropTable(name: "QuorumScopeConfigRoles");
 
-            migrationBuilder.DropTable(
-                name: "QuorumScopeConfigs");
+            migrationBuilder.DropTable(name: "QuorumScopeConfigs");
 
             migrationBuilder.CreateTable(
                 name: "Configs",
                 columns: table => new
                 {
                     Key = table.Column<string>(type: "text", nullable: false),
-                    Value = table.Column<string>(type: "jsonb", nullable: false)
+                    Value = table.Column<string>(type: "jsonb", nullable: false),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Configs", x => new { x.Key, x.Value });
-                });
+                }
+            );
 
             migrationBuilder.Sql(
                 """
@@ -122,7 +145,8 @@ namespace RatBot.Infrastructure.Migrations
                    AND role."ScopeType" = config."ScopeType"
                    AND role."ScopeId" = config."ScopeId"
                 GROUP BY config."GuildId", config."ScopeType", config."ScopeId", config."QuorumProportion";
-                """);
+                """
+            );
         }
     }
 }

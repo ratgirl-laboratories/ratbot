@@ -32,17 +32,20 @@ public static class DependencyInjection
                     new DiscordSocketConfig
                     {
                         MessageCacheSize = options.MessageCacheSize,
-                        GatewayIntents = GatewayIntents.Guilds
-                                         | GatewayIntents.GuildMembers
-                                         | GatewayIntents.GuildMessages
-                                         | GatewayIntents.GuildMessageReactions
-                                         | GatewayIntents.MessageContent
-                    });
+                        GatewayIntents =
+                            GatewayIntents.Guilds
+                            | GatewayIntents.GuildMembers
+                            | GatewayIntents.GuildMessages
+                            | GatewayIntents.GuildMessageReactions
+                            | GatewayIntents.MessageContent
+                    }
+                );
             });
 
             services.AddSingleton(sp => new InteractionService(
                 sp.GetRequiredService<DiscordSocketClient>(),
-                new InteractionServiceConfig { AutoServiceScopes = true }));
+                new InteractionServiceConfig { AutoServiceScopes = true }
+            ));
 
             services.AddSingleton<DiscordInteractionHandler>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<DiscordInteractionHandler>());

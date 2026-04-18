@@ -3,7 +3,7 @@ namespace RatBot.Discord.Gateway;
 public sealed class GuildMemberCacheService(ILogger logger)
 {
     private readonly ILogger _logger = logger.ForContext<GuildMemberCacheService>();
-    private readonly SemaphoreSlim _warmupLock = new(1, 1);
+    private readonly SemaphoreSlim _warmupLock = new SemaphoreSlim(1, 1);
 
     public async Task EnsureGuildMembersDownloadedAsync(
         SocketGuild guild,
@@ -17,7 +17,8 @@ public sealed class GuildMemberCacheService(ILogger logger)
                 guild.Id,
                 guild.DownloadedMemberCount,
                 guild.MemberCount,
-                reason);
+                reason
+            );
 
             return;
         }
@@ -42,7 +43,8 @@ public sealed class GuildMemberCacheService(ILogger logger)
                 guild.Id,
                 guild.DownloadedMemberCount,
                 guild.MemberCount,
-                reason);
+                reason
+            );
 
             await guild.DownloadUsersAsync();
         }
@@ -54,7 +56,8 @@ public sealed class GuildMemberCacheService(ILogger logger)
                 guild.Id,
                 guild.DownloadedMemberCount,
                 guild.MemberCount,
-                reason);
+                reason
+            );
         }
         finally
         {

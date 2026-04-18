@@ -12,7 +12,7 @@ public static class ModerationModule
     {
         [SlashCommand("autoban", "Register a user to be banned if they join.")]
         [RequireUserPermission(GuildPermission.BanMembers)]
-        public async Task AutobanAsync([Summary("User ID", "The Discord user ID to autoban.")] string user)
+        public async Task AutobanAsync([Summary("user-id", "The Discord user ID to autoban.")] string user)
         {
             if (!ulong.TryParse(user, out ulong parsedUserId) || parsedUserId == 0)
             {
@@ -20,9 +20,7 @@ public static class ModerationModule
                 return;
             }
 
-            ulong bannedUser = parsedUserId;
-
-            if (Context.Guild.GetUser(bannedUser) is not null)
+            if (Context.Guild.GetUser(parsedUserId) is not null)
             {
                 await RespondAsync(
                     "That user is currently in the server. Use a regular ban instead.",
@@ -36,7 +34,7 @@ public static class ModerationModule
 
             ErrorOr<AutobannedUser> result = await moderationService.RegisterAutobanAsync(
                 guildId,
-                bannedUser,
+                parsedUserId,
                 moderator);
 
             if (result.IsError)
@@ -49,10 +47,10 @@ public static class ModerationModule
                 "User {User} ({UserId}) registered autoban for {TargetId} in guild {GuildId}.",
                 Context.User.Username,
                 Context.User.Id,
-                bannedUser,
+                parsedUserId,
                 guildId);
 
-            await RespondAsync($"Registered <@{bannedUser}> for autoban.", ephemeral: true);
+            await RespondAsync($"Registered <@{parsedUserId}> for autoban.", ephemeral: true);
         }
     }
 

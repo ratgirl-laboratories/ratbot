@@ -7,53 +7,70 @@ public sealed class QuorumSettings
 {
     private readonly List<QuorumSettingsRole> _roles = [];
 
-    /// <summary>
-    ///     Initializes a new instance of the <see cref="QuorumSettings" /> class.
-    /// </summary>
-    /// <param name="guildId">The guild identifier.</param>
-    /// <param name="targetType">The configuration target type.</param>
-    /// <param name="targetId">The configuration target identifier.</param>
-    /// <param name="quorumProportion">The quorum proportion.</param>
-    public QuorumSettings(ulong guildId, QuorumSettingsType targetType, ulong targetId, double quorumProportion)
+    private QuorumSettings()
     {
-        GuildId = guildId;
-        TargetType = targetType;
-        TargetId = targetId;
-        QuorumProportion = quorumProportion;
     }
 
-    /// <summary>
-    ///     Gets the guild identifier.
-    /// </summary>
-    public ulong GuildId { get; }
+    private QuorumSettings(QuorumTarget target)
+    {
+        GuildId = target.GuildId;
+        TargetType = target.TargetType;
+        TargetId = target.TargetId;
+    }
 
-    /// <summary>
-    ///     Gets the configuration target type.
-    /// </summary>
-    public QuorumSettingsType TargetType { get; }
+    public ulong GuildId { get; private set; }
 
-    /// <summary>
-    ///     Gets the configuration target identifier.
-    /// </summary>
-    public ulong TargetId { get; }
+    public QuorumSettingsType TargetType { get; private set; }
 
-    /// <summary>
-    ///     Gets the role rows used for persistence.
-    /// </summary>
+    public ulong TargetId { get; private set; }
+
     public IReadOnlyCollection<QuorumSettingsRole> Roles => _roles;
 
-    /// <summary>
-    ///     Gets the quorum proportion.
-    /// </summary>
-    public double QuorumProportion { get; }
+    public double Proportion { get; private set; }
 
-    public void ReplaceRoles(IEnumerable<ulong> roleIds)
+    public static ErrorOr<QuorumSettings> Create(
+        QuorumTarget target,
+        IEnumerable<ulong> roleIds,
+        Proportion proportion)
+    {
+        ErrorOr<QuorumTarget> targetResult = QuorumTarget.Create(target.GuildId, target.TargetType, target.TargetId);
+
+        if (targetResult.IsError)
+            return targetResult.Errors;
+
+        QuorumSettings settings = new QuorumSettings(targetResult.Value);
+        ErrorOr<Success> updateResult = settings.Update(roleIds, proportion);
+
+        return updateResult.IsError
+            ? updateResult.Errors
+            : settings;
+    }
+
+    public ErrorOr<Success> Update(IEnumerable<ulong> roleIds, Proportion proportion)
+    {
+        ErrorOr<Proportion> quorumProportionResult =
+            Quorum.Proportion.Create(proportion.Value);
+
+        if (quorumProportionResult.IsError)
+            return quorumProportionResult.Errors;
+
+        ulong[] canonicalRoleIds = roleIds.Distinct().ToArray();
+
+        if (canonicalRoleIds.Length == 0)
+            return Error.Validation(description: "At least one role must be provided.");
+
+        Proportion = quorumProportionResult.Value.Value;
+        ReplaceRoles(canonicalRoleIds);
+
+        return Result.Success;
+    }
+
+    private void ReplaceRoles(IEnumerable<ulong> roleIds)
     {
         _roles.Clear();
 
         _roles.AddRange(
             roleIds
-                .Distinct()
                 .Select(roleId => new QuorumSettingsRole
                 {
                     Id = roleId,

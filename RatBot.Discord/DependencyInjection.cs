@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using RatBot.Discord.BackgroundWorkers;
 using RatBot.Discord.Commands.Meta;
+using RatBot.Discord.Commands.Settings;
 using RatBot.Discord.Configuration;
 using RatBot.Discord.Gateway;
 using RatBot.Discord.Handlers;
@@ -55,6 +56,7 @@ public static class DependencyInjection
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<EmojiReactionGatewayHandler>());
             services.AddSingleton<GuildMemberCacheService>();
             services.AddSingleton<MetaSuggestionPendingStore>();
+            services.AddSingleton<IQuorumCommandInputResolver, QuorumCommandInputResolver>();
 
             services.AddSingleton<DiscordMetaSuggestionForumServiceFactory>(_ =>
                 guild => new MetaSuggestionForumService(guild));

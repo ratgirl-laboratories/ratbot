@@ -2,23 +2,18 @@
 
 ## Workflows
 
-- `.github/workflows/ci-format.yml`
-    - Runs formatting, build, and tests
-    - Triggered on pull requests targeting `master` and pushes to `master`
+- `.github/workflows/ci-tests.yml`
+    - Runs restore, build, and tests on `ubuntu-latest`
+    - Uses the runner Docker daemon for Testcontainers-based integration tests
+    - Triggered on pull requests targeting `master`, pushes to `master`, and manual dispatch
 
-- `.github/workflows/build-image.yml`
-    - Builds the bot container image from `Dockerfile`
-    - Pushes to GHCR
-    - Triggered on push to `master`, plus manual dispatch
+- `.github/workflows/deploy-vps.yml`
+    - Builds and pushes the bot container image from `Dockerfile` after `CI Tests` succeeds on `master`
     - Publishes tags:
         - immutable: `sha-<full_commit_sha>`
         - branch: `master`
         - moving aliases for staging candidates: `latest-staging`, `staging`
-
-- `.github/workflows/deploy-vps.yml`
-    - Auto deploy mapping:
-        - `master` build completion from a push event -> deploy `production` and `staging`
-        - both targets use the same immutable `sha-<full_commit_sha>` image
+    - Auto deploys `production` and `staging` with the same immutable `sha-<full_commit_sha>` image
     - Manual dispatch supports:
         - `shared`
         - `production`
@@ -29,6 +24,18 @@
         - `ratbot-staging`
     - Prevents overlap with per-target concurrency groups
     - Runs automatic production and staging deploy jobs independently, so one failed target does not cancel the other
+
+- `.github/workflows/sonarqube.yml`
+    - Runs SonarQube analysis for pushes to `master` and pull requests
+
+## PR Merge Protection
+
+To prevent merges to `master` when tests fail, configure a branch protection rule or repository ruleset in GitHub:
+
+- Target branch: `master`
+- Require status checks to pass before merging
+- Required check: `Build and test` from `.github/workflows/ci-tests.yml`
+- Require branches to be up to date before merging, if you want every PR tested against the latest `master`
 
 ## Required GitHub Secrets and Variables
 
@@ -96,7 +103,8 @@ Use **Actions -> Deploy RatBot to VPS -> Run workflow**:
 
 Automatic production flow:
 
-- Let `master` build and publish the immutable `sha-<commit_sha>` image
+- Let `CI Tests` pass on a `master` push
+- The deploy workflow builds and publishes the immutable `sha-<commit_sha>` image
 - The deploy workflow applies that exact image to both production and staging
 
 For bot stacks, the deploy helper also writes the deployed `RATBOT_IMAGE` back to the server-side `.env` so later manual

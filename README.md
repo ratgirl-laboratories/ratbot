@@ -91,6 +91,8 @@ Grafana will be accessible at `http://localhost:3000` (Default: `admin`/`admin`)
 
 ### Running Tests
 
+The infrastructure integration tests use Testcontainers and require access to a running Docker daemon.
+
 ```bash
 dotnet test
 ```

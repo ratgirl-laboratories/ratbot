@@ -3,7 +3,7 @@ name: Deploy RatBot to VPS
 on:
   workflow_run:
     workflows:
-      - Build and Publish RatBot Image
+      - CI Tests
     types:
       - completed
     branches:
@@ -19,22 +19,27 @@ on:
           - production
           - staging
       image_tag:
-        description: "Image tag or full image ref (for example: sha-<commit>, <Docker build record ID>, or full ghcr ref). Required for production. Optional for staging."
+        description: "Image tag or full image ref. Required for production. Optional for staging."
         required: false
         type: string
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
+      build_image: ${{ steps.resolve.outputs.build_image }}
       deploy: ${{ steps.resolve.outputs.deploy }}
+      image_ref: ${{ steps.resolve.outputs.image_ref }}
+      image_repo: ${{ steps.resolve.outputs.image_repo }}
       targets: ${{ steps.resolve.outputs.targets }}
+      source_sha: ${{ steps.resolve.outputs.source_sha }}
       reason: ${{ steps.resolve.outputs.reason }}
     steps:
-      - name: Resolve deployment target and image
+      - name: Resolve deployment plan
         id: resolve
         shell: bash
         env:
@@ -51,20 +56,25 @@ jobs:
 
           image_repo="ghcr.io/${GITHUB_REPOSITORY,,}"
 
+          build_image="false"
           deploy="false"
+          image_ref=""
+          source_sha=""
           targets="[]"
           reason=""
 
           if [[ "$EVENT_NAME" == "workflow_run" ]]; then
             if [[ "$WORKFLOW_CONCLUSION" != "success" ]]; then
-              reason="Upstream build workflow did not succeed."
+              reason="CI workflow did not succeed."
             elif [[ "$WORKFLOW_EVENT" != "push" ]]; then
-              reason="Ignoring build workflow not triggered by a push event."
+              reason="Ignoring CI workflow not triggered by a push event."
             elif [[ "$WORKFLOW_HEAD_REPO" != "$GITHUB_REPOSITORY" ]]; then
               reason="Ignoring workflow run from different repository."
             elif [[ "$WORKFLOW_HEAD_BRANCH" == "master" ]]; then
+              build_image="true"
               deploy="true"
-              image_ref="${image_repo}:sha-${WORKFLOW_HEAD_SHA}"
+              source_sha="$WORKFLOW_HEAD_SHA"
+              image_ref="${image_repo}:sha-${source_sha}"
               targets="$(jq -cn --arg image_ref "$image_ref" '[
                 {
                   target: "production",
@@ -81,7 +91,7 @@ jobs:
                   image_ref: $image_ref
                 }
               ]')"
-              reason="Auto deploy production and staging from master."
+              reason="Build image and auto deploy production and staging after CI passes on master."
             else
               reason="Branch is not mapped to auto deployment."
             fi
@@ -154,24 +164,95 @@ jobs:
           fi
 
           {
+            echo "build_image=$build_image"
             echo "deploy=$deploy"
+            echo "image_ref=$image_ref"
+            echo "image_repo=$image_repo"
+            echo "source_sha=$source_sha"
             echo "targets=$targets"
             echo "reason=$reason"
           } >> "$GITHUB_OUTPUT"
 
       - name: Summarize resolved plan
         shell: bash
+        env:
+          BUILD_IMAGE: ${{ steps.resolve.outputs.build_image }}
+          DEPLOY: ${{ steps.resolve.outputs.deploy }}
+          IMAGE_REF: ${{ steps.resolve.outputs.image_ref }}
+          TARGETS: ${{ steps.resolve.outputs.targets }}
+          REASON: ${{ steps.resolve.outputs.reason }}
         run: |
           {
             echo "### Deployment Plan"
-            echo '- Deploy: `${{ steps.resolve.outputs.deploy }}`'
-            echo '- Targets: `${{ steps.resolve.outputs.targets }}`'
-            echo "- Reason: ${{ steps.resolve.outputs.reason }}"
+            echo "- Build image: \`${BUILD_IMAGE}\`"
+            echo "- Deploy: \`${DEPLOY}\`"
+            echo "- Image ref: \`${IMAGE_REF}\`"
+            echo "- Targets: \`${TARGETS}\`"
+            echo "- Reason: ${REASON}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build-and-push:
+    needs: prepare
+    if: needs.prepare.outputs.build_image == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.source_sha }}
+
+      - name: Derive image tags
+        id: tags
+        shell: bash
+        env:
+          IMAGE_REPO: ${{ needs.prepare.outputs.image_repo }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "tags<<EOF"
+            echo "${IMAGE_REPO}:sha-${SOURCE_SHA}"
+            echo "${IMAGE_REPO}:master"
+            echo "${IMAGE_REPO}:latest-staging"
+            echo "${IMAGE_REPO}:staging"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+
+      - name: Summarize image
+        shell: bash
+        run: |
+          {
+            echo "### Image"
+            echo "- Published image: \`${{ needs.prepare.outputs.image_ref }}\`"
+            echo "- Moving tags: \`master\`, \`latest-staging\`, \`staging\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
-    needs: prepare
-    if: needs.prepare.outputs.deploy == 'true'
+    needs:
+      - prepare
+      - build-and-push
+    if: always() && needs.prepare.outputs.deploy == 'true' && (needs.prepare.outputs.build_image != 'true' || needs.build-and-push.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -215,11 +296,16 @@ jobs:
 
       - name: Summarize deployment
         shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          PROJECT: ${{ matrix.project }}
+          REMOTE_DIR: ${{ matrix.remote_dir }}
+          IMAGE_REF: ${{ matrix.image_ref }}
         run: |
           {
             echo "### Deployment Result"
-            echo '- Target: `${{ matrix.target }}`'
-            echo '- Project: `${{ matrix.project }}`'
-            echo '- Remote dir: `${{ matrix.remote_dir }}`'
-            echo '- Image ref: `${{ matrix.image_ref }}`'
+            echo "- Target: \`${TARGET}\`"
+            echo "- Project: \`${PROJECT}\`"
+            echo "- Remote dir: \`${REMOTE_DIR}\`"
+            echo "- Image ref: \`${IMAGE_REF}\`"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -2,7 +2,7 @@ namespace RatBot.Discord.Commands.Quorum;
 
 [Group("quorum", "Quorum commands. Group restricted to moderators by default.")]
 [DefaultMemberPermissions(GuildPermission.MuteMembers)]
-public sealed class QuorumModule(ILogger logger, QuorumSettingsService quorumSettingsService) : SlashCommandBase
+public sealed class QuorumModule(ILogger logger, IQuorumSettingsReader settingsReader) : SlashCommandBase
 {
     private readonly ILogger _logger = logger.ForContext<QuorumModule>();
 
@@ -22,7 +22,7 @@ public sealed class QuorumModule(ILogger logger, QuorumSettingsService quorumSet
 
         ICategoryChannel? category = await currentChannel.GetCategoryAsync();
 
-        ErrorOr<QuorumSettings> configResult = await quorumSettingsService.GetEffectiveAsync(
+        ErrorOr<QuorumSettings> configResult = await settingsReader.GetEffectiveAsync(
             currentChannel.GuildId,
             currentChannel.Id,
             category?.Id);
@@ -53,7 +53,7 @@ public sealed class QuorumModule(ILogger logger, QuorumSettingsService quorumSet
                 guild.MemberCount
             );
 
-        int quorumCount = QuorumCalculator.CalculateRequiredMemberCount(usersWithRoles.Count, config.QuorumProportion);
+        int quorumCount = QuorumCalculator.CalculateRequiredMemberCount(usersWithRoles.Count, config.Proportion);
 
         _logger.Debug(
             "Members with roles {RolesIds}: {UsersWithRoles}, cached guild members: {DownloadedMemberCount}/{MemberCount}, quorum count: {QuorumCount}, proportion: {ConfigQuorumProportion}",
@@ -62,7 +62,7 @@ public sealed class QuorumModule(ILogger logger, QuorumSettingsService quorumSet
             guild.DownloadedMemberCount,
             guild.MemberCount,
             quorumCount,
-            config.QuorumProportion
+            config.Proportion
         );
 
         return $"{quorumCount} votes are needed for quorum.";

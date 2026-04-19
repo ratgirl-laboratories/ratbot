@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build and analyze
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -18,30 +18,33 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
       - name: Cache SonarQube Cloud packages
         uses: actions/cache@v4
         with:
-          path: ~\sonar\cache
+          path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
       - name: Cache SonarQube Cloud scanner
         id: cache-sonar-scanner
         uses: actions/cache@v4
         with:
-          path: ${{ runner.temp }}\scanner
+          path: ${{ runner.temp }}/scanner
           key: ${{ runner.os }}-sonar-scanner
           restore-keys: ${{ runner.os }}-sonar-scanner
       - name: Install SonarQube Cloud scanner
         if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
-        shell: powershell
         run: |
-          New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory
-          dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
+          mkdir -p "${{ runner.temp }}/scanner"
+          dotnet tool update dotnet-sonarscanner --tool-path "${{ runner.temp }}/scanner"
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"ratgirl-laboratories_ratbot" /o:"ratgirl-laboratories" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          "${{ runner.temp }}/scanner/dotnet-sonarscanner" begin /k:"ratgirl-laboratories_ratbot" /o:"ratgirl-laboratories" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
           dotnet build
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          dotnet test --no-build --collect:"XPlat Code Coverage;Format=opencover" --results-directory TestResults
+          "${{ runner.temp }}/scanner/dotnet-sonarscanner" end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"

@@ -2,9 +2,9 @@ namespace RatBot.Application.Quorum;
 
 public interface IQuorumSettingsRepository
 {
-    Task<ErrorOr<QuorumSettings>> GetAsync(ulong guildId, QuorumSettingsType targetType, ulong targetId);
+    Task<ErrorOr<QuorumSettings>> GetAsync(QuorumTarget target);
 
     Task<ErrorOr<Success>> UpsertAsync(QuorumSettings config);
 
-    Task<ErrorOr<Deleted>> DeleteAsync(ulong guildId, QuorumSettingsType targetType, ulong targetId);
+    Task<ErrorOr<Deleted>> DeleteAsync(QuorumTarget target);
 }

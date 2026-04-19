@@ -18,7 +18,7 @@ public sealed class QuorumSettingsConfiguration : IEntityTypeConfiguration<Quoru
         builder.Property(x => x.GuildId).HasColumnType("bigint").HasConversion<long>();
         builder.Property(x => x.TargetType).HasColumnType("integer");
         builder.Property(x => x.TargetId).HasColumnType("bigint").HasConversion<long>();
-        builder.Property(x => x.QuorumProportion).HasColumnType("double precision").HasPrecision(6, 4);
+        builder.Property(x => x.Proportion).HasColumnType("double precision").HasPrecision(6, 4);
 
         builder
             .HasMany(x => x.Roles)

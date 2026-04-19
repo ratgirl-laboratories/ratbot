@@ -5,14 +5,16 @@ namespace RatBot.Infrastructure.Persistence.Repositories;
 
 public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSettingsRepository
 {
-    public async Task<ErrorOr<QuorumSettings>> GetAsync(ulong guildId, QuorumSettingsType targetType, ulong targetId)
+    public async Task<ErrorOr<QuorumSettings>> GetAsync(QuorumTarget target)
     {
         QuorumSettings? config = await dbContext
             .Set<QuorumSettings>()
             .Include(config => config.Roles)
             .AsNoTracking()
             .SingleOrDefaultAsync(config =>
-                config.GuildId == guildId && config.TargetType == targetType && config.TargetId == targetId);
+                config.GuildId == target.GuildId
+                && config.TargetType == target.TargetType
+                && config.TargetId == target.TargetId);
 
         if (config is null)
             return Error.NotFound(description: "Quorum settings not found");
@@ -43,7 +45,7 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
                     && existing.TargetType == config.TargetType
                     && existing.TargetId == config.TargetId
                 )
-                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.QuorumProportion, config.QuorumProportion));
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.Proportion, config.Proportion));
 
             await dbContext
                 .Set<QuorumSettingsRole>()
@@ -60,19 +62,24 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
         return Result.Success;
     }
 
-    public async Task<ErrorOr<Deleted>> DeleteAsync(ulong guildId, QuorumSettingsType targetType, ulong targetId)
+    public async Task<ErrorOr<Deleted>> DeleteAsync(QuorumTarget target)
     {
         QuorumSettings? entity = await dbContext
             .Set<QuorumSettings>()
             .SingleOrDefaultAsync(existing =>
-                existing.GuildId == guildId && existing.TargetType == targetType && existing.TargetId == targetId);
+                existing.GuildId == target.GuildId
+                && existing.TargetType == target.TargetType
+                && existing.TargetId == target.TargetId);
 
         if (entity is null)
             return Error.NotFound(description: "Quorum settings not found");
 
         await dbContext
             .Set<QuorumSettingsRole>()
-            .Where(role => role.GuildId == guildId && role.TargetType == targetType && role.TargetId == targetId)
+            .Where(role =>
+                role.GuildId == target.GuildId
+                && role.TargetType == target.TargetType
+                && role.TargetId == target.TargetId)
             .ExecuteDeleteAsync();
 
         dbContext.Remove(entity);

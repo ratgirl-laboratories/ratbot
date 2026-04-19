@@ -20,7 +20,8 @@ public static class DependencyInjection
             services.AddScoped<MetaSuggestionService>();
             services.AddScoped<MetaSuggestionSettingsService>();
             services.AddScoped<IModerationService, ModerationService>();
-            services.AddScoped<QuorumSettingsService>();
+            services.AddScoped<IQuorumSettingsReader, QuorumSettingsReader>();
+            services.AddScoped<IQuorumSettingsWriter, QuorumSettingsWriter>();
             services.AddScoped<RpsGameService>();
 
             return services;

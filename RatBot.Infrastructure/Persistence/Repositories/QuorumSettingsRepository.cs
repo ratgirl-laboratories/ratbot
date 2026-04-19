@@ -74,14 +74,6 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
         if (entity is null)
             return Error.NotFound(description: "Quorum settings not found");
 
-        await dbContext
-            .Set<QuorumSettingsRole>()
-            .Where(role =>
-                role.GuildId == target.GuildId
-                && role.TargetType == target.TargetType
-                && role.TargetId == target.TargetId)
-            .ExecuteDeleteAsync();
-
         dbContext.Remove(entity);
         await dbContext.SaveChangesAsync();
         return Result.Deleted;

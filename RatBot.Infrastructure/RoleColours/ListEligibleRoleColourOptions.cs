@@ -7,9 +7,6 @@ namespace RatBot.Infrastructure.RoleColours;
 /// </summary>
 public static class ListEligibleRoleColourOptions
 {
-    public sealed record Query(
-        IReadOnlyCollection<ulong> CurrentMemberRoleIds
-    );
 
     public static Task<IReadOnlyList<RoleColourOption>> ExecuteAsync(
         BotDbContext db,
@@ -26,4 +23,7 @@ public static class ListEligibleRoleColourOptions
 
         return q.ToListAsync(ct).ContinueWith<IReadOnlyList<RoleColourOption>>(t => t.Result, ct);
     }
+    public sealed record Query(
+        IReadOnlyCollection<ulong> CurrentMemberRoleIds
+    );
 }

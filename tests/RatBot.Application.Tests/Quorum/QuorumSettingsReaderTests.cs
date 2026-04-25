@@ -14,6 +14,12 @@ public sealed class QuorumSettingsReaderTests
     private QuorumTarget _channelTarget;
     private QuorumTarget _categoryTarget;
 
+    private static QuorumSettings CreateSettings(
+        QuorumTarget target,
+        IEnumerable<ulong> roleIds,
+        double quorumProportion) =>
+        QuorumSettings.Create(target, roleIds, Proportion.Create(quorumProportion).Value).Value;
+
     [SetUp]
     public void SetUp()
     {
@@ -112,10 +118,4 @@ public sealed class QuorumSettingsReaderTests
         await _repository.Received(1).GetAsync(_channelTarget);
         await _repository.DidNotReceive().GetAsync(_categoryTarget);
     }
-
-    private static QuorumSettings CreateSettings(
-        QuorumTarget target,
-        IEnumerable<ulong> roleIds,
-        double quorumProportion) =>
-        QuorumSettings.Create(target, roleIds, Proportion.Create(quorumProportion).Value).Value;
 }

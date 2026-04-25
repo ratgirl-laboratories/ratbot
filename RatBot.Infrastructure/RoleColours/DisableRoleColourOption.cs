@@ -4,7 +4,6 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class DisableRoleColourOption
 {
-    public sealed record Command(string Key);
 
     public async static Task<ErrorOr<RoleColourOption>> ExecuteAsync(
         BotDbContext db,
@@ -31,4 +30,5 @@ public static class DisableRoleColourOption
         await db.SaveChangesAsync(ct);
         return option;
     }
+    public sealed record Command(string Key);
 }

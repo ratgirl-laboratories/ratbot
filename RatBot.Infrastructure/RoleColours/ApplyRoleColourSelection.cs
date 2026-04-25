@@ -4,17 +4,6 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class ApplyRoleColourSelection
 {
-    public sealed record Command(
-        ulong UserId,
-        RoleColourOption.Id SelectedOptionId,
-        IReadOnlyCollection<ulong> CurrentMemberRoleIds
-    );
-
-    public sealed record Result(bool Success, string? ErrorDescription)
-    {
-        public static Result Ok() => new Result(true, null);
-        public static Result Fail(string description) => new Result(false, description);
-    }
 
     public async static Task<Result> ExecuteAsync(
         BotDbContext db,
@@ -51,5 +40,16 @@ public static class ApplyRoleColourSelection
 
         await db.SaveChangesAsync(ct);
         return Result.Ok();
+    }
+    public sealed record Command(
+        ulong UserId,
+        RoleColourOption.Id SelectedOptionId,
+        IReadOnlyCollection<ulong> CurrentMemberRoleIds
+    );
+
+    public sealed record Result(bool Success, string? ErrorDescription)
+    {
+        public static Result Ok() => new Result(true, null);
+        public static Result Fail(string description) => new Result(false, description);
     }
 }

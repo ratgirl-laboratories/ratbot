@@ -11,6 +11,32 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
 {
     private const string NoneLogValue = "(none)";
 
+    private static ulong? ResolveConfiguredTargetDcr(
+        IReadOnlyCollection<ulong> currentRoles,
+        MemberColourPreference? preference,
+        IReadOnlyCollection<RoleColourOption> enabledOptions)
+    {
+        if (preference is not { Kind: MemberColourPreferenceKind.ConfiguredOption, SelectedOptionId: not null })
+            return null;
+
+        RoleColourOption.Id selectedId = preference.SelectedOptionId.Value;
+        RoleColourOption? selected = enabledOptions.SingleOrDefault(o => o.OptionId.Equals(selectedId));
+
+        return selected is not null && currentRoles.Contains(selected.SourceRoleId)
+            ? selected.DisplayRoleId
+            : null;
+    }
+
+    private static HashSet<ulong> GetDisplayRolesToRemove(HashSet<ulong> currentDcrs, ulong? targetDcr) =>
+        currentDcrs
+            .Where(roleId => roleId != targetDcr)
+            .ToHashSet();
+
+    private static List<ulong> GetDisplayRolesToAdd(IReadOnlyCollection<ulong> currentRoles, ulong? targetDcr) =>
+        targetDcr.HasValue && !currentRoles.Contains(targetDcr.Value)
+            ? new List<ulong> { targetDcr.Value }
+            : new List<ulong>();
+
     public async Task ReconcileMemberAsync(IGuild guild, ulong userId, CancellationToken ct)
     {
         using IServiceScope scope = scopeFactory.CreateScope();
@@ -105,22 +131,6 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
         ResolveConfiguredTargetDcr(currentRoles, preference, enabledOptions)
         ?? ResolveFallbackTargetDcr(guild, userId, currentRoles, enabledOptions);
 
-    private static ulong? ResolveConfiguredTargetDcr(
-        IReadOnlyCollection<ulong> currentRoles,
-        MemberColourPreference? preference,
-        IReadOnlyCollection<RoleColourOption> enabledOptions)
-    {
-        if (preference is not { Kind: MemberColourPreferenceKind.ConfiguredOption, SelectedOptionId: not null })
-            return null;
-
-        RoleColourOption.Id selectedId = preference.SelectedOptionId.Value;
-        RoleColourOption? selected = enabledOptions.SingleOrDefault(o => o.OptionId.Equals(selectedId));
-
-        return selected is not null && currentRoles.Contains(selected.SourceRoleId)
-            ? selected.DisplayRoleId
-            : null;
-    }
-
     private ulong? ResolveFallbackTargetDcr(
         IGuild guild,
         ulong userId,
@@ -158,14 +168,4 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
 
         return best.DisplayRoleId;
     }
-
-    private static HashSet<ulong> GetDisplayRolesToRemove(HashSet<ulong> currentDcrs, ulong? targetDcr) =>
-        currentDcrs
-            .Where(roleId => roleId != targetDcr)
-            .ToHashSet();
-
-    private static List<ulong> GetDisplayRolesToAdd(IReadOnlyCollection<ulong> currentRoles, ulong? targetDcr) =>
-        targetDcr.HasValue && !currentRoles.Contains(targetDcr.Value)
-            ? new List<ulong> { targetDcr.Value }
-            : new List<ulong>();
 }

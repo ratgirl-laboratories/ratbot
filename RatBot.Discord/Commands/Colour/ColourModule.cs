@@ -15,11 +15,6 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
     private static readonly ConcurrentDictionary<string, Session>
         Sessions = new ConcurrentDictionary<string, Session>();
 
-    private sealed record Session(ulong OwnerUserId, RoleColourOption.Id? Selected, DateTimeOffset ExpiresAtUtc)
-    {
-        public bool IsExpired => DateTimeOffset.UtcNow >= ExpiresAtUtc;
-    }
-
     [SlashCommand("swap", "Swap to another available display colour.")]
     public async Task SwapAsync()
     {
@@ -277,5 +272,10 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         {
             // Don't care
         }
+    }
+
+    private sealed record Session(ulong OwnerUserId, RoleColourOption.Id? Selected, DateTimeOffset ExpiresAtUtc)
+    {
+        public bool IsExpired => DateTimeOffset.UtcNow >= ExpiresAtUtc;
     }
 }

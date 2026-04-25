@@ -28,29 +28,6 @@ public sealed class DiscordInteractionHandler(
     private readonly string _serviceInstanceId =
         configuration["OTEL:Resource:ServiceInstanceId"] ?? Environment.MachineName;
 
-    public async Task InitializeAsync(CancellationToken ct)
-    {
-        Assembly interactionsAssembly = typeof(HelloModule).Assembly;
-        await interactionService.AddModulesAsync(interactionsAssembly, services);
-
-        _logger.Information(
-            "Registered {InteractionModuleCount} interaction modules.",
-            interactionService.Modules.Count);
-
-        LogRegisteredInteractionCommands();
-
-        discordClient.InteractionCreated += HandleInteractionAsync;
-        discordClient.Ready += RegisterCommandsAsync;
-        interactionService.InteractionExecuted += HandleInteractionExecutedAsync;
-    }
-
-    public void Unsubscribe()
-    {
-        discordClient.InteractionCreated -= HandleInteractionAsync;
-        discordClient.Ready -= RegisterCommandsAsync;
-        interactionService.InteractionExecuted -= HandleInteractionExecutedAsync;
-    }
-
     private static string GetInteractionName(SocketInteraction interaction) =>
         interaction switch
         {
@@ -220,6 +197,29 @@ public sealed class DiscordInteractionHandler(
             .ForContext("invokee_username", usage.InvokeeUsername)
             .ForContext("invokee_source", usage.InvokeeSource)
             .Debug("Command invoked");
+    }
+
+    public async Task InitializeAsync(CancellationToken ct)
+    {
+        Assembly interactionsAssembly = typeof(HelloModule).Assembly;
+        await interactionService.AddModulesAsync(interactionsAssembly, services);
+
+        _logger.Information(
+            "Registered {InteractionModuleCount} interaction modules.",
+            interactionService.Modules.Count);
+
+        LogRegisteredInteractionCommands();
+
+        discordClient.InteractionCreated += HandleInteractionAsync;
+        discordClient.Ready += RegisterCommandsAsync;
+        interactionService.InteractionExecuted += HandleInteractionExecutedAsync;
+    }
+
+    public void Unsubscribe()
+    {
+        discordClient.InteractionCreated -= HandleInteractionAsync;
+        discordClient.Ready -= RegisterCommandsAsync;
+        interactionService.InteractionExecuted -= HandleInteractionExecutedAsync;
     }
 
     private async Task RegisterCommandsAsync()

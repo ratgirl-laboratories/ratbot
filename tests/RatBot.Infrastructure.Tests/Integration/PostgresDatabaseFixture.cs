@@ -14,24 +14,6 @@ public sealed class PostgresDatabaseFixture
 
     public static string ConnectionString => _container.GetConnectionString();
 
-    [OneTimeSetUp]
-    public async Task OneTimeSetUp()
-    {
-        _container = new PostgreSqlBuilder("postgres:17-alpine")
-            .Build();
-
-        await _container.StartAsync();
-
-        await using BotDbContext db = CreateDbContext();
-        await db.Database.MigrateAsync();
-    }
-
-    [OneTimeTearDown]
-    public async Task OneTimeTearDown()
-    {
-        await _container.DisposeAsync();
-    }
-
     public static BotDbContext CreateDbContext()
     {
         DbContextOptions<BotDbContext> options = new DbContextOptionsBuilder<BotDbContext>()
@@ -53,5 +35,23 @@ public sealed class PostgresDatabaseFixture
         await db.MetaSuggestionSettings.ExecuteDeleteAsync();
         await db.AutobannedUsers.ExecuteDeleteAsync();
         await db.EmojiUsageCounts.ExecuteDeleteAsync();
+    }
+
+    [OneTimeSetUp]
+    public async Task OneTimeSetUp()
+    {
+        _container = new PostgreSqlBuilder("postgres:17-alpine")
+            .Build();
+
+        await _container.StartAsync();
+
+        await using BotDbContext db = CreateDbContext();
+        await db.Database.MigrateAsync();
+    }
+
+    [OneTimeTearDown]
+    public async Task OneTimeTearDown()
+    {
+        await _container.DisposeAsync();
     }
 }

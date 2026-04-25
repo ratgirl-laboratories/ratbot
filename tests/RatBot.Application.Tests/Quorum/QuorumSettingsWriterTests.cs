@@ -14,6 +14,12 @@ public sealed class QuorumSettingsWriterTests
     private QuorumSettingsWriter _writer = null!;
     private QuorumTarget _target;
 
+    private static QuorumSettings CreateSettings(
+        QuorumTarget target,
+        IEnumerable<ulong> roleIds,
+        double quorumProportion) =>
+        QuorumSettings.Create(target, roleIds, Proportion.Create(quorumProportion).Value).Value;
+
     [SetUp]
     public void SetUp()
     {
@@ -186,10 +192,4 @@ public sealed class QuorumSettingsWriterTests
         result.FirstError.ShouldBe(repositoryError);
         await _repository.Received(1).DeleteAsync(_target);
     }
-
-    private static QuorumSettings CreateSettings(
-        QuorumTarget target,
-        IEnumerable<ulong> roleIds,
-        double quorumProportion) =>
-        QuorumSettings.Create(target, roleIds, Proportion.Create(quorumProportion).Value).Value;
 }

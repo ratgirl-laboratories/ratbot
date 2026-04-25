@@ -5,13 +5,6 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class RegisterRoleColourOption
 {
-    public sealed record Command(
-        string Key,
-        string Label,
-        ulong SourceRoleId,
-        ulong DisplayRoleId,
-        RoleColourRegistrationContext RegistrationContext
-    );
 
     public async static Task<ErrorOr<RoleColourOption>> ExecuteAsync(
         BotDbContext db,
@@ -65,4 +58,11 @@ public static class RegisterRoleColourOption
 
         return option;
     }
+    public sealed record Command(
+        string Key,
+        string Label,
+        ulong SourceRoleId,
+        ulong DisplayRoleId,
+        RoleColourRegistrationContext RegistrationContext
+    );
 }

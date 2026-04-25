@@ -10,8 +10,8 @@ public sealed class RoleColourSyncBackgroundWorker(
     ILogger logger)
     : BackgroundService
 {
-    private readonly ILogger _log = logger.ForContext<RoleColourSyncBackgroundWorker>();
     private static readonly int DefaultConcurrency = Environment.ProcessorCount >> 1;
+    private readonly ILogger _log = logger.ForContext<RoleColourSyncBackgroundWorker>();
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {

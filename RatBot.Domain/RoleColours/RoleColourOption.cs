@@ -2,12 +2,6 @@ namespace RatBot.Domain.RoleColours;
 
 public sealed class RoleColourOption
 {
-    // Real SCR/DCR mappings only. The built-in "no colour" preference is not configured here.
-    public readonly record struct Id(Guid Value)
-    {
-        public static Id Empty { get; } = new Id(Guid.Empty);
-        public static Id NewId() => new Id(Guid.NewGuid());
-    }
 
     // EF Core private ctor
     private RoleColourOption() { }
@@ -91,4 +85,10 @@ public sealed class RoleColourOption
     }
 
     private void Touch() => UpdatedAtUtc = DateTimeOffset.UtcNow;
+    // Real SCR/DCR mappings only. The built-in "no colour" preference is not configured here.
+    public readonly record struct Id(Guid Value)
+    {
+        public static Id Empty { get; } = new Id(Guid.Empty);
+        public static Id NewId() => new Id(Guid.NewGuid());
+    }
 }

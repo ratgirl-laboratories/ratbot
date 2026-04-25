@@ -2,12 +2,6 @@ namespace RatBot.Domain.RoleColours;
 
 public sealed class MemberColourPreference
 {
-    public readonly record struct Id(Guid Value)
-    {
-        public static Id Empty { get; } = new Id(Guid.Empty);
-
-        public static Id NewId() => new Id(Guid.NewGuid());
-    }
 
     // EF Core private ctor
     private MemberColourPreference() { }
@@ -54,5 +48,11 @@ public sealed class MemberColourPreference
     {
         Kind = MemberColourPreferenceKind.NoColour;
         SelectedOptionId = null;
+    }
+    public readonly record struct Id(Guid Value)
+    {
+        public static Id Empty { get; } = new Id(Guid.Empty);
+
+        public static Id NewId() => new Id(Guid.NewGuid());
     }
 }

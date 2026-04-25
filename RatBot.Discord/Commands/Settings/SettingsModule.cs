@@ -15,8 +15,10 @@ namespace RatBot.Discord.Commands.Settings;
 [DefaultMemberPermissions(GuildPermission.Administrator)]
 public sealed class SettingsModule : SlashCommandBase
 {
-    // ReSharper disable once InconsistentNaming
-    private const string ONLY_IN_GUILD = "This command can only be used in a guild.";
+    // ReSharper disable InconsistentNaming
+    private const string RESPONSE_NO_GUILD = "This command can only be used in a guild.";
+    private const string LABEL_REFRESH = "Refresh";
+    // ReSharper enable InconsistentNaming
 
     [Group("colour", "Role colour configuration.")]
     [DefaultMemberPermissions(GuildPermission.Administrator)]
@@ -35,7 +37,7 @@ public sealed class SettingsModule : SlashCommandBase
         {
             if (Context.Guild is null)
             {
-                await RespondAsync(ONLY_IN_GUILD, ephemeral: true);
+                await RespondAsync(RESPONSE_NO_GUILD, ephemeral: true);
                 return;
             }
 
@@ -68,7 +70,7 @@ public sealed class SettingsModule : SlashCommandBase
                     ComponentBuilder components = (status.Pending + status.InFlight) == 0
                         ? new ComponentBuilder()
                         : new ComponentBuilder().WithButton(
-                            label: "Refresh",
+                            label: LABEL_REFRESH,
                             customId: $"colour-sync-refresh:{Context.User.Id}",
                             style: ButtonStyle.Primary);
 
@@ -78,28 +80,52 @@ public sealed class SettingsModule : SlashCommandBase
             );
         }
 
-        [SlashCommand("disable", "Disable a configured role colour option.")]
+        [SlashCommand("delete", "Delete a configured role colour option.")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task DisableAsync(
-            [Summary("name", "Name of the colour option to disable.")]
+        public async Task DeleteAsync(
+            [Summary("name", "Name/key of the colour option to delete.")]
             string name)
         {
             if (Context.Guild is null)
             {
-                await RespondAsync(ONLY_IN_GUILD, ephemeral: true);
+                await RespondAsync(RESPONSE_NO_GUILD, ephemeral: true);
                 return;
             }
 
-            ErrorOr<RoleColourOption> result = await DisableRoleColourOption.ExecuteAsync(
+            await DeferAsync(true);
+
+            ErrorOr<RoleColourOption> result = await DeleteRoleColourOption.ExecuteAsync(
                 dbContext,
-                new DisableRoleColourOption.Command(name),
+                new DeleteRoleColourOption.Command(name),
                 CancellationToken.None);
 
             await result.SwitchFirstAsync(
-                async option => await RespondAsync($"Disabled colour option `{option.Key}`.", ephemeral: true),
-                async error => await RespondAsync(error.Description, ephemeral: true)
+                async option =>
+                {
+                    // Enqueue members that either had the source role or currently wear the display role
+                    int queued = await EnqueueMembersWithAnyOfRolesAsync(
+                        Context.Guild,
+                        new HashSet<ulong> { option.SourceRoleId, option.DisplayRoleId });
+
+                    IRoleColourSyncQueue.Status status = syncQueue.GetStatus();
+                    string eta = FormatEta(status);
+
+                    ComponentBuilder components = (status.Pending + status.InFlight) == 0
+                        ? new ComponentBuilder()
+                        : new ComponentBuilder().WithButton(
+                            label: LABEL_REFRESH,
+                            customId: $"colour-sync-refresh:{Context.User.Id}",
+                            style: ButtonStyle.Primary);
+
+                    await FollowupAsync(
+                        $"Deleted colour option `{option.Key}`. Queued {queued} member(s) for colour sync. Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.",
+                        ephemeral: true,
+                        components: components.Build());
+                },
+                async error => await FollowupAsync(error.Description, ephemeral: true)
             );
         }
+
 
         [SlashCommand("list", "List configured role colour options.")]
         [RequireUserPermission(GuildPermission.Administrator)]
@@ -109,7 +135,7 @@ public sealed class SettingsModule : SlashCommandBase
         {
             if (Context.Guild is null)
             {
-                await RespondAsync(ONLY_IN_GUILD, ephemeral: true);
+                await RespondAsync(RESPONSE_NO_GUILD, ephemeral: true);
                 return;
             }
 
@@ -135,7 +161,7 @@ public sealed class SettingsModule : SlashCommandBase
         {
             if (Context.Guild is null)
             {
-                await RespondAsync(ONLY_IN_GUILD, ephemeral: true);
+                await RespondAsync(RESPONSE_NO_GUILD, ephemeral: true);
                 return;
             }
 
@@ -164,7 +190,7 @@ public sealed class SettingsModule : SlashCommandBase
             ComponentBuilder components = (status.Pending + status.InFlight) == 0
                 ? new ComponentBuilder()
                 : new ComponentBuilder().WithButton(
-                    label: "Refresh",
+                    label: LABEL_REFRESH,
                     customId: $"colour-sync-refresh:{Context.User.Id}",
                     style: ButtonStyle.Primary);
 
@@ -191,6 +217,17 @@ public sealed class SettingsModule : SlashCommandBase
 
             ImmutableArray<IGuildUser> targetUsers = users
                 .Where(u => u.RoleIds.Any(sourceRoleIds.Contains))
+                .ToImmutableArray();
+
+            return targetUsers.Count(user => syncQueue.Enqueue(guild.Id, user.Id));
+        }
+
+        private async Task<int> EnqueueMembersWithAnyOfRolesAsync(IGuild guild, HashSet<ulong> roleIds)
+        {
+            IReadOnlyCollection<IGuildUser> users = await guild.GetUsersAsync();
+
+            ImmutableArray<IGuildUser> targetUsers = users
+                .Where(u => u.RoleIds.Any(roleIds.Contains))
                 .ToImmutableArray();
 
             return targetUsers.Count(user => syncQueue.Enqueue(guild.Id, user.Id));
@@ -256,6 +293,7 @@ public sealed class SettingsModule : SlashCommandBase
             string eta = FormatEta(status);
 
             bool done = (status.Pending + status.InFlight) == 0;
+
             string content = done
                 ? "Role colour sync complete. Queue is empty."
                 : $"Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.";
@@ -263,7 +301,7 @@ public sealed class SettingsModule : SlashCommandBase
             ComponentBuilder components = done
                 ? new ComponentBuilder()
                 : new ComponentBuilder().WithButton(
-                    label: "Refresh",
+                    label: LABEL_REFRESH,
                     customId: $"colour-sync-refresh:{ownerUserId}",
                     style: ButtonStyle.Primary);
 
@@ -364,7 +402,7 @@ public sealed class SettingsModule : SlashCommandBase
         {
             if (Context.Guild is null)
             {
-                await RespondAsync(ONLY_IN_GUILD, ephemeral: true);
+                await RespondAsync(RESPONSE_NO_GUILD, ephemeral: true);
                 return;
             }
 

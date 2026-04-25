@@ -19,7 +19,6 @@
     </Folder>
     <Folder Name="/ops/" />
     <Folder Name="/ops/cicd/">
-        <File Path=".github/workflows/ci-tests.yml" />
         <File Path=".github/workflows/deploy-vps.yml" />
         <File Path=".github/workflows/sonarqube.yml" />
         <File Path="scripts/deploy-vps-stack.sh" />

@@ -45,10 +45,13 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
         MemberColourPreference? prefTracked = await db.MemberColourPreferences
             .SingleOrDefaultAsync(p => p.UserId == userId, ct);
 
-        List<RoleColourOption> enabledOptions = await db.RoleColourOptions
+        // Load all options; we use enabled ones for selection logic, but remove any DCRs from all configured options
+        List<RoleColourOption> allOptions = await db.RoleColourOptions
             .AsNoTracking()
-            .Where(o => o.IsEnabled)
             .ToListAsync(ct);
+        List<RoleColourOption> enabledOptions = allOptions
+            .Where(o => o.IsEnabled)
+            .ToList();
 
         IGuildUser? member = await guild.GetUserAsync(userId);
 
@@ -59,9 +62,14 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
         }
 
         IReadOnlyCollection<ulong> currentRoles = member.RoleIds;
-        ulong? targetDcr = ResolveTargetDcr(guild, userId, currentRoles, prefTracked, enabledOptions);
 
-        HashSet<ulong> dcrSet = enabledOptions
+        // If the user explicitly selected NoColour, do not apply fallback; remove all DCRs instead
+        ulong? targetDcr = prefTracked?.IsNoColourSelected == true
+            ? null
+            : ResolveTargetDcr(guild, userId, currentRoles, prefTracked, enabledOptions);
+
+        // Remove any DCRs that belong to any configured option (enabled or disabled)
+        HashSet<ulong> dcrSet = allOptions
             .Select(colourOption => colourOption.DisplayRoleId)
             .ToHashSet();
 

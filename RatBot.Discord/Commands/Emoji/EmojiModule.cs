@@ -7,7 +7,7 @@ using RatBot.Domain.Emoji;
 namespace RatBot.Discord.Commands.Emoji;
 
 [Group("emoji", "Emoji analytics commands.")]
-[DefaultMemberPermissions(GuildPermission.MuteMembers)]
+[DefaultMemberPermissions(GuildPermission.SendMessages)]
 public sealed class EmojiModule(
     ReactionUsageTracker reactionUsageTracker,
     DiscordSocketClient discordClient,

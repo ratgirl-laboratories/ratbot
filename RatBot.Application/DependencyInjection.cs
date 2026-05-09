@@ -5,7 +5,6 @@ using RatBot.Application.Meta;
 using RatBot.Application.Moderation;
 using RatBot.Application.Quorum;
 using RatBot.Application.Reactions;
-using RatBot.Application.RoleColours;
 using RatBot.Application.Rps;
 
 namespace RatBot.Application;

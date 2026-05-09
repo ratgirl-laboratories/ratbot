@@ -2,9 +2,10 @@ namespace RatBot.Domain.RoleColours;
 
 public sealed class RoleColourOption
 {
-
     // EF Core private ctor
-    private RoleColourOption() { }
+    private RoleColourOption()
+    {
+    }
 
     public Id OptionId { get; private set; } = Id.Empty;
 
@@ -27,16 +28,24 @@ public sealed class RoleColourOption
 
     public DateTimeOffset UpdatedAtUtc { get; private set; }
 
-    public static RoleColourOption Create(string key, string label, ulong sourceRoleId, ulong displayRoleId)
+    public static ErrorOr<RoleColourOption> Create(string key, string label, ulong sourceRoleId, ulong displayRoleId)
     {
         if (sourceRoleId == displayRoleId)
-            throw new ArgumentException("Source and display role IDs must be different.");
+        {
+            return Error.Validation(
+                "RoleColourOption.RolesMustDiffer",
+                "Source and display role IDs must be different.");
+        }
 
         if (string.IsNullOrWhiteSpace(key))
-            throw new ArgumentException("Key is required.");
+            return Error.Validation("RoleColourOption.KeyRequired", "Key is required.");
 
         if (string.IsNullOrWhiteSpace(label))
-            throw new ArgumentException("Label is required.");
+        {
+            return Error.Validation(
+                "RoleColourOption.LabelRequired",
+                "Label is required.");
+        }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
@@ -57,22 +66,34 @@ public sealed class RoleColourOption
         };
     }
 
-    public void Rename(string label)
+    public ErrorOr<Success> Update(string key, string label, ulong displayRoleId)
     {
+        if (SourceRoleId == displayRoleId)
+        {
+            return Error.Validation(
+                "RoleColourOption.RolesMustDiffer",
+                "Source and display role IDs must be different.");
+        }
+
+        if (string.IsNullOrWhiteSpace(key))
+            return Error.Validation("RoleColourOption.KeyRequired", "Key is required.");
+
         if (string.IsNullOrWhiteSpace(label))
-            throw new ArgumentException("Label is required.");
+        {
+            return Error.Validation(
+                "RoleColourOption.LabelRequired",
+                "Label is required.");
+        }
 
+        string trimmedKey = key.Trim();
+
+        Key = trimmedKey;
+        NormalisedKey = trimmedKey.ToUpperInvariant();
         Label = label.Trim();
+        DisplayRoleId = displayRoleId;
         Touch();
-    }
 
-    public void Enable()
-    {
-        if (IsEnabled)
-            return;
-
-        IsEnabled = true;
-        Touch();
+        return Result.Success;
     }
 
     public void Disable()
@@ -85,6 +106,7 @@ public sealed class RoleColourOption
     }
 
     private void Touch() => UpdatedAtUtc = DateTimeOffset.UtcNow;
+
     // Real SCR/DCR mappings only. The built-in "no colour" preference is not configured here.
     public readonly record struct Id(Guid Value)
     {

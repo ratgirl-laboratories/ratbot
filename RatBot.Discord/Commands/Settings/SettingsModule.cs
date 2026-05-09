@@ -1,13 +1,12 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using RatBot.Application.Common.Extensions;
 using RatBot.Application.Meta;
-using RatBot.Application.RoleColours;
+using RatBot.Discord.BackgroundWorkers;
 using RatBot.Infrastructure.Data;
 using RatBot.Infrastructure.RoleColours;
-using Microsoft.EntityFrameworkCore;
-using RatBot.Discord.BackgroundWorkers;
 
 namespace RatBot.Discord.Commands.Settings;
 
@@ -18,12 +17,12 @@ public sealed class SettingsModule : SlashCommandBase
     // ReSharper disable InconsistentNaming
     private const string RESPONSE_NO_GUILD = "This command can only be used in a guild.";
     private const string LABEL_REFRESH = "Refresh";
+
     // ReSharper enable InconsistentNaming
 
     [Group("colour", "Role colour configuration.")]
     [DefaultMemberPermissions(GuildPermission.Administrator)]
-    public sealed class ColourSettingsModule(BotDbContext dbContext, IRoleColourSyncQueue syncQueue)
-        : SlashCommandBase
+    public sealed class ColourSettingsModule(BotDbContext dbContext, IRoleColourSyncQueue syncQueue) : SlashCommandBase
     {
         [SlashCommand("add", "Register a source/display role colour mapping.")]
         [RequireUserPermission(GuildPermission.Administrator)]
@@ -33,7 +32,8 @@ public sealed class SettingsModule : SlashCommandBase
             [Summary("source", "Source colour role users select.")]
             IRole source,
             [Summary("display", "Display colour role RatBot manages.")]
-            IRole display)
+            IRole display
+        )
         {
             if (Context.Guild is null)
             {
@@ -41,25 +41,30 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(true);
+            ErrorOr<Success> roleValidation = ValidateRoleColourRoles(source.Id, display.Id);
 
-            RoleColourRegistrationContext registrationContext = BuildRegistrationContext(source.Id, display.Id);
+            if (roleValidation.IsError)
+            {
+                await RespondAsync(roleValidation.FirstError.Description, ephemeral: true);
+                return;
+            }
+
+            await DeferAsync(ephemeral: true);
 
             ErrorOr<RoleColourOption> result = await RegisterRoleColourOption.ExecuteAsync(
                 dbContext,
-                new RegisterRoleColourOption.Command(
-                    Key: name,
-                    Label: name,
-                    SourceRoleId: source.Id,
-                    DisplayRoleId: display.Id,
-                    RegistrationContext: registrationContext
-                ),
-                CancellationToken.None);
+                name,
+                name,
+                source.Id,
+                display.Id,
+                CancellationToken.None
+            );
 
             await result.SwitchFirstAsync(
                 async option =>
                 {
                     int queued = await EnqueueMembersWithSourceRoleAsync(Context.Guild, option.SourceRoleId);
+
                     IRoleColourSyncQueue.Status status = syncQueue.GetStatus();
                     string eta = FormatEta(status);
 
@@ -67,12 +72,87 @@ public sealed class SettingsModule : SlashCommandBase
                         $"Registered colour option `{option.Key}` (‘{option.Label}’): {source.Mention} -> {display.Mention}.\n"
                         + $"Queued {queued} member(s) for colour sync. Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.";
 
-                    ComponentBuilder components = (status.Pending + status.InFlight) == 0
-                        ? new ComponentBuilder()
-                        : new ComponentBuilder().WithButton(
-                            label: LABEL_REFRESH,
-                            customId: $"colour-sync-refresh:{Context.User.Id}",
-                            style: ButtonStyle.Primary);
+                    ComponentBuilder components =
+                        (status.Pending + status.InFlight) == 0
+                            ? new ComponentBuilder()
+                            : new ComponentBuilder().WithButton(
+                                label: LABEL_REFRESH,
+                                customId: $"colour-sync-refresh:{Context.User.Id}",
+                                style: ButtonStyle.Primary
+                            );
+
+                    await FollowupAsync(message, ephemeral: true, components: components.Build());
+                },
+                async error => await FollowupAsync(error.Description, ephemeral: true)
+            );
+        }
+
+        [SlashCommand("upsert", "Create or update a source/display role colour mapping.")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task UpsertAsync(
+            [Summary("name", "Name used to identify this colour.")]
+            string name,
+            [Summary("source", "Source colour role users select.")]
+            IRole source,
+            [Summary("display", "Display colour role RatBot manages.")]
+            IRole display
+        )
+        {
+            if (Context.Guild is null)
+            {
+                await RespondAsync(RESPONSE_NO_GUILD, ephemeral: true);
+                return;
+            }
+
+            ErrorOr<Success> roleValidation = ValidateRoleColourRoles(source.Id, display.Id);
+
+            if (roleValidation.IsError)
+            {
+                await RespondAsync(roleValidation.FirstError.Description, ephemeral: true);
+                return;
+            }
+
+            await DeferAsync(ephemeral: true);
+
+            ErrorOr<UpsertRoleColourOption.Result> result = await UpsertRoleColourOption.ExecuteAsync(
+                dbContext,
+                name,
+                name,
+                source.Id,
+                display.Id,
+                CancellationToken.None
+            );
+
+            await result.SwitchFirstAsync(
+                async upsert =>
+                {
+                    HashSet<ulong> affectedRoleIds = new HashSet<ulong>
+                        { upsert.Option.SourceRoleId, upsert.Option.DisplayRoleId };
+
+                    if (upsert.PreviousDisplayRoleId is not null)
+                        affectedRoleIds.Add(upsert.PreviousDisplayRoleId.Value);
+
+                    int queued = await EnqueueMembersWithAnyOfRolesAsync(Context.Guild, affectedRoleIds);
+
+                    IRoleColourSyncQueue.Status status = syncQueue.GetStatus();
+                    string eta = FormatEta(status);
+
+                    string action = upsert.Created
+                        ? "Registered"
+                        : "Updated";
+
+                    string message =
+                        $"{action} colour option `{upsert.Option.Key}` (‘{upsert.Option.Label}’): {source.Mention} -> {display.Mention}.\n"
+                        + $"Queued {queued} member(s) for colour sync. Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.";
+
+                    ComponentBuilder components =
+                        (status.Pending + status.InFlight) == 0
+                            ? new ComponentBuilder()
+                            : new ComponentBuilder().WithButton(
+                                label: LABEL_REFRESH,
+                                customId: $"colour-sync-refresh:{Context.User.Id}",
+                                style: ButtonStyle.Primary
+                            );
 
                     await FollowupAsync(message, ephemeral: true, components: components.Build());
                 },
@@ -82,9 +162,7 @@ public sealed class SettingsModule : SlashCommandBase
 
         [SlashCommand("delete", "Delete a configured role colour option.")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task DeleteAsync(
-            [Summary("name", "Name/key of the colour option to delete.")]
-            string name)
+        public async Task DeleteAsync([Summary("name", "Name/key of the colour option to delete.")] string name)
         {
             if (Context.Guild is null)
             {
@@ -92,12 +170,13 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(true);
+            await DeferAsync(ephemeral: true);
 
             ErrorOr<RoleColourOption> result = await DeleteRoleColourOption.ExecuteAsync(
                 dbContext,
                 new DeleteRoleColourOption.Command(name),
-                CancellationToken.None);
+                CancellationToken.None
+            );
 
             await result.SwitchFirstAsync(
                 async option =>
@@ -105,27 +184,30 @@ public sealed class SettingsModule : SlashCommandBase
                     // Enqueue members that either had the source role or currently wear the display role
                     int queued = await EnqueueMembersWithAnyOfRolesAsync(
                         Context.Guild,
-                        new HashSet<ulong> { option.SourceRoleId, option.DisplayRoleId });
+                        new HashSet<ulong> { option.SourceRoleId, option.DisplayRoleId }
+                    );
 
                     IRoleColourSyncQueue.Status status = syncQueue.GetStatus();
                     string eta = FormatEta(status);
 
-                    ComponentBuilder components = (status.Pending + status.InFlight) == 0
-                        ? new ComponentBuilder()
-                        : new ComponentBuilder().WithButton(
-                            label: LABEL_REFRESH,
-                            customId: $"colour-sync-refresh:{Context.User.Id}",
-                            style: ButtonStyle.Primary);
+                    ComponentBuilder components =
+                        (status.Pending + status.InFlight) == 0
+                            ? new ComponentBuilder()
+                            : new ComponentBuilder().WithButton(
+                                label: LABEL_REFRESH,
+                                customId: $"colour-sync-refresh:{Context.User.Id}",
+                                style: ButtonStyle.Primary
+                            );
 
                     await FollowupAsync(
                         $"Deleted colour option `{option.Key}`. Queued {queued} member(s) for colour sync. Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.",
                         ephemeral: true,
-                        components: components.Build());
+                        components: components.Build()
+                    );
                 },
                 async error => await FollowupAsync(error.Description, ephemeral: true)
             );
         }
-
 
         [SlashCommand("list", "List configured role colour options.")]
         [RequireUserPermission(GuildPermission.Administrator)]
@@ -142,7 +224,8 @@ public sealed class SettingsModule : SlashCommandBase
             IReadOnlyList<RoleColourOption> options = await ListRoleColourOptions.ExecuteAsync(
                 dbContext,
                 new ListRoleColourOptions.Query(includeDisabled),
-                CancellationToken.None);
+                CancellationToken.None
+            );
 
             if (options.Count == 0)
             {
@@ -165,11 +248,11 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(true);
+            await DeferAsync(ephemeral: true);
 
             // Load enabled options and gather SCR set
-            List<RoleColourOption> enabled = await dbContext.RoleColourOptions
-                .AsNoTracking()
+            List<RoleColourOption> enabled = await dbContext
+                .RoleColourOptions.AsNoTracking()
                 .Where(o => o.IsEnabled)
                 .ToListAsync(CancellationToken.None);
 
@@ -179,34 +262,34 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            HashSet<ulong> scrSet = enabled
-                .Select(o => o.SourceRoleId)
-                .ToHashSet();
+            HashSet<ulong> scrSet = enabled.Select(o => o.SourceRoleId).ToHashSet();
 
             int queued = await EnqueueMembersWithAnySourceRoleAsync(Context.Guild, scrSet);
             IRoleColourSyncQueue.Status status = syncQueue.GetStatus();
             string eta = FormatEta(status);
 
-            ComponentBuilder components = (status.Pending + status.InFlight) == 0
-                ? new ComponentBuilder()
-                : new ComponentBuilder().WithButton(
-                    label: LABEL_REFRESH,
-                    customId: $"colour-sync-refresh:{Context.User.Id}",
-                    style: ButtonStyle.Primary);
+            ComponentBuilder components =
+                (status.Pending + status.InFlight) == 0
+                    ? new ComponentBuilder()
+                    : new ComponentBuilder().WithButton(
+                        label: LABEL_REFRESH,
+                        customId: $"colour-sync-refresh:{Context.User.Id}",
+                        style: ButtonStyle.Primary
+                    );
 
             await FollowupAsync(
                 $"Queued {queued} member(s). Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.",
                 ephemeral: true,
-                components: components.Build());
+                components: components.Build()
+            );
         }
 
         private async Task<int> EnqueueMembersWithSourceRoleAsync(IGuild guild, ulong sourceRoleId)
         {
             IReadOnlyCollection<IGuildUser> users = await guild.GetUsersAsync();
 
-            ImmutableArray<IGuildUser> targetUsers = users
-                .Where(u => u.RoleIds.Contains(sourceRoleId))
-                .ToImmutableArray();
+            ImmutableArray<IGuildUser> targetUsers =
+                users.Where(u => u.RoleIds.Contains(sourceRoleId)).ToImmutableArray();
 
             return targetUsers.Count(user => syncQueue.Enqueue(guild.Id, user.Id));
         }
@@ -215,9 +298,8 @@ public sealed class SettingsModule : SlashCommandBase
         {
             IReadOnlyCollection<IGuildUser> users = await guild.GetUsersAsync();
 
-            ImmutableArray<IGuildUser> targetUsers = users
-                .Where(u => u.RoleIds.Any(sourceRoleIds.Contains))
-                .ToImmutableArray();
+            ImmutableArray<IGuildUser> targetUsers =
+                users.Where(u => u.RoleIds.Any(sourceRoleIds.Contains)).ToImmutableArray();
 
             return targetUsers.Count(user => syncQueue.Enqueue(guild.Id, user.Id));
         }
@@ -226,9 +308,8 @@ public sealed class SettingsModule : SlashCommandBase
         {
             IReadOnlyCollection<IGuildUser> users = await guild.GetUsersAsync();
 
-            ImmutableArray<IGuildUser> targetUsers = users
-                .Where(u => u.RoleIds.Any(roleIds.Contains))
-                .ToImmutableArray();
+            ImmutableArray<IGuildUser> targetUsers =
+                users.Where(u => u.RoleIds.Any(roleIds.Contains)).ToImmutableArray();
 
             return targetUsers.Count(user => syncQueue.Enqueue(guild.Id, user.Id));
         }
@@ -251,16 +332,21 @@ public sealed class SettingsModule : SlashCommandBase
                 : $"~{Math.Floor(eta.TotalHours)}h {eta.Minutes:D2}m";
         }
 
-        private RoleColourRegistrationContext BuildRegistrationContext(ulong sourceRoleId, ulong displayRoleId)
+        private ErrorOr<Success> ValidateRoleColourRoles(ulong sourceRoleId, ulong displayRoleId)
         {
             SocketRole? sourceRole = Context.Guild.GetRole(sourceRoleId);
             SocketRole? displayRole = Context.Guild.GetRole(displayRoleId);
 
-            return new RoleColourRegistrationContext(
-                SourceRoleExists: sourceRole is not null,
-                DisplayRoleExists: displayRole is not null,
-                SourceRoleHasColour: sourceRole is not null
-                                     && sourceRole.Colors.PrimaryColor != global::Discord.Color.Default);
+            if (sourceRole is null)
+                return Error.Validation(description: "Source role does not exist in this guild.");
+
+            if (displayRole is null)
+                return Error.Validation(description: "Display role does not exist in this guild.");
+
+            if (sourceRole.Colors.PrimaryColor != Color.Default)
+                return Error.Validation(description: "Source role must not have a colour set. Clear the colour first.");
+
+            return Result.Success;
         }
 
         private static string BuildListResponse(IReadOnlyList<RoleColourOption> options)
@@ -340,8 +426,7 @@ public sealed class SettingsModule : SlashCommandBase
 
             await result.SwitchFirstAsync(
                 async _ => await RespondAsync($"Meta suggestion forum set to {channel.Mention}.", ephemeral: true),
-                async error => await RespondAsync(error.Description, ephemeral: true)
-            );
+                async error => await RespondAsync(error.Description, ephemeral: true));
         }
     }
 
@@ -350,8 +435,8 @@ public sealed class SettingsModule : SlashCommandBase
     public sealed class QuorumSettingsModule(
         IQuorumSettingsWriter quorumSettingsWriter,
         IQuorumSettingsReader quorumSettingsReader,
-        IQuorumCommandInputResolver inputResolver)
-        : SlashCommandBase
+        IQuorumCommandInputResolver inputResolver
+    ) : SlashCommandBase
     {
         [SlashCommand("set", "Create or update quorum settings for a channel or category.")]
         public async Task SetAsync(
@@ -364,22 +449,18 @@ public sealed class SettingsModule : SlashCommandBase
             double proportion
         )
         {
-            ErrorOr<QuorumSettingsUpsertResult> upsertResult = await (
+            ErrorOr<QuorumSettingsUpsertResult> upsertResult = await
                 from resolvedTarget in inputResolver.ResolveTarget(Context.Guild, target)
                 from parsedRoles in inputResolver.ResolveRoles(Context.Guild, roles)
                 let parsedRoleIds = parsedRoles.Select(role => role.Id)
-                from upsert in quorumSettingsWriter.UpsertAsync(
-                    resolvedTarget,
-                    parsedRoleIds,
-                    proportion)
-                select upsert
-            );
+                from upsert in quorumSettingsWriter.UpsertAsync(resolvedTarget, parsedRoleIds, proportion)
+                select upsert;
 
             await upsertResult.SwitchFirstAsync(
                 async result =>
                 {
-                    ImmutableArray<SocketRole> savedRoles = result.Config
-                        .Roles.Select(role => Context.Guild.GetRole(role.Id))
+                    ImmutableArray<SocketRole> savedRoles = result
+                        .Config.Roles.Select(role => Context.Guild.GetRole(role.Id))
                         .Where(role => role is not null)
                         .ToImmutableArray();
 
@@ -387,8 +468,7 @@ public sealed class SettingsModule : SlashCommandBase
                         BuildSetResponse(target, savedRoles, result.Created, proportion),
                         ephemeral: true);
                 },
-                async error => await RespondAsync(DescribeError(error), ephemeral: true)
-            );
+                async error => await RespondAsync(DescribeError(error), ephemeral: true));
         }
 
         [SlashCommand(
@@ -421,8 +501,7 @@ public sealed class SettingsModule : SlashCommandBase
 
             await deleteResult.SwitchFirstAsync(
                 async _ => await RespondAsync(BuildUnsetResponse(targetChannel), ephemeral: true),
-                async error => await RespondAsync(DescribeError(error), ephemeral: true)
-            );
+                async error => await RespondAsync(DescribeError(error), ephemeral: true));
         }
 
         [SlashCommand("view", "View the quorum settings for a channel or category.")]
@@ -432,12 +511,11 @@ public sealed class SettingsModule : SlashCommandBase
             IChannel target
         )
         {
-            ErrorOr<QuorumSettings> getResult =
-                await (
-                    from resolvedTarget in Task.FromResult(inputResolver.ResolveTarget(Context.Guild, target))
-                    from settings in quorumSettingsReader.GetAsync(resolvedTarget)
-                    select settings
-                );
+            ErrorOr<QuorumSettings> getResult = await (
+                from resolvedTarget in Task.FromResult(inputResolver.ResolveTarget(Context.Guild, target))
+                from settings in quorumSettingsReader.GetAsync(resolvedTarget)
+                select settings
+            );
 
             await getResult.SwitchFirstAsync(
                 async settings =>
@@ -447,12 +525,9 @@ public sealed class SettingsModule : SlashCommandBase
                         .Where(role => role is not null)
                         .ToImmutableArray();
 
-                    await RespondAsync(
-                        BuildViewResponse(target, resolvedRoles, settings.Proportion),
-                        ephemeral: true);
+                    await RespondAsync(BuildViewResponse(target, resolvedRoles, settings.Proportion), ephemeral: true);
                 },
-                async error => await RespondAsync(DescribeError(error), ephemeral: true)
-            );
+                async error => await RespondAsync(DescribeError(error), ephemeral: true));
         }
 
         private static string BuildSetResponse(

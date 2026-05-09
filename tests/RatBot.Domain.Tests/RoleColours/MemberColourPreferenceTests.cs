@@ -9,7 +9,7 @@ public sealed class MemberColourPreferenceTests
     [Test]
     public void CreateForOption_StoresConfiguredOptionSelection()
     {
-        RoleColourOption option = RoleColourOption.Create("red", "Red", 10, 20);
+        RoleColourOption option = CreateRoleColourOption();
 
         MemberColourPreference preference = MemberColourPreference.CreateForOption(100, option.OptionId);
 
@@ -32,7 +32,7 @@ public sealed class MemberColourPreferenceTests
     [Test]
     public void SelectNoColour_ClearsConfiguredOptionSelection()
     {
-        RoleColourOption option = RoleColourOption.Create("red", "Red", 10, 20);
+        RoleColourOption option = CreateRoleColourOption();
         MemberColourPreference preference = MemberColourPreference.CreateForOption(100, option.OptionId);
 
         preference.SelectNoColour();
@@ -45,7 +45,7 @@ public sealed class MemberColourPreferenceTests
     [Test]
     public void SelectOption_ReplacesNoColourSelection()
     {
-        RoleColourOption option = RoleColourOption.Create("red", "Red", 10, 20);
+        RoleColourOption option = CreateRoleColourOption();
         MemberColourPreference preference = MemberColourPreference.CreateNoColour(100);
 
         preference.SelectOption(option.OptionId);
@@ -54,4 +54,7 @@ public sealed class MemberColourPreferenceTests
         preference.SelectedOptionId.ShouldBe(option.OptionId);
         preference.IsNoColourSelected.ShouldBeFalse();
     }
+
+    private static RoleColourOption CreateRoleColourOption() =>
+        RoleColourOption.Create("red", "Red", 10, 20).Value;
 }

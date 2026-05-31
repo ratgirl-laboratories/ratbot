@@ -1,0 +1,82 @@
+using System.Runtime.InteropServices;
+
+namespace RatBot.Application.Moderation;
+
+public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorOptions options)
+{
+    private readonly Lock _gate = new Lock();
+
+    private readonly Dictionary<ImageBurstBufferKey, Queue<ImageBurstMessage>> _buffers =
+        new Dictionary<ImageBurstBufferKey, Queue<ImageBurstMessage>>();
+
+    private readonly Dictionary<ImageBurstBufferKey, DateTimeOffset> _handlingLocks =
+        new Dictionary<ImageBurstBufferKey, DateTimeOffset>();
+
+    public ImageBurstSpamDetector()
+        : this(TimeProvider.System, new ImageBurstSpamDetectorOptions())
+    {
+    }
+
+    public ImageBurstDetection? Observe(ImageBurstMessage message)
+    {
+        ImageBurstBufferKey key = new ImageBurstBufferKey(message.GuildId, message.UserId);
+        DateTimeOffset now = timeProvider.GetUtcNow();
+
+        lock (_gate)
+        {
+            PruneExpiredLocks(now);
+
+            if (_handlingLocks.TryGetValue(key, out DateTimeOffset lockedUntil) && lockedUntil > now)
+                return null;
+
+            Queue<ImageBurstMessage> buffer = GetBuffer(key);
+
+            buffer.Enqueue(message);
+            PruneOldMessages(buffer, message.Timestamp - options.Window);
+
+            ulong[] channelIds = buffer
+                .Select(x => x.ChannelId)
+                .Distinct()
+                .Order()
+                .ToArray();
+
+            if (channelIds.Length < options.DistinctChannelThreshold)
+                return null;
+
+            _handlingLocks[key] = now + options.HandlingLockDuration;
+
+            return new ImageBurstDetection(message.GuildId, message.UserId, buffer.ToArray(), channelIds);
+        }
+    }
+
+    private Queue<ImageBurstMessage> GetBuffer(ImageBurstBufferKey key)
+    {
+        if (_buffers.TryGetValue(key, out Queue<ImageBurstMessage>? buffer) && buffer is not null)
+            return buffer;
+
+        Queue<ImageBurstMessage> newBuffer = new Queue<ImageBurstMessage>();
+        _buffers[key] = newBuffer;
+
+        return newBuffer;
+    }
+
+    private static void PruneOldMessages(Queue<ImageBurstMessage> buffer, DateTimeOffset cutoff)
+    {
+        while (buffer.Count > 0 && buffer.Peek().Timestamp < cutoff)
+            buffer.Dequeue();
+    }
+
+    private void PruneExpiredLocks(DateTimeOffset now)
+    {
+        ImageBurstBufferKey[] expiredKeys = _handlingLocks
+            .Where(x => x.Value <= now)
+            .Select(x => x.Key)
+            .ToArray();
+
+        foreach (ImageBurstBufferKey key in expiredKeys)
+            _handlingLocks.Remove(key);
+    }
+
+    [StructLayout(LayoutKind.Auto)]
+    private readonly record struct ImageBurstBufferKey(ulong GuildId, ulong UserId);
+}

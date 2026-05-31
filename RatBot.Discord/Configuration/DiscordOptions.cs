@@ -13,4 +13,10 @@ public sealed class DiscordOptions
     [Range(1000, 50000)] public int MessageCacheSize { get; init; } = 5000;
 
     [Range(5, 1440)] public int MemberCacheRefreshIntervalMinutes { get; init; } = 30;
+
+    public ulong[] ImageBurstSpamAllowlistedUserIds { get; init; } = [];
+
+    public ulong[] ImageBurstSpamAllowlistedRoleIds { get; init; } = [];
+
+    [Range(0, 7)] public int ImageBurstSpamHistoryPruneDays { get; init; } = 1;
 }

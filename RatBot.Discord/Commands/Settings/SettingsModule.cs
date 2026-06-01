@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RatBot.Application.Common.Extensions;
 using RatBot.Application.Meta;
+using RatBot.Application.Moderation;
 using RatBot.Discord.BackgroundWorkers;
 using RatBot.Infrastructure.Data;
 using RatBot.Infrastructure.RoleColours;
@@ -12,13 +13,57 @@ namespace RatBot.Discord.Commands.Settings;
 
 [Group("config", "Configuration commands.")]
 [DefaultMemberPermissions(GuildPermission.Administrator)]
-public sealed class SettingsModule : SlashCommandBase
+public sealed class SettingsModule(ImageBurstSpamDetectorOptionsStore imageBurstOptionsStore) : SlashCommandBase
 {
     // ReSharper disable InconsistentNaming
     private const string RESPONSE_NO_GUILD = "This command can only be used in a guild.";
     private const string LABEL_REFRESH = "Refresh";
 
     // ReSharper enable InconsistentNaming
+
+    [SlashCommand("spambot", "Set image burst spambot detection settings.")]
+    [RequireUserPermission(GuildPermission.Administrator)]
+    public async Task SetSpambotAsync(
+        [Summary("window", "Detection window in seconds.")]
+        int window,
+        [Summary("distinct-channel-threshold", "Distinct channels required within the window.")]
+        int distinctChannelThreshold
+    )
+    {
+        ErrorOr<ImageBurstSpamDetectorOptions> optionsResult =
+            from parsedWindow in ValidateWindow(window)
+            from parsedDistinctChannelThreshold in ValidateDistinctChannelThreshold(distinctChannelThreshold)
+            select new ImageBurstSpamDetectorOptions
+            {
+                Window = parsedWindow,
+                DistinctChannelThreshold = parsedDistinctChannelThreshold,
+                HandlingLockDuration = imageBurstOptionsStore.Current.HandlingLockDuration,
+            };
+
+        if (optionsResult.IsError)
+        {
+            await RespondAsync(optionsResult.FirstError.Description, ephemeral: true);
+            return;
+        }
+
+        imageBurstOptionsStore.Update(optionsResult.Value);
+
+        await RespondAsync(
+            "Spambot detection settings updated: "
+            + $"window {optionsResult.Value.Window}s, "
+            + $"distinct channel threshold {optionsResult.Value.DistinctChannelThreshold}.",
+            ephemeral: true);
+    }
+
+    private static ErrorOr<int> ValidateWindow(int window) =>
+        window > 0
+            ? window
+            : Error.Validation(description: "Window must be greater than zero seconds.");
+
+    private static ErrorOr<int> ValidateDistinctChannelThreshold(int distinctChannelThreshold) =>
+        distinctChannelThreshold > 0
+            ? distinctChannelThreshold
+            : Error.Validation(description: "Distinct channel threshold must be greater than zero.");
 
     [Group("colour", "Role colour configuration.")]
     [DefaultMemberPermissions(GuildPermission.Administrator)]
@@ -449,12 +494,13 @@ public sealed class SettingsModule : SlashCommandBase
             double proportion
         )
         {
-            ErrorOr<QuorumSettingsUpsertResult> upsertResult = await
+            ErrorOr<QuorumSettingsUpsertResult> upsertResult = await (
                 from resolvedTarget in inputResolver.ResolveTarget(Context.Guild, target)
                 from parsedRoles in inputResolver.ResolveRoles(Context.Guild, roles)
                 let parsedRoleIds = parsedRoles.Select(role => role.Id)
                 from upsert in quorumSettingsWriter.UpsertAsync(resolvedTarget, parsedRoleIds, proportion)
-                select upsert;
+                select upsert
+            );
 
             await upsertResult.SwitchFirstAsync(
                 async result =>

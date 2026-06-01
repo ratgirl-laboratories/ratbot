@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace RatBot.Application.Moderation;
 
-public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorOptions options)
+public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorOptionsStore optionsStore)
 {
     private readonly Lock _gate = new Lock();
 
@@ -14,6 +14,11 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
 
     public ImageBurstSpamDetector()
         : this(TimeProvider.System, new ImageBurstSpamDetectorOptions())
+    {
+    }
+
+    public ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorOptions options)
+        : this(timeProvider, new ImageBurstSpamDetectorOptionsStore(options))
     {
     }
 
@@ -30,9 +35,10 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
                 return null;
 
             Queue<ImageBurstMessage> buffer = GetBuffer(key);
+            ImageBurstSpamDetectorOptions options = optionsStore.Current;
 
             buffer.Enqueue(message);
-            PruneOldMessages(buffer, message.Timestamp - options.Window);
+            PruneOldMessages(buffer, message.Timestamp - TimeSpan.FromSeconds(options.Window));
 
             ulong[] channelIds = buffer
                 .Select(x => x.ChannelId)
@@ -51,7 +57,7 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
 
     private Queue<ImageBurstMessage> GetBuffer(ImageBurstBufferKey key)
     {
-        if (_buffers.TryGetValue(key, out Queue<ImageBurstMessage>? buffer) && buffer is not null)
+        if (_buffers.TryGetValue(key, out Queue<ImageBurstMessage>? buffer))
             return buffer;
 
         Queue<ImageBurstMessage> newBuffer = new Queue<ImageBurstMessage>();

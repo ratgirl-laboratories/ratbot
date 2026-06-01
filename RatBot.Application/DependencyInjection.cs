@@ -17,6 +17,7 @@ public static class DependencyInjection
         {
             services.AddSingleton<ReactionQueue>();
             services.AddSingleton<MessageContentQueue>();
+            services.AddSingleton(new ImageBurstSpamDetectorOptionsStore(new ImageBurstSpamDetectorOptions()));
             services.AddSingleton<ImageBurstSpamDetector>();
 
             services.AddScoped<AdminSendService>();

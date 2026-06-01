@@ -13,7 +13,7 @@ namespace RatBot.Discord.Commands.Settings;
 
 [Group("config", "Configuration commands.")]
 [DefaultMemberPermissions(GuildPermission.Administrator)]
-public sealed class SettingsModule(ImageBurstSpamDetectorOptionsStore imageBurstOptionsStore) : SlashCommandBase
+public sealed class SettingsModule(ImageBurstSpamDetectorSettings imageBurstSettings) : SlashCommandBase
 {
     // ReSharper disable InconsistentNaming
     private const string RESPONSE_NO_GUILD = "This command can only be used in a guild.";
@@ -30,15 +30,10 @@ public sealed class SettingsModule(ImageBurstSpamDetectorOptionsStore imageBurst
         int distinctChannelThreshold
     )
     {
-        ErrorOr<ImageBurstSpamDetectorOptions> optionsResult =
+        ErrorOr<(int Window, int DistinctChannelThreshold)> optionsResult =
             from parsedWindow in ValidateWindow(window)
             from parsedDistinctChannelThreshold in ValidateDistinctChannelThreshold(distinctChannelThreshold)
-            select new ImageBurstSpamDetectorOptions
-            {
-                Window = parsedWindow,
-                DistinctChannelThreshold = parsedDistinctChannelThreshold,
-                HandlingLockDuration = imageBurstOptionsStore.Current.HandlingLockDuration,
-            };
+            select (parsedWindow, parsedDistinctChannelThreshold);
 
         if (optionsResult.IsError)
         {
@@ -46,7 +41,7 @@ public sealed class SettingsModule(ImageBurstSpamDetectorOptionsStore imageBurst
             return;
         }
 
-        imageBurstOptionsStore.Update(optionsResult.Value);
+        imageBurstSettings.Update(optionsResult.Value.Window, optionsResult.Value.DistinctChannelThreshold);
 
         await RespondAsync(
             "Spambot detection settings updated: "

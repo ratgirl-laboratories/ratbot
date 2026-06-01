@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace RatBot.Application.Moderation;
 
-public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorOptionsStore optionsStore)
+public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorSettings settings)
 {
     private readonly Lock _gate = new Lock();
 
@@ -18,7 +18,7 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
     }
 
     public ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorOptions options)
-        : this(timeProvider, new ImageBurstSpamDetectorOptionsStore(options))
+        : this(timeProvider, CreateSettings(options))
     {
     }
 
@@ -35,7 +35,7 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
                 return null;
 
             Queue<ImageBurstMessage> buffer = GetBuffer(key);
-            ImageBurstSpamDetectorOptions options = optionsStore.Current;
+            ImageBurstSpamDetectorOptions options = settings.Current;
 
             buffer.Enqueue(message);
             PruneOldMessages(buffer, message.Timestamp - TimeSpan.FromSeconds(options.Window));
@@ -85,4 +85,7 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
 
     [StructLayout(LayoutKind.Auto)]
     private readonly record struct ImageBurstBufferKey(ulong GuildId, ulong UserId);
+
+    private static ImageBurstSpamDetectorSettings CreateSettings(ImageBurstSpamDetectorOptions options)
+        => new ImageBurstSpamDetectorSettings(options);
 }

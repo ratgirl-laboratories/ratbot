@@ -104,7 +104,7 @@ public sealed class ImageBurstSpamDetectorTests
             timeProvider,
             new ImageBurstSpamDetectorOptions
             {
-                Window = TimeSpan.FromSeconds(45),
+                Window = 45,
                 DistinctChannelThreshold = 4,
                 HandlingLockDuration = TimeSpan.FromMinutes(5),
             });

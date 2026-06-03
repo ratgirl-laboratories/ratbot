@@ -10,6 +10,37 @@ namespace RatBot.Discord.Tests.Commands.Settings;
 public sealed class SettingsInteractionRegistrationTests
 {
     [Test]
+    public void SetSpambotAsync_HasExpectedSlashCommandMetadata()
+    {
+        // Arrange
+        MethodInfo method =
+            typeof(SettingsModule).GetMethod(nameof(SettingsModule.SetSpambotAsync))
+            ?? throw new InvalidOperationException("Expected SetSpambotAsync method.");
+
+        // Act
+        SlashCommandAttribute slashCommand =
+            method.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
+
+        ParameterInfo[] parameters = method.GetParameters();
+
+        // Assert
+        slashCommand.Name.ShouldBe("spambot");
+
+        parameters.Select(parameter => parameter.ParameterType).ShouldBe(
+        [
+            typeof(int),
+            typeof(int),
+        ]);
+
+        parameters.Select(parameter =>
+            parameter.GetCustomAttribute<SummaryAttribute>()?.Name).ShouldBe(
+        [
+            "window",
+            "distinct-channel-threshold",
+        ]);
+    }
+
+    [Test]
     public void MetaSettingsModule_HasExpectedGroupMetadata()
     {
         // Arrange

@@ -10,6 +10,9 @@ public sealed class AdventureLeaderboardUpdateService(
     ILogger logger)
     : BackgroundService
 {
+    private static readonly AllowedMentions UserMentionsOnly = new AllowedMentions(AllowedMentionTypes.Users);
+    private const MessageFlags LeaderboardMessageFlags =
+        MessageFlags.ComponentsV2 | MessageFlags.SuppressNotification;
     private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
     private readonly ILogger _logger = logger.ForContext<AdventureLeaderboardUpdateService>();
     private readonly AdventureLeaderboardOptions _options = options.Value;
@@ -27,9 +30,9 @@ public sealed class AdventureLeaderboardUpdateService(
         MessageComponent components = BuildComponents(snapshot, year, guildMemberUserIds);
 
         IUserMessage message = await channel.SendMessageAsync(
-            allowedMentions: AllowedMentions.None,
+            allowedMentions: UserMentionsOnly,
             components: components,
-            flags: MessageFlags.ComponentsV2).ConfigureAwait(false);
+            flags: LeaderboardMessageFlags).ConfigureAwait(false);
 
         TrackedLeaderboardMessage? previousMessage;
 
@@ -104,7 +107,8 @@ public sealed class AdventureLeaderboardUpdateService(
                 properties =>
                 {
                     properties.Components = components;
-                    properties.AllowedMentions = AllowedMentions.None;
+                    properties.AllowedMentions = UserMentionsOnly;
+                    properties.Flags = LeaderboardMessageFlags;
                 },
                 new RequestOptions { CancelToken = cancellationToken }).ConfigureAwait(false);
 

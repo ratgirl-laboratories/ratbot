@@ -63,7 +63,6 @@ public static class DependencyInjection
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<ReactionGatewayHandler>());
             services.AddSingleton<MessageContentGatewayHandler>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<MessageContentGatewayHandler>());
-            services.AddSingleton<TrialRunDetectionLogger>();
             services.AddSingleton<ImageBurstSpamGatewayHandler>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<ImageBurstSpamGatewayHandler>());
             services.AddSingleton<UserUpdatedGatewayHandler>();

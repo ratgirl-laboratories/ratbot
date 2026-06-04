@@ -7,7 +7,6 @@ namespace RatBot.Discord.Gateway;
 public sealed class ImageBurstSpamGatewayHandler(
     DiscordSocketClient discordClient,
     ImageBurstSpamDetector detector,
-    TrialRunDetectionLogger trialRunDetectionLogger,
     IOptions<DiscordOptions> options,
     ILogger logger)
     : IDiscordGatewayHandler
@@ -106,8 +105,6 @@ public sealed class ImageBurstSpamGatewayHandler(
         await guild
             .AddBanAsync(detection.UserId, _options.ImageBurstSpamHistoryPruneDays, reason)
             .ConfigureAwait(false);
-
-        await trialRunDetectionLogger.LogImageSpamBanAsync(detection.UserId).ConfigureAwait(false);
 
         _logger.Warning(
             "Banned user {UserId} for image-burst spam across {ChannelCount} channels.",

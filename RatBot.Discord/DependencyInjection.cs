@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using RatBot.Application.Common.Forums;
 using RatBot.Application.Common.Interfaces;
 using RatBot.Discord.BackgroundWorkers;
+using RatBot.Discord.Commands.AdventureLeaderboard;
 using RatBot.Discord.Commands.Emoji;
 using RatBot.Discord.Forum;
 using RatBot.Discord.Commands.Settings;
@@ -27,6 +28,9 @@ public static class DependencyInjection
                     options => options.MessageCacheSize >= 1000,
                     "Discord message cache size must be at least 1000.")
                 .ValidateOnStart();
+
+            services.AddOptions<AdventureLeaderboardOptions>()
+                .Bind(configuration.GetSection(AdventureLeaderboardOptions.SectionName));
 
             services.AddSingleton(sp =>
             {
@@ -66,6 +70,9 @@ public static class DependencyInjection
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<UserUpdatedGatewayHandler>());
             services.AddSingleton<GuildMemberCacheService>();
             services.AddSingleton<ITrackedEmojiCatalog, TrackedEmojiCatalog>();
+            services.AddSingleton<AdventureLeaderboardClient>();
+            services.AddSingleton<AdventureLeaderboardComponentBuilder>();
+            services.AddSingleton<AdventureLeaderboardUpdateService>();
             services.AddSingleton<IQuorumCommandInputResolver, QuorumCommandInputResolver>();
             services.AddSingleton<IRoleColourReconciler, RoleColourReconciler>();
 
@@ -77,6 +84,7 @@ public static class DependencyInjection
             services.AddHostedService<GuildMemberCacheBackgroundWorker>();
             services.AddHostedService<EmojiAnalyticsBackgroundWorker>();
             services.AddHostedService<RoleColourSyncBackgroundWorker>();
+            services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardUpdateService>());
 
             services.AddSingleton<IForumThreadClient, ForumThreadClient>();
         }

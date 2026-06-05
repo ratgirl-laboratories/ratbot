@@ -37,24 +37,24 @@ public static class Program
             .WriteTo.Console(LogEventLevel.Debug)
             .WriteTo.File(
                 "logs/verbose-.log",
-                rollingInterval: RollingInterval.Day,
-                restrictedToMinimumLevel: LogEventLevel.Verbose)
+                restrictedToMinimumLevel: LogEventLevel.Verbose,
+                rollingInterval: RollingInterval.Day)
             .WriteTo.File(
                 "logs/debug-.log",
-                rollingInterval: RollingInterval.Day,
-                restrictedToMinimumLevel: LogEventLevel.Debug)
+                restrictedToMinimumLevel: LogEventLevel.Debug,
+                rollingInterval: RollingInterval.Day)
             .WriteTo.File(
                 "logs/info-.log",
-                rollingInterval: RollingInterval.Day,
-                restrictedToMinimumLevel: LogEventLevel.Information)
+                restrictedToMinimumLevel: LogEventLevel.Information,
+                rollingInterval: RollingInterval.Day)
             .WriteTo.File(
                 "logs/warning-.log",
-                rollingInterval: RollingInterval.Day,
-                restrictedToMinimumLevel: LogEventLevel.Warning)
+                restrictedToMinimumLevel: LogEventLevel.Warning,
+                rollingInterval: RollingInterval.Day)
             .WriteTo.File(
                 "logs/error-.log",
-                rollingInterval: RollingInterval.Day,
-                restrictedToMinimumLevel: LogEventLevel.Error);
+                restrictedToMinimumLevel: LogEventLevel.Error,
+                rollingInterval: RollingInterval.Day);
 
         ConfigureOpenTelemetryLogs(config, loggerConfiguration);
     }
@@ -82,7 +82,7 @@ public static class Program
             options.Endpoint = endpoint;
             options.Protocol = protocol;
 
-            options.ResourceAttributes = new Dictionary<string, object>
+            options.ResourceAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 ["service.name"] = serviceName,
                 ["service.instance.id"] = serviceInstanceId,

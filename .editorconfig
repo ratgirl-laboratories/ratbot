@@ -8,7 +8,7 @@ csharp_style_expression_bodied_methods = true:none
 csharp_style_expression_bodied_properties = true:suggestion
 
 # RatBot runs under the .NET generic host without a synchronization context.
-dotnet_diagnostic.MA0004.severity = none
+dotnet_diagnostic.ma0004.severity = none
 
 # ReSharper properties
 resharper_blank_lines_after_multiline_statements = 1
@@ -20,7 +20,7 @@ resharper_csharp_wrap_arguments_style = chop_if_long
 resharper_csharp_wrap_before_binary_opsign = true
 resharper_csharp_wrap_before_invocation_rpar = false
 resharper_csharp_wrap_parameters_style = chop_if_long
-resharper_csharp_wrap_ternary_expr_style = chop_always
+resharper_csharp_wrap_ternary_expr_style = chop_if_long
 resharper_empty_string = string_empty
 resharper_instance_members_qualify_declared_in = 
 resharper_keep_user_linebreaks = true
@@ -36,6 +36,7 @@ resharper_wrap_before_first_method_call = false
 resharper_wrap_before_invocation_rpar = false
 resharper_wrap_chained_binary_expressions = chop_if_long
 resharper_wrap_chained_method_calls = chop_if_long
+resharper_wrap_ternary_expr_style = chop_if_long
 
 # Rider defaults
 charset = utf-8

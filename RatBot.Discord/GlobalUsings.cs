@@ -10,6 +10,7 @@ global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Hosting;
 global using RatBot.Application.Quorum;
 global using RatBot.Discord.Commands;
+global using RatBot.Domain.Adventure;
 global using RatBot.Domain.Meta;
 global using RatBot.Domain.Quorum;
 global using RatBot.Domain.RoleColours;

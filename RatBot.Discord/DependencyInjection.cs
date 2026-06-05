@@ -71,7 +71,8 @@ public static class DependencyInjection
             services.AddSingleton<ITrackedEmojiCatalog, TrackedEmojiCatalog>();
             services.AddSingleton<AdventureLeaderboardClient>();
             services.AddSingleton<AdventureLeaderboardComponentBuilder>();
-            services.AddSingleton<AdventureLeaderboardUpdateService>();
+            services.AddSingleton<AdventureAccessController>();
+            services.AddSingleton<AdventureLeaderboardManager>();
             services.AddSingleton<IQuorumCommandInputResolver, QuorumCommandInputResolver>();
             services.AddSingleton<IRoleColourReconciler, RoleColourReconciler>();
 
@@ -83,7 +84,7 @@ public static class DependencyInjection
             services.AddHostedService<GuildMemberCacheBackgroundWorker>();
             services.AddHostedService<EmojiAnalyticsBackgroundWorker>();
             services.AddHostedService<RoleColourSyncBackgroundWorker>();
-            services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardUpdateService>());
+            services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardManager>());
 
             services.AddSingleton<IForumThreadClient, ForumThreadClient>();
         }

@@ -11,7 +11,7 @@ public sealed class AdventureLeaderboardClient(IOptions<AdventureLeaderboardOpti
 
     private readonly AdventureLeaderboardOptions _options = options.Value;
 
-    public async Task<IReadOnlyList<AdventureLeaderboardEntryDto>> GetLeaderboardAsync(
+    public async Task<IReadOnlyList<AdventureEntryDto>> GetLeaderboardAsync(
         int year,
         CancellationToken cancellationToken)
     {
@@ -20,8 +20,8 @@ public sealed class AdventureLeaderboardClient(IOptions<AdventureLeaderboardOpti
         using HttpResponseMessage response = await HttpClient.GetAsync(uri, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        IReadOnlyList<AdventureLeaderboardEntryDto>? rows =
-            await response.Content.ReadFromJsonAsync<IReadOnlyList<AdventureLeaderboardEntryDto>>(
+        IReadOnlyList<AdventureEntryDto>? rows =
+            await response.Content.ReadFromJsonAsync<IReadOnlyList<AdventureEntryDto>>(
                 JsonOptions,
                 cancellationToken).ConfigureAwait(false);
 

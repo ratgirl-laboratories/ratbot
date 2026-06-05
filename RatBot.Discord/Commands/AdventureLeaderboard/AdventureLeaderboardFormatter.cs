@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 
 namespace RatBot.Discord.Commands.AdventureLeaderboard;
@@ -8,32 +9,35 @@ public static class AdventureLeaderboardFormatter
     private const int MaxDisplayNameLength = 32;
 
     public static AdventureLeaderboardViewModel Format(
-        AdventureLeaderboardSnapshot snapshot,
+        AdventureEntrySnapshot snapshot,
         int year,
-        IReadOnlySet<ulong> guildMemberUserIds,
+        ImmutableHashSet<ulong> guildMemberUserIds,
         DateTimeOffset lastUpdated)
     {
-        List<AdventureLeaderboardSnapshotRow> sortedRows = snapshot.Rows
+        ImmutableArray<AdventureEntryRow> sortedRows = snapshot.Rows
             .OrderByDescending(row => row.Score)
             .ThenBy(row => row.ApiOrder)
             .Take(MaxVisibleRows)
-            .ToList();
-        List<AdventureLeaderboardViewRow> rows = FormatRows(sortedRows, guildMemberUserIds);
+            .ToImmutableArray();
 
-        return new AdventureLeaderboardViewModel(year, snapshot.Rows.Count, rows.Count, lastUpdated, rows);
+        ImmutableArray<AdventureLeaderboardViewRow> rows = FormatRows(sortedRows, guildMemberUserIds);
+
+        return new AdventureLeaderboardViewModel(year, snapshot.Rows.Length, rows.Length, lastUpdated, rows);
     }
 
-    private static List<AdventureLeaderboardViewRow> FormatRows(
-        IReadOnlyList<AdventureLeaderboardSnapshotRow> sortedRows,
-        IReadOnlySet<ulong> guildMemberUserIds)
+    private static ImmutableArray<AdventureLeaderboardViewRow> FormatRows(
+        ImmutableArray<AdventureEntryRow> sortedRows,
+        ImmutableHashSet<ulong> guildMemberUserIds)
     {
-        List<AdventureLeaderboardViewRow> rows = new List<AdventureLeaderboardViewRow>(sortedRows.Count);
+        ImmutableArray<AdventureLeaderboardViewRow>.Builder rows =
+            ImmutableArray.CreateBuilder<AdventureLeaderboardViewRow>(sortedRows.Length);
+
         int? previousScore = null;
         int currentRank = 0;
 
-        for (int index = 0; index < sortedRows.Count; index++)
+        for (int index = 0; index < sortedRows.Length; index++)
         {
-            AdventureLeaderboardSnapshotRow row = sortedRows[index];
+            AdventureEntryRow row = sortedRows[index];
 
             if (previousScore != row.Score)
             {
@@ -44,14 +48,14 @@ public static class AdventureLeaderboardFormatter
             rows.Add(FormatRow(row, currentRank, guildMemberUserIds));
         }
 
-        return rows;
+        return rows.ToImmutable();
     }
 
-    private static string BuildProgressBar(IReadOnlyList<AdventureLeaderboardDayProgress> progress)
+    private static string BuildProgressBar(IReadOnlyList<AdventureDayProgress> progress)
     {
         StringBuilder text = new StringBuilder(progress.Count);
 
-        foreach (AdventureLeaderboardDayProgress day in progress)
+        foreach (AdventureDayProgress day in progress)
         {
             char symbol = (day.Part1Complete, day.Part2Complete) switch
             {
@@ -79,9 +83,9 @@ public static class AdventureLeaderboardFormatter
     }
 
     private static AdventureLeaderboardViewRow FormatRow(
-        AdventureLeaderboardSnapshotRow row,
+        AdventureEntryRow row,
         int rank,
-        IReadOnlySet<ulong> guildMemberUserIds)
+        ImmutableHashSet<ulong> guildMemberUserIds)
     {
         string displayName = ulong.TryParse(row.UserId, out ulong userId) && guildMemberUserIds.Contains(userId)
             ? MentionUtils.MentionUser(userId)

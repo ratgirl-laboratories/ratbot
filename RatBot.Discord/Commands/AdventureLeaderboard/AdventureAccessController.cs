@@ -1,0 +1,230 @@
+using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
+using Microsoft.EntityFrameworkCore;
+using RatBot.Infrastructure.Data;
+using Discord.Rest;
+
+namespace RatBot.Discord.Commands.AdventureLeaderboard;
+
+public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> dbContextFactory, ILogger logger)
+{
+    private readonly ILogger _logger = logger.ForContext<AdventureAccessController>();
+
+    public async Task UpdateAccessGrantsAsync(SocketGuild guild, AdventureEntrySnapshot snapshot, CancellationToken ct)
+    {
+        ImmutableArray<AdventureForumThreadLink> links;
+
+        try
+        {
+            await using BotDbContext dbContext =
+                await dbContextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
+
+            links = (await dbContext.AdventureForumThreadLinks
+                    .AsNoTracking()
+                    .OrderBy(link => link.ScorePartIndex)
+                    .ToListAsync(ct)
+                    .ConfigureAwait(false))
+                .ToImmutableArray();
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Could not load adventure forum thread links; skipping access sync.");
+            return;
+        }
+
+        if (links.Length == 0)
+        {
+            _logger.Debug("Adventure forum access sync skipped because no score-part threads are configured.");
+            return;
+        }
+
+        RequestOptions requestOptions = new RequestOptions { CancelToken = ct };
+
+        ImmutableDictionary<ulong, IGuildUser> guildMembers =
+            await ResolveGuildMembersAsync(guild, snapshot, requestOptions)
+                .ConfigureAwait(false);
+
+        ImmutableDictionary<int, ulong> threadIdsByScorePart = links.ToImmutableDictionary(
+            link => link.ScorePartIndex,
+            link => link.ThreadId);
+
+        AdventureAccessGrants grants =
+            AdventureGrantManager.GenerateAdventureAccessGrants(
+                snapshot,
+                threadIdsByScorePart,
+                guildMembers.Keys.ToImmutableHashSet());
+
+        int attempted = 0;
+        int alreadyPresent = 0;
+        int failures = 0;
+        int skippedThreads = 0;
+
+        foreach (IGrouping<ulong, AdventureAccessGrant> accessGrants in grants.Grants.GroupBy(grant => grant.ThreadId))
+        {
+            IThreadChannel? thread = await ResolveThreadAsync(guild, accessGrants.Key, requestOptions)
+                .ConfigureAwait(false);
+
+            if (thread is null)
+            {
+                skippedThreads++;
+                continue;
+            }
+
+            if (!await PrepareThreadAsync(thread, requestOptions).ConfigureAwait(false))
+            {
+                skippedThreads++;
+                continue;
+            }
+
+            HashSet<ulong> currentMemberIds =
+                await GetThreadMemberIdsAsync(thread, requestOptions).ConfigureAwait(false);
+
+            foreach (AdventureAccessGrant grant in accessGrants)
+            {
+                if (currentMemberIds.Contains(grant.UserId))
+                {
+                    alreadyPresent++;
+                    continue;
+                }
+
+                if (!guildMembers.TryGetValue(grant.UserId, out IGuildUser? user))
+                {
+                    failures++;
+                    continue;
+                }
+
+                attempted++;
+
+                try
+                {
+                    await thread.AddUserAsync(user, requestOptions).ConfigureAwait(false);
+                    currentMemberIds.Add(user.Id);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    failures++;
+
+                    _logger.Warning(
+                        ex,
+                        "Failed to add user {UserId} to adventure forum thread {ThreadId} for score part {ScorePartIndex}.",
+                        grant.UserId,
+                        grant.ThreadId,
+                        grant.ScorePartIndex);
+                }
+            }
+        }
+
+        _logger.Information(
+            "Adventure forum access sync completed. ThreadLinks={ThreadLinkCount} GuildUsersConsidered={GuildUserCount} GrantsAttempted={GrantsAttempted} GrantsAlreadyPresent={GrantsAlreadyPresent} Failures={Failures} ThreadsSkipped={ThreadsSkipped}.",
+            links.Length,
+            guildMembers.Count,
+            attempted,
+            alreadyPresent,
+            failures,
+            skippedThreads);
+    }
+
+    private async static Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(
+        SocketGuild guild,
+        AdventureEntrySnapshot snapshot,
+        RequestOptions options)
+    {
+        ImmutableDictionary<ulong, IGuildUser>.Builder members = ImmutableDictionary.CreateBuilder<ulong, IGuildUser>();
+
+        foreach (AdventureEntryRow row in snapshot.Rows)
+        {
+            if (!ulong.TryParse(row.UserId, out ulong userId))
+                continue;
+
+            IGuildUser? member = guild.GetUser(userId)
+                                 ?? await ((IGuild)guild)
+                                     .GetUserAsync(userId, CacheMode.AllowDownload, options)
+                                     .ConfigureAwait(false);
+
+            if (member is not null)
+                members.Add(userId, member);
+        }
+
+        return members.ToImmutable();
+    }
+
+    private async Task<IThreadChannel?> ResolveThreadAsync(SocketGuild guild, ulong threadId, RequestOptions options)
+    {
+        SocketThreadChannel? thread = guild.GetThreadChannel(threadId);
+
+        if (thread is not null)
+            return thread;
+
+        IThreadChannel? downloadedThread = await ((IGuild)guild)
+            .GetThreadChannelAsync(threadId, CacheMode.AllowDownload, options)
+            .ConfigureAwait(false);
+
+        if (downloadedThread is not null)
+            return downloadedThread;
+
+        _logger.Warning("Adventure forum thread {ThreadId} is missing or unavailable.", threadId);
+        return null;
+    }
+
+    private async Task<bool> PrepareThreadAsync(IThreadChannel thread, RequestOptions requestOptions)
+    {
+        try
+        {
+            if (thread.IsArchived)
+            {
+                await thread.ModifyAsync(properties => properties.Archived = false, requestOptions)
+                    .ConfigureAwait(false);
+            }
+
+            if (!thread.HasJoined)
+                await thread.JoinAsync(requestOptions).ConfigureAwait(false);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(
+                ex,
+                "Adventure forum thread {ThreadId} is inaccessible or could not be unarchived.",
+                thread.Id);
+
+            return false;
+        }
+    }
+
+    private async static Task<HashSet<ulong>> GetThreadMemberIdsAsync(IThreadChannel thread, RequestOptions options)
+    {
+        switch (thread)
+        {
+            case SocketThreadChannel socketThread:
+            {
+                IReadOnlyCollection<SocketThreadUser> users =
+                    await socketThread.GetUsersAsync(options).ConfigureAwait(false);
+
+                return users.Select(user => user.Id).ToHashSet();
+            }
+            case RestThreadChannel restThread:
+            {
+                HashSet<ulong> memberIds = new HashSet<ulong>();
+
+                ConfiguredCancelableAsyncEnumerable<IReadOnlyCollection<RestThreadUser>> userAsyncEnumerator =
+                    restThread
+                        .GetThreadUsersAsync(100, options)
+                        .WithCancellation(options.CancelToken)
+                        .ConfigureAwait(false);
+
+                await foreach (IReadOnlyCollection<RestThreadUser> users in userAsyncEnumerator)
+                foreach (RestThreadUser user in users)
+                    memberIds.Add(user.Id);
+
+                return memberIds;
+            }
+            default:
+                return new HashSet<ulong>();
+        }
+    }
+}

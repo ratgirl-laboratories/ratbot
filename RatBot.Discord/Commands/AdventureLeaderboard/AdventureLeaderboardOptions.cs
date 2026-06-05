@@ -4,10 +4,9 @@ public sealed class AdventureLeaderboardOptions
 {
     public const string SectionName = "AdventureLeaderboard";
 
-    public int RefreshIntervalSeconds { get; init; } = 60;
+    private int RefreshIntervalSeconds { get; init; } = 60;
 
     public string BaseUrl { get; init; } = "https://adventure.practicalpython.org/api/leaderboard/";
 
-    public TimeSpan RefreshInterval =>
-        TimeSpan.FromSeconds(Math.Max(10, RefreshIntervalSeconds));
+    public TimeSpan RefreshInterval => TimeSpan.FromSeconds(Math.Max(10, RefreshIntervalSeconds));
 }

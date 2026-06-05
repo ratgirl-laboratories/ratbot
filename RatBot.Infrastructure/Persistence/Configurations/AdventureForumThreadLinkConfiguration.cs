@@ -1,0 +1,27 @@
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using RatBot.Domain.Adventure;
+
+namespace RatBot.Infrastructure.Persistence.Configurations;
+
+public sealed class AdventureForumThreadLinkConfiguration : IEntityTypeConfiguration<AdventureForumThreadLink>
+{
+    public void Configure(EntityTypeBuilder<AdventureForumThreadLink> builder)
+    {
+        builder.ToTable(
+            "AdventureForumThreadLinks",
+            table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_AdventureForumThreadLinks_ScorePartIndex",
+                    "\"ScorePartIndex\" >= 1 AND \"ScorePartIndex\" <= 20");
+            });
+
+        builder.HasKey(x => x.ScorePartIndex);
+
+        builder.Property(x => x.ScorePartIndex).ValueGeneratedNever();
+        builder.Property(x => x.ThreadId).IsRequired().HasConversion<long>().HasColumnType("bigint");
+
+        builder.HasIndex(x => x.ScorePartIndex).IsUnique();
+        builder.HasIndex(x => x.ThreadId).IsUnique();
+    }
+}

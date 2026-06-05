@@ -13,14 +13,38 @@ public static class AdventureLeaderboardFormatter
         IReadOnlySet<ulong> guildMemberUserIds,
         DateTimeOffset lastUpdated)
     {
-        List<AdventureLeaderboardViewRow> rows = snapshot.Rows
+        List<AdventureLeaderboardSnapshotRow> sortedRows = snapshot.Rows
             .OrderByDescending(row => row.Score)
             .ThenBy(row => row.ApiOrder)
             .Take(MaxVisibleRows)
-            .Select((row, index) => FormatRow(row, index + 1, guildMemberUserIds))
             .ToList();
+        List<AdventureLeaderboardViewRow> rows = FormatRows(sortedRows, guildMemberUserIds);
 
         return new AdventureLeaderboardViewModel(year, snapshot.Rows.Count, rows.Count, lastUpdated, rows);
+    }
+
+    private static List<AdventureLeaderboardViewRow> FormatRows(
+        IReadOnlyList<AdventureLeaderboardSnapshotRow> sortedRows,
+        IReadOnlySet<ulong> guildMemberUserIds)
+    {
+        List<AdventureLeaderboardViewRow> rows = new List<AdventureLeaderboardViewRow>(sortedRows.Count);
+        int? previousScore = null;
+        int currentRank = 0;
+
+        for (int index = 0; index < sortedRows.Count; index++)
+        {
+            AdventureLeaderboardSnapshotRow row = sortedRows[index];
+
+            if (previousScore != row.Score)
+            {
+                currentRank = index + 1;
+                previousScore = row.Score;
+            }
+
+            rows.Add(FormatRow(row, currentRank, guildMemberUserIds));
+        }
+
+        return rows;
     }
 
     private static string BuildProgressBar(IReadOnlyList<AdventureLeaderboardDayProgress> progress)
@@ -31,9 +55,9 @@ public static class AdventureLeaderboardFormatter
         {
             char symbol = (day.Part1Complete, day.Part2Complete) switch
             {
-                (true, true) => '●',
-                (true, false) or (false, true) => '◐',
-                _ => '○',
+                (true, true) => '█',
+                (true, false) or (false, true) => '▄',
+                _ => '▁',
             };
 
             text.Append(symbol);

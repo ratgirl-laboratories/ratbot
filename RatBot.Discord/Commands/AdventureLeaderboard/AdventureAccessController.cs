@@ -11,6 +11,62 @@ public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> db
     private static readonly AllowedMentions UserMentionsOnly = new AllowedMentions(AllowedMentionTypes.Users);
     private readonly ILogger _logger = logger.ForContext<AdventureAccessController>();
 
+    private async static Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(
+        SocketGuild guild,
+        AdventureEntrySnapshot snapshot,
+        RequestOptions options)
+    {
+        ImmutableDictionary<ulong, IGuildUser>.Builder members = ImmutableDictionary.CreateBuilder<ulong, IGuildUser>();
+
+        foreach (AdventureEntryRow row in snapshot.Rows)
+        {
+            if (!ulong.TryParse(row.UserId, out ulong userId))
+                continue;
+
+            IGuildUser? member = guild.GetUser(userId)
+                                 ?? await ((IGuild)guild)
+                                     .GetUserAsync(userId, CacheMode.AllowDownload, options)
+                                     .ConfigureAwait(false);
+
+            if (member is not null)
+                members.Add(userId, member);
+        }
+
+        return members.ToImmutable();
+    }
+
+    private async static Task<HashSet<ulong>> GetThreadMemberIdsAsync(IThreadChannel thread, RequestOptions options)
+    {
+        switch (thread)
+        {
+            case SocketThreadChannel socketThread:
+            {
+                IReadOnlyCollection<SocketThreadUser> users =
+                    await socketThread.GetUsersAsync(options).ConfigureAwait(false);
+
+                return users.Select(user => user.Id).ToHashSet();
+            }
+            case RestThreadChannel restThread:
+            {
+                HashSet<ulong> memberIds = new HashSet<ulong>();
+
+                ConfiguredCancelableAsyncEnumerable<IReadOnlyCollection<RestThreadUser>> userAsyncEnumerator =
+                    restThread
+                        .GetThreadUsersAsync(100, options)
+                        .WithCancellation(options.CancelToken)
+                        .ConfigureAwait(false);
+
+                await foreach (IReadOnlyCollection<RestThreadUser> users in userAsyncEnumerator)
+                foreach (RestThreadUser user in users)
+                    memberIds.Add(user.Id);
+
+                return memberIds;
+            }
+            default:
+                return new HashSet<ulong>();
+        }
+    }
+
     public async Task UpdateAccessGrantsAsync(SocketGuild guild, AdventureEntrySnapshot snapshot, CancellationToken ct)
     {
         ImmutableArray<AdventureForumThreadLink> links;
@@ -164,30 +220,6 @@ public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> db
         }
     }
 
-    private async static Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(
-        SocketGuild guild,
-        AdventureEntrySnapshot snapshot,
-        RequestOptions options)
-    {
-        ImmutableDictionary<ulong, IGuildUser>.Builder members = ImmutableDictionary.CreateBuilder<ulong, IGuildUser>();
-
-        foreach (AdventureEntryRow row in snapshot.Rows)
-        {
-            if (!ulong.TryParse(row.UserId, out ulong userId))
-                continue;
-
-            IGuildUser? member = guild.GetUser(userId)
-                                 ?? await ((IGuild)guild)
-                                     .GetUserAsync(userId, CacheMode.AllowDownload, options)
-                                     .ConfigureAwait(false);
-
-            if (member is not null)
-                members.Add(userId, member);
-        }
-
-        return members.ToImmutable();
-    }
-
     private async Task<IThreadChannel?> ResolveThreadAsync(SocketGuild guild, ulong threadId, RequestOptions options)
     {
         SocketThreadChannel? thread = guild.GetThreadChannel(threadId);
@@ -229,38 +261,6 @@ public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> db
                 thread.Id);
 
             return false;
-        }
-    }
-
-    private async static Task<HashSet<ulong>> GetThreadMemberIdsAsync(IThreadChannel thread, RequestOptions options)
-    {
-        switch (thread)
-        {
-            case SocketThreadChannel socketThread:
-            {
-                IReadOnlyCollection<SocketThreadUser> users =
-                    await socketThread.GetUsersAsync(options).ConfigureAwait(false);
-
-                return users.Select(user => user.Id).ToHashSet();
-            }
-            case RestThreadChannel restThread:
-            {
-                HashSet<ulong> memberIds = new HashSet<ulong>();
-
-                ConfiguredCancelableAsyncEnumerable<IReadOnlyCollection<RestThreadUser>> userAsyncEnumerator =
-                    restThread
-                        .GetThreadUsersAsync(100, options)
-                        .WithCancellation(options.CancelToken)
-                        .ConfigureAwait(false);
-
-                await foreach (IReadOnlyCollection<RestThreadUser> users in userAsyncEnumerator)
-                foreach (RestThreadUser user in users)
-                    memberIds.Add(user.Id);
-
-                return memberIds;
-            }
-            default:
-                return new HashSet<ulong>();
         }
     }
 }

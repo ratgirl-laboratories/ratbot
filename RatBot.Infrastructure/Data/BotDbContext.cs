@@ -19,6 +19,8 @@ public sealed class BotDbContext(DbContextOptions<BotDbContext> options)
     public DbSet<RoleColourOption> RoleColourOptions => Set<RoleColourOption>();
     public DbSet<MemberColourPreference> MemberColourPreferences => Set<MemberColourPreference>();
     public DbSet<AdventureForumThreadLink> AdventureForumThreadLinks => Set<AdventureForumThreadLink>();
+    public DbSet<AdventureLeaderboardMessageState> AdventureLeaderboardMessageState =>
+        Set<AdventureLeaderboardMessageState>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BotDbContext).Assembly);

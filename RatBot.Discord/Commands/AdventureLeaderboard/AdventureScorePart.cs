@@ -6,14 +6,14 @@ public readonly record struct AdventureScorePart(int Index)
 {
     private const int Count = 20;
 
-    private int Week => ((Index - 1) / 2) + 1;
-
-    private int Part => ((Index - 1) % 2) + 1;
+    public static ImmutableArray<AdventureScorePart> All { get; } =
+        Enumerable.Range(1, Count).Select(index => new AdventureScorePart(index)).ToImmutableArray();
 
     public string ThreadName => $"Week {Week} Part {Part}";
 
-    public static ImmutableArray<AdventureScorePart> All { get; } =
-        Enumerable.Range(1, Count).Select(index => new AdventureScorePart(index)).ToImmutableArray();
+    private int Week => ((Index - 1) / 2) + 1;
+
+    private int Part => ((Index - 1) % 2) + 1;
 
     public static ImmutableHashSet<int> CompletedParts(IReadOnlyList<AdventureDayProgress> progress)
     {

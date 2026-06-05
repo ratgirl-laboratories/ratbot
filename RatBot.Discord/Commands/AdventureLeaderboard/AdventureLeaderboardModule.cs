@@ -41,4 +41,20 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardUpdateService
             throw;
         }
     }
+
+    [SlashCommand("exclude", "Exclude a user from the active adventure leaderboard.")]
+    [RequireUserPermission(GuildPermission.Administrator)]
+    public async Task ExcludeAsync(
+        [Summary("user", "User to exclude from the adventure leaderboard.")] IUser user)
+    {
+        await DeferAsync(ephemeral: true).ConfigureAwait(false);
+
+        bool added = await updateService.ExcludeUserAsync(user.Id, CancellationToken.None).ConfigureAwait(false);
+        string displayName = global::Discord.Format.Sanitize(user.Username);
+        string action = added ? "Excluded" : "Already excluding";
+
+        await FollowupAsync(
+            $"{action} {displayName} ({user.Id}) from the adventure leaderboard.",
+            ephemeral: true).ConfigureAwait(false);
+    }
 }

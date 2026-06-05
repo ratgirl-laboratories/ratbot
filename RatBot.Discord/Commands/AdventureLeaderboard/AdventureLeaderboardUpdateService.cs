@@ -16,6 +16,7 @@ public sealed class AdventureLeaderboardUpdateService(
     private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
     private readonly ILogger _logger = logger.ForContext<AdventureLeaderboardUpdateService>();
     private readonly AdventureLeaderboardOptions _options = options.Value;
+    private readonly HashSet<ulong> _excludedUserIds = new HashSet<ulong>();
     private TrackedLeaderboardMessage? _trackedMessage;
 
     public async Task<IUserMessage> CreateLeaderboardMessageAsync(
@@ -24,22 +25,24 @@ public sealed class AdventureLeaderboardUpdateService(
         CancellationToken cancellationToken)
     {
         AdventureLeaderboardSnapshot snapshot = await FetchSnapshotAsync(year, cancellationToken).ConfigureAwait(false);
-        IReadOnlySet<ulong> guildMemberUserIds =
-            await FindGuildMemberUserIdsAsync(channel.Guild, snapshot, cancellationToken).ConfigureAwait(false);
-        string renderHash = BuildRenderHash(snapshot, guildMemberUserIds);
-        MessageComponent components = BuildComponents(snapshot, year, guildMemberUserIds);
-
-        IUserMessage message = await channel.SendMessageAsync(
-            allowedMentions: UserMentionsOnly,
-            components: components,
-            flags: LeaderboardMessageFlags).ConfigureAwait(false);
-
         TrackedLeaderboardMessage? previousMessage;
+        IUserMessage message;
 
         await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
+            AdventureLeaderboardSnapshot visibleSnapshot = RemoveExcludedUsers(snapshot);
+            IReadOnlySet<ulong> guildMemberUserIds =
+                await FindGuildMemberUserIdsAsync(channel.Guild, visibleSnapshot, cancellationToken).ConfigureAwait(false);
+            string renderHash = BuildRenderHash(snapshot, guildMemberUserIds, _excludedUserIds);
+            MessageComponent components = BuildComponents(visibleSnapshot, year, guildMemberUserIds);
+
+            message = await channel.SendMessageAsync(
+                allowedMentions: UserMentionsOnly,
+                components: components,
+                flags: LeaderboardMessageFlags).ConfigureAwait(false);
+
             previousMessage = _trackedMessage;
             _trackedMessage = new TrackedLeaderboardMessage(channel.Guild.Id, channel.Id, message.Id, year, renderHash);
         }
@@ -52,6 +55,36 @@ public sealed class AdventureLeaderboardUpdateService(
             await DeletePreviousMessageAsync(previousMessage, cancellationToken).ConfigureAwait(false);
 
         return message;
+    }
+
+    public async Task<bool> ExcludeUserAsync(ulong userId, CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            bool added = _excludedUserIds.Add(userId);
+
+            try
+            {
+                if (_trackedMessage is not null)
+                    await UpdateTrackedMessageCoreAsync(_trackedMessage, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Failed to update adventure leaderboard message after excluding user {UserId}.", userId);
+            }
+
+            return added;
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     protected async override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -84,35 +117,7 @@ public sealed class AdventureLeaderboardUpdateService(
             if (_trackedMessage is null)
                 return;
 
-            AdventureLeaderboardSnapshot snapshot = await FetchSnapshotAsync(
-                _trackedMessage.Year,
-                cancellationToken).ConfigureAwait(false);
-
-            TrackedLeaderboardMessageTarget? target =
-                await FindTrackedMessageTargetAsync(_trackedMessage, cancellationToken).ConfigureAwait(false);
-
-            if (target is null)
-                return;
-
-            IReadOnlySet<ulong> guildMemberUserIds =
-                await FindGuildMemberUserIdsAsync(target.Guild, snapshot, cancellationToken).ConfigureAwait(false);
-            string renderHash = BuildRenderHash(snapshot, guildMemberUserIds);
-
-            if (string.Equals(renderHash, _trackedMessage.LastRenderHash, StringComparison.Ordinal))
-                return;
-
-            MessageComponent components = BuildComponents(snapshot, _trackedMessage.Year, guildMemberUserIds);
-
-            await target.Message.ModifyAsync(
-                properties =>
-                {
-                    properties.Components = components;
-                    properties.AllowedMentions = UserMentionsOnly;
-                    properties.Flags = LeaderboardMessageFlags;
-                },
-                new RequestOptions { CancelToken = cancellationToken }).ConfigureAwait(false);
-
-            _trackedMessage = _trackedMessage with { LastRenderHash = renderHash };
+            await UpdateTrackedMessageCoreAsync(_trackedMessage, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -128,12 +133,62 @@ public sealed class AdventureLeaderboardUpdateService(
         }
     }
 
+    private async Task UpdateTrackedMessageCoreAsync(
+        TrackedLeaderboardMessage trackedMessage,
+        CancellationToken cancellationToken)
+    {
+        AdventureLeaderboardSnapshot snapshot = await FetchSnapshotAsync(
+            trackedMessage.Year,
+            cancellationToken).ConfigureAwait(false);
+
+        AdventureLeaderboardSnapshot visibleSnapshot = RemoveExcludedUsers(snapshot);
+
+        TrackedLeaderboardMessageTarget? target =
+            await FindTrackedMessageTargetAsync(trackedMessage, cancellationToken).ConfigureAwait(false);
+
+        if (target is null)
+            return;
+
+        IReadOnlySet<ulong> guildMemberUserIds =
+            await FindGuildMemberUserIdsAsync(target.Guild, visibleSnapshot, cancellationToken).ConfigureAwait(false);
+        string renderHash = BuildRenderHash(snapshot, guildMemberUserIds, _excludedUserIds);
+
+        if (string.Equals(renderHash, trackedMessage.LastRenderHash, StringComparison.Ordinal))
+            return;
+
+        MessageComponent components = BuildComponents(visibleSnapshot, trackedMessage.Year, guildMemberUserIds);
+
+        await target.Message.ModifyAsync(
+            properties =>
+            {
+                properties.Components = components;
+                properties.AllowedMentions = UserMentionsOnly;
+                properties.Flags = LeaderboardMessageFlags;
+            },
+            new RequestOptions { CancelToken = cancellationToken }).ConfigureAwait(false);
+
+        _trackedMessage = trackedMessage with { LastRenderHash = renderHash };
+    }
+
     private async Task<AdventureLeaderboardSnapshot> FetchSnapshotAsync(int year, CancellationToken cancellationToken)
     {
         IReadOnlyList<AdventureLeaderboardEntryDto> rows =
             await client.GetLeaderboardAsync(year, cancellationToken).ConfigureAwait(false);
 
         return AdventureLeaderboardSnapshot.FromDtos(rows);
+    }
+
+    private AdventureLeaderboardSnapshot RemoveExcludedUsers(AdventureLeaderboardSnapshot snapshot)
+    {
+        if (_excludedUserIds.Count == 0)
+            return snapshot;
+
+        return snapshot with
+        {
+            Rows = snapshot.Rows
+                .Where(row => !ulong.TryParse(row.UserId, out ulong userId) || !_excludedUserIds.Contains(userId))
+                .ToList(),
+        };
     }
 
     private MessageComponent BuildComponents(
@@ -175,8 +230,9 @@ public sealed class AdventureLeaderboardUpdateService(
 
     private static string BuildRenderHash(
         AdventureLeaderboardSnapshot snapshot,
-        IReadOnlySet<ulong> guildMemberUserIds) =>
-        $"{snapshot.Hash}:{string.Join(',', guildMemberUserIds.Order())}";
+        IReadOnlySet<ulong> guildMemberUserIds,
+        IReadOnlySet<ulong> excludedUserIds) =>
+        $"{snapshot.Hash}:{string.Join(',', guildMemberUserIds.Order())}:{string.Join(',', excludedUserIds.Order())}";
 
     private async Task<TrackedLeaderboardMessageTarget?> FindTrackedMessageTargetAsync(
         TrackedLeaderboardMessage trackedMessage,

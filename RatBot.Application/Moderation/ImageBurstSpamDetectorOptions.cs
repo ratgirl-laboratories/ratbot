@@ -6,5 +6,7 @@ public sealed record ImageBurstSpamDetectorOptions
 
     public int DistinctChannelThreshold { get; init; } = 4;
 
+    public int RequiredAttachedMessageCount { get; init; } = 4;
+
     public TimeSpan HandlingLockDuration { get; init; } = TimeSpan.FromMinutes(3);
 }

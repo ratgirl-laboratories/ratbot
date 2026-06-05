@@ -7,19 +7,23 @@ namespace RatBot.Discord.Gateway;
 public sealed class ImageBurstSpamGatewayHandler(
     DiscordSocketClient discordClient,
     ImageBurstSpamDetector detector,
+    ImageBurstSpamDetectorSettings detectorSettings,
+    IServiceScopeFactory scopeFactory,
     IOptions<DiscordOptions> options,
     ILogger logger)
     : IDiscordGatewayHandler
 {
-    private const int MinimumAttachmentCount = 2;
-
     private readonly ILogger _logger = logger.ForContext<ImageBurstSpamGatewayHandler>();
     private readonly DiscordOptions _options = options.Value;
+    private const int MinimumAttachmentCount = 1;
 
-    public Task InitializeAsync(CancellationToken ct)
+    public async Task InitializeAsync(CancellationToken ct)
     {
+        using IServiceScope scope = scopeFactory.CreateScope();
+        ImageSpamSettingsService settingsService = scope.ServiceProvider.GetRequiredService<ImageSpamSettingsService>();
+        await settingsService.GetCurrentAsync(ct).ConfigureAwait(false);
+
         Subscribe();
-        return Task.CompletedTask;
     }
 
     public void Unsubscribe() => discordClient.MessageReceived -= HandleMessageReceivedAsync;
@@ -100,7 +104,11 @@ public sealed class ImageBurstSpamGatewayHandler(
     {
         SocketGuild guild = discordClient.GetGuild(detection.GuildId);
 
-        string reason = $"Automatic image-burst spam detection: {detection.ChannelIds.Count} channels in 45 seconds.";
+        ImageBurstSpamDetectorOptions currentSettings = detectorSettings.Current;
+        string reason =
+            "Automatic image-burst spam detection: "
+            + $"{detection.ChannelIds.Count} channels and {detection.Messages.Count} attached messages "
+            + $"in {currentSettings.Window} seconds.";
 
         await guild
             .AddBanAsync(detection.UserId, _options.ImageBurstSpamHistoryPruneDays, reason)

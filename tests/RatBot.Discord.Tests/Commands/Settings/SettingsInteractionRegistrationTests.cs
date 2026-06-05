@@ -1,7 +1,12 @@
 using System.Reflection;
 using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
+using RatBot.Application.Moderation;
+using RatBot.Discord.Commands.Spam;
 using RatBot.Discord.Commands.Settings;
+using RatBot.Domain.Moderation;
 using Shouldly;
 
 namespace RatBot.Discord.Tests.Commands.Settings;
@@ -10,34 +15,81 @@ namespace RatBot.Discord.Tests.Commands.Settings;
 public sealed class SettingsInteractionRegistrationTests
 {
     [Test]
-    public void SetSpambotAsync_HasExpectedSlashCommandMetadata()
+    public void ImageSpamConfigAsync_HasExpectedSlashCommandMetadata()
     {
         // Arrange
         MethodInfo method =
-            typeof(SettingsModule).GetMethod(nameof(SettingsModule.SetSpambotAsync))
-            ?? throw new InvalidOperationException("Expected SetSpambotAsync method.");
+            typeof(SpamModule).GetMethod(nameof(SpamModule.ImageSpamConfigAsync))
+            ?? throw new InvalidOperationException("Expected ImageSpamConfigAsync method.");
 
         // Act
+        GroupAttribute group =
+            typeof(SpamModule).GetCustomAttribute<GroupAttribute>()
+            ?? throw new InvalidOperationException("Expected group attribute.");
+
         SlashCommandAttribute slashCommand =
             method.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
 
         ParameterInfo[] parameters = method.GetParameters();
 
         // Assert
-        slashCommand.Name.ShouldBe("spambot");
+        group.Name.ShouldBe("spam");
+        slashCommand.Name.ShouldBe("image-spam-config");
 
         parameters.Select(parameter => parameter.ParameterType).ShouldBe(
         [
-            typeof(int),
-            typeof(int),
+            typeof(int?),
+            typeof(int?),
+            typeof(int?),
         ]);
 
         parameters.Select(parameter =>
             parameter.GetCustomAttribute<SummaryAttribute>()?.Name).ShouldBe(
         [
-            "window",
-            "distinct-channel-threshold",
+            "number-of-channels",
+            "number-of-required-attached-messages",
+            "burst-duration",
         ]);
+
+        parameters.Select(parameter => parameter.HasDefaultValue && parameter.DefaultValue is null).ShouldBe(
+        [
+            true,
+            true,
+            true,
+        ]);
+    }
+
+    [Test]
+    public async Task ImageSpamConfigAsync_CanBeRegisteredByInteractionService()
+    {
+        // Arrange
+        DiscordSocketClient client = new DiscordSocketClient();
+        InteractionService interactionService = new InteractionService(client);
+        ServiceProvider services = new ServiceCollection()
+            .AddSingleton<ImageBurstSpamDetectorSettings>()
+            .AddSingleton<IImageSpamSettingsStore, FakeImageSpamSettingsStore>()
+            .AddScoped<ImageSpamSettingsService>()
+            .BuildServiceProvider();
+
+        // Act
+        ModuleInfo module = await interactionService.AddModuleAsync<SpamModule>(services);
+        SlashCommandInfo command = module.SlashCommands.Single();
+
+        // Assert
+        command.Name.ShouldBe("image-spam-config");
+        command.Parameters.Select(parameter => parameter.IsRequired).ShouldBe([false, false, false]);
+    }
+
+    private sealed class FakeImageSpamSettingsStore : IImageSpamSettingsStore
+    {
+        public Task<ImageSpamSettings?> GetAsync(CancellationToken ct) => Task.FromResult<ImageSpamSettings?>(null);
+
+        public Task<ImageSpamSettings> UpsertAsync(
+            int? requiredChannelCount,
+            int? requiredAttachedMessageCount,
+            int? burstDurationSeconds,
+            CancellationToken ct) =>
+            Task.FromResult(ImageSpamSettings.CreateDefault());
     }
 
     [Test]

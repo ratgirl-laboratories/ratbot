@@ -32,6 +32,7 @@ public static class DependencyInjection
             services.AddScoped<IRepository<MetaSuggestionSettings>, BotDbContext>();
 
             services.AddScoped<IAutobannedUserRepository, AutobannedUserRepository>();
+            services.AddScoped<IImageSpamSettingsStore, ImageSpamSettingsStore>();
             services.AddScoped<IQuorumSettingsRepository, QuorumSettingsRepository>();
             services.AddScoped<IEmojiRepository, BotDbContext>();
         }

@@ -1,0 +1,38 @@
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace RatBot.Infrastructure.Migrations
+{
+    /// <inheritdoc />
+    public partial class AddImageBurstSpamDetectorSettings : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "ImageSpamSettings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false),
+                    RequiredChannelCount = table.Column<int>(type: "integer", nullable: false),
+                    RequiredAttachedMessageCount = table.Column<int>(type: "integer", nullable: false),
+                    BurstDurationSeconds = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ImageSpamSettings", x => x.Id);
+                    table.CheckConstraint("CK_ImageSpamSettings_BurstDurationSeconds_Positive", "\"BurstDurationSeconds\" > 0");
+                    table.CheckConstraint("CK_ImageSpamSettings_RequiredAttachedMessageCount_Positive", "\"RequiredAttachedMessageCount\" > 0");
+                    table.CheckConstraint("CK_ImageSpamSettings_RequiredChannelCount_Positive", "\"RequiredChannelCount\" > 0");
+                });
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "ImageSpamSettings");
+        }
+    }
+}

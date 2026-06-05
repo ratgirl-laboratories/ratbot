@@ -19,6 +19,12 @@ public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions
         }
     }
 
+    public void Update(ImageBurstSpamDetectorOptions options)
+    {
+        lock (_gate)
+            _current = options;
+    }
+
     public void Update(int window, int distinctChannelThreshold)
     {
         lock (_gate)
@@ -27,6 +33,19 @@ public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions
             {
                 Window = window,
                 DistinctChannelThreshold = distinctChannelThreshold,
+            };
+        }
+    }
+
+    public void Update(int window, int distinctChannelThreshold, int requiredAttachedMessageCount)
+    {
+        lock (_gate)
+        {
+            _current = _current with
+            {
+                Window = window,
+                DistinctChannelThreshold = distinctChannelThreshold,
+                RequiredAttachedMessageCount = requiredAttachedMessageCount,
             };
         }
     }

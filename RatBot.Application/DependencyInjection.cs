@@ -20,6 +20,7 @@ public static class DependencyInjection
             services.AddSingleton<ImageBurstSpamDetectorSettings>();
             services.AddSingleton<ImageBurstSpamDetector>();
 
+            services.AddScoped<ImageSpamSettingsService>();
             services.AddScoped<AdminSendService>();
             services.AddScoped<ReactionUsageTracker>();
             services.AddScoped<EmojiUsageTracker>();

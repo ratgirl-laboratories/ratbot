@@ -16,6 +16,7 @@ public sealed class BotDbContext(DbContextOptions<BotDbContext> options)
     public DbSet<EmojiUsageCount> EmojiUsageCounts => Set<EmojiUsageCount>();
     public DbSet<MetaSuggestionSettings> MetaSuggestionSettings => Set<MetaSuggestionSettings>();
     public DbSet<AutobannedUser> AutobannedUsers => Set<AutobannedUser>();
+    public DbSet<ImageSpamSettings> ImageSpamSettings => Set<ImageSpamSettings>();
     public DbSet<RoleColourOption> RoleColourOptions => Set<RoleColourOption>();
     public DbSet<MemberColourPreference> MemberColourPreferences => Set<MemberColourPreference>();
     public DbSet<AdventureForumThreadLink> AdventureForumThreadLinks => Set<AdventureForumThreadLink>();

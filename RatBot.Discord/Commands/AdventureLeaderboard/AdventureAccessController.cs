@@ -8,6 +8,7 @@ namespace RatBot.Discord.Commands.AdventureLeaderboard;
 
 public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> dbContextFactory, ILogger logger)
 {
+    private static readonly AllowedMentions UserMentionsOnly = new AllowedMentions(AllowedMentionTypes.Users);
     private readonly ILogger _logger = logger.ForContext<AdventureAccessController>();
 
     public async Task UpdateAccessGrantsAsync(SocketGuild guild, AdventureEntrySnapshot snapshot, CancellationToken ct)
@@ -57,6 +58,7 @@ public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> db
         int attempted = 0;
         int alreadyPresent = 0;
         int failures = 0;
+        int notificationFailures = 0;
         int skippedThreads = 0;
 
         foreach (IGrouping<ulong, AdventureAccessGrant> accessGrants in grants.Grants.GroupBy(grant => grant.ThreadId))
@@ -99,6 +101,9 @@ public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> db
                 {
                     await thread.AddUserAsync(user, requestOptions).ConfigureAwait(false);
                     currentMemberIds.Add(user.Id);
+
+                    if (!await SendAdventureThreadWelcomeAsync(thread, user, requestOptions).ConfigureAwait(false))
+                        notificationFailures++;
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
@@ -119,13 +124,44 @@ public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> db
         }
 
         _logger.Information(
-            "Adventure forum access sync completed. ThreadLinks={ThreadLinkCount} GuildUsersConsidered={GuildUserCount} GrantsAttempted={GrantsAttempted} GrantsAlreadyPresent={GrantsAlreadyPresent} Failures={Failures} ThreadsSkipped={ThreadsSkipped}.",
+            "Adventure forum access sync completed. ThreadLinks={ThreadLinkCount} GuildUsersConsidered={GuildUserCount} GrantsAttempted={GrantsAttempted} GrantsAlreadyPresent={GrantsAlreadyPresent} Failures={Failures} NotificationFailures={NotificationFailures} ThreadsSkipped={ThreadsSkipped}.",
             links.Length,
             guildMembers.Count,
             attempted,
             alreadyPresent,
             failures,
+            notificationFailures,
             skippedThreads);
+    }
+
+    private async Task<bool> SendAdventureThreadWelcomeAsync(
+        IThreadChannel thread,
+        IGuildUser user,
+        RequestOptions requestOptions)
+    {
+        try
+        {
+            await thread.SendMessageAsync(
+                $"Congratulations, Adventurer {MentionUtils.MentionUser(user.Id)}!",
+                allowedMentions: UserMentionsOnly,
+                options: requestOptions).ConfigureAwait(false);
+
+            return true;
+        }
+        catch (OperationCanceledException) when (requestOptions.CancelToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(
+                ex,
+                "Failed to send adventure forum thread welcome message to user {UserId} in thread {ThreadId}.",
+                user.Id,
+                thread.Id);
+
+            return false;
+        }
     }
 
     private async static Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(

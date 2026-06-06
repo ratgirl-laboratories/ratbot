@@ -37,7 +37,7 @@ public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions
         }
     }
 
-    public void Update(int window, int distinctChannelThreshold, int requiredAttachedMessageCount)
+    public void Update(int window, int distinctChannelThreshold, int requiredAttachmentCount)
     {
         lock (_gate)
         {
@@ -45,7 +45,7 @@ public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions
             {
                 Window = window,
                 DistinctChannelThreshold = distinctChannelThreshold,
-                RequiredAttachedMessageCount = requiredAttachedMessageCount,
+                RequiredAttachmentCount = requiredAttachmentCount,
             };
         }
     }

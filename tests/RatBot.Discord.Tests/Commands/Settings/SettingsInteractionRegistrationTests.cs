@@ -47,7 +47,7 @@ public sealed class SettingsInteractionRegistrationTests
             parameter.GetCustomAttribute<SummaryAttribute>()?.Name).ShouldBe(
         [
             "number-of-channels",
-            "number-of-required-attached-messages",
+            "attachment-count",
             "burst-duration",
         ]);
 
@@ -77,6 +77,13 @@ public sealed class SettingsInteractionRegistrationTests
 
         // Assert
         command.Name.ShouldBe("image-spam-config");
+        command.Parameters.Select(parameter => parameter.Name).ShouldBe(
+        [
+            "number-of-channels",
+            "attachment-count",
+            "burst-duration",
+        ]);
+        command.Parameters.Select(parameter => parameter.Name.Length <= 32).ShouldBe([true, true, true]);
         command.Parameters.Select(parameter => parameter.IsRequired).ShouldBe([false, false, false]);
     }
 
@@ -86,7 +93,7 @@ public sealed class SettingsInteractionRegistrationTests
 
         public Task<ImageSpamSettings> UpsertAsync(
             int? requiredChannelCount,
-            int? requiredAttachedMessageCount,
+            int? requiredAttachmentCount,
             int? burstDurationSeconds,
             CancellationToken ct) =>
             Task.FromResult(ImageSpamSettings.CreateDefault());

@@ -46,7 +46,7 @@ public sealed class ImageBurstSpamDetectorTests
     }
 
     [Test]
-    public void Observe_WithRequiredChannelsButTooFewAttachedMessages_DoesNotReturnDetection()
+    public void Observe_WithThreeQualifyingMessagesAcrossThreeChannelsInsideFifteenSeconds_ReturnsDetection()
     {
         // Arrange
         TestTimeProvider timeProvider = new TestTimeProvider(BaseTimestamp);
@@ -56,32 +56,7 @@ public sealed class ImageBurstSpamDetectorTests
             {
                 Window = 15,
                 DistinctChannelThreshold = 3,
-                RequiredAttachedMessageCount = 4,
-                HandlingLockDuration = TimeSpan.FromMinutes(5),
-            });
-
-        // Act
-        detector.Observe(CreateMessage(channelId: 10, timestamp: BaseTimestamp)).ShouldBeNull();
-        detector.Observe(CreateMessage(channelId: 20, timestamp: BaseTimestamp.AddSeconds(2))).ShouldBeNull();
-        ImageBurstDetection? detection =
-            detector.Observe(CreateMessage(channelId: 30, timestamp: BaseTimestamp.AddSeconds(4)));
-
-        // Assert
-        detection.ShouldBeNull();
-    }
-
-    [Test]
-    public void Observe_WithThreeAttachedMessagesAcrossThreeChannelsInsideFifteenSeconds_ReturnsDetection()
-    {
-        // Arrange
-        TestTimeProvider timeProvider = new TestTimeProvider(BaseTimestamp);
-        ImageBurstSpamDetector detector = new ImageBurstSpamDetector(
-            timeProvider,
-            new ImageBurstSpamDetectorOptions
-            {
-                Window = 15,
-                DistinctChannelThreshold = 3,
-                RequiredAttachedMessageCount = 3,
+                RequiredAttachmentCount = 2,
                 HandlingLockDuration = TimeSpan.FromMinutes(5),
             });
 
@@ -158,7 +133,7 @@ public sealed class ImageBurstSpamDetectorTests
             {
                 Window = 45,
                 DistinctChannelThreshold = 4,
-                RequiredAttachedMessageCount = 4,
+                RequiredAttachmentCount = 2,
                 HandlingLockDuration = TimeSpan.FromMinutes(5),
             });
 

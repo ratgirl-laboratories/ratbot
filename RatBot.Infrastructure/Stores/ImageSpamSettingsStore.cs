@@ -12,7 +12,7 @@ public sealed class ImageSpamSettingsStore(BotDbContext dbContext) : IImageSpamS
 
     public async Task<ImageSpamSettings> UpsertAsync(
         int? requiredChannelCount,
-        int? requiredAttachedMessageCount,
+        int? requiredAttachmentCount,
         int? burstDurationSeconds,
         CancellationToken ct)
     {
@@ -26,7 +26,7 @@ public sealed class ImageSpamSettingsStore(BotDbContext dbContext) : IImageSpamS
             dbContext.ImageSpamSettings.Add(settings);
         }
 
-        settings.Update(requiredChannelCount, requiredAttachedMessageCount, burstDurationSeconds);
+        settings.Update(requiredChannelCount, requiredAttachmentCount, burstDurationSeconds);
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
         return settings;

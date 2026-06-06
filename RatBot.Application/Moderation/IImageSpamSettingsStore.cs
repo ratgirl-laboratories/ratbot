@@ -8,7 +8,7 @@ public interface IImageSpamSettingsStore
 
     Task<ImageSpamSettings> UpsertAsync(
         int? requiredChannelCount,
-        int? requiredAttachedMessageCount,
+        int? requiredAttachmentCount,
         int? burstDurationSeconds,
         CancellationToken ct);
 }

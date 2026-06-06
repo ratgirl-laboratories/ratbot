@@ -8,11 +8,11 @@ public sealed class ImageSpamSettings
     {
     }
 
-    private ImageSpamSettings(int id, int requiredChannelCount, int requiredAttachedMessageCount, int burstDurationSeconds)
+    private ImageSpamSettings(int id, int requiredChannelCount, int requiredAttachmentCount, int burstDurationSeconds)
     {
         Id = id;
         RequiredChannelCount = requiredChannelCount;
-        RequiredAttachedMessageCount = requiredAttachedMessageCount;
+        RequiredAttachmentCount = requiredAttachmentCount;
         BurstDurationSeconds = burstDurationSeconds;
     }
 
@@ -20,7 +20,7 @@ public sealed class ImageSpamSettings
 
     public int RequiredChannelCount { get; private set; }
 
-    public int RequiredAttachedMessageCount { get; private set; }
+    public int RequiredAttachmentCount { get; private set; }
 
     public int BurstDurationSeconds { get; private set; }
 
@@ -28,13 +28,13 @@ public sealed class ImageSpamSettings
         new ImageSpamSettings(
             SingletonId,
             4,
-            4,
+            2,
             45);
 
-    public void Update(int? requiredChannelCount, int? requiredAttachedMessageCount, int? burstDurationSeconds)
+    public void Update(int? requiredChannelCount, int? requiredAttachmentCount, int? burstDurationSeconds)
     {
         RequiredChannelCount = requiredChannelCount ?? RequiredChannelCount;
-        RequiredAttachedMessageCount = requiredAttachedMessageCount ?? RequiredAttachedMessageCount;
+        RequiredAttachmentCount = requiredAttachmentCount ?? RequiredAttachmentCount;
         BurstDurationSeconds = burstDurationSeconds ?? BurstDurationSeconds;
     }
 }

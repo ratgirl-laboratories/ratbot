@@ -199,7 +199,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.Property<int>("BurstDurationSeconds")
                         .HasColumnType("integer");
 
-                    b.Property<int>("RequiredAttachedMessageCount")
+                    b.Property<int>("RequiredAttachmentCount")
                         .HasColumnType("integer");
 
                     b.Property<int>("RequiredChannelCount")
@@ -211,7 +211,7 @@ namespace RatBot.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_ImageSpamSettings_BurstDurationSeconds_Positive", "\"BurstDurationSeconds\" > 0");
 
-                            t.HasCheckConstraint("CK_ImageSpamSettings_RequiredAttachedMessageCount_Positive", "\"RequiredAttachedMessageCount\" > 0");
+                            t.HasCheckConstraint("CK_ImageSpamSettings_RequiredAttachmentCount_Positive", "\"RequiredAttachmentCount\" > 0");
 
                             t.HasCheckConstraint("CK_ImageSpamSettings_RequiredChannelCount_Positive", "\"RequiredChannelCount\" > 0");
                         });

@@ -15,7 +15,6 @@ public sealed class ImageBurstSpamGatewayHandler(
 {
     private readonly ILogger _logger = logger.ForContext<ImageBurstSpamGatewayHandler>();
     private readonly DiscordOptions _options = options.Value;
-    private const int MinimumAttachmentCount = 1;
 
     public async Task InitializeAsync(CancellationToken ct)
     {
@@ -69,7 +68,7 @@ public sealed class ImageBurstSpamGatewayHandler(
         if (userMessage.Author is not SocketGuildUser guildUser)
             return null;
 
-        if (userMessage.Attachments.Count < MinimumAttachmentCount)
+        if (userMessage.Attachments.Count < detectorSettings.Current.RequiredAttachmentCount)
             return null;
 
         if (IsExempt(guildUser))
@@ -107,7 +106,7 @@ public sealed class ImageBurstSpamGatewayHandler(
         ImageBurstSpamDetectorOptions currentSettings = detectorSettings.Current;
         string reason =
             "Automatic image-burst spam detection: "
-            + $"{detection.ChannelIds.Count} channels and {detection.Messages.Count} attached messages "
+            + $"{detection.ChannelIds.Count} channels with {currentSettings.RequiredAttachmentCount}+ attachments "
             + $"in {currentSettings.Window} seconds.";
 
         await guild

@@ -16,14 +16,14 @@ namespace RatBot.Infrastructure.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false),
                     RequiredChannelCount = table.Column<int>(type: "integer", nullable: false),
-                    RequiredAttachedMessageCount = table.Column<int>(type: "integer", nullable: false),
+                    RequiredAttachmentCount = table.Column<int>(type: "integer", nullable: false),
                     BurstDurationSeconds = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ImageSpamSettings", x => x.Id);
                     table.CheckConstraint("CK_ImageSpamSettings_BurstDurationSeconds_Positive", "\"BurstDurationSeconds\" > 0");
-                    table.CheckConstraint("CK_ImageSpamSettings_RequiredAttachedMessageCount_Positive", "\"RequiredAttachedMessageCount\" > 0");
+                    table.CheckConstraint("CK_ImageSpamSettings_RequiredAttachmentCount_Positive", "\"RequiredAttachmentCount\" > 0");
                     table.CheckConstraint("CK_ImageSpamSettings_RequiredChannelCount_Positive", "\"RequiredChannelCount\" > 0");
                 });
         }

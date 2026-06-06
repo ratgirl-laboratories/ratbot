@@ -21,12 +21,12 @@ public sealed class ImageSpamSettingsService(
 
     public async Task<ImageBurstSpamDetectorOptions> UpsertAsync(
         int? requiredChannelCount,
-        int? requiredAttachedMessageCount,
+        int? requiredAttachmentCount,
         int? burstDurationSeconds,
         CancellationToken ct)
     {
         ImageSpamSettings settings = await store
-            .UpsertAsync(requiredChannelCount, requiredAttachedMessageCount, burstDurationSeconds, ct)
+            .UpsertAsync(requiredChannelCount, requiredAttachmentCount, burstDurationSeconds, ct)
             .ConfigureAwait(false);
 
         ImageBurstSpamDetectorOptions options = ToOptions(settings);
@@ -40,6 +40,6 @@ public sealed class ImageSpamSettingsService(
         {
             Window = settings.BurstDurationSeconds,
             DistinctChannelThreshold = settings.RequiredChannelCount,
-            RequiredAttachedMessageCount = settings.RequiredAttachedMessageCount,
+            RequiredAttachmentCount = settings.RequiredAttachmentCount,
         };
 }

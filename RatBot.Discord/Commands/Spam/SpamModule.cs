@@ -11,14 +11,14 @@ public sealed class SpamModule(ImageSpamSettingsService settingsService) : Slash
     public async Task ImageSpamConfigAsync(
         [Summary("number-of-channels", "Distinct channels required within the burst duration.")]
         int? numberOfChannels = null,
-        [Summary("number-of-required-attached-messages", "Messages with attachments required within the burst duration.")]
-        int? numberOfRequiredAttachedMessages = null,
+        [Summary("attachment-count", "Attachments required on a message before it counts toward detection.")]
+        int? attachmentCount = null,
         [Summary("burst-duration", "Detection burst duration in seconds.")]
         int? burstDuration = null)
     {
         ErrorOr<Success> validationResult = Validate(
             numberOfChannels,
-            numberOfRequiredAttachedMessages,
+            attachmentCount,
             burstDuration);
 
         if (validationResult.IsError)
@@ -28,10 +28,10 @@ public sealed class SpamModule(ImageSpamSettingsService settingsService) : Slash
         }
 
         ImageBurstSpamDetectorOptions settings =
-            numberOfChannels is null && numberOfRequiredAttachedMessages is null && burstDuration is null
+            numberOfChannels is null && attachmentCount is null && burstDuration is null
                 ? await settingsService.GetCurrentAsync(CancellationToken.None).ConfigureAwait(false)
                 : await settingsService
-                    .UpsertAsync(numberOfChannels, numberOfRequiredAttachedMessages, burstDuration, CancellationToken.None)
+                    .UpsertAsync(numberOfChannels, attachmentCount, burstDuration, CancellationToken.None)
                     .ConfigureAwait(false);
 
         await RespondAsync(FormatSettings(settings), ephemeral: true).ConfigureAwait(false);
@@ -39,14 +39,14 @@ public sealed class SpamModule(ImageSpamSettingsService settingsService) : Slash
 
     private static ErrorOr<Success> Validate(
         int? numberOfChannels,
-        int? numberOfRequiredAttachedMessages,
+        int? attachmentCount,
         int? burstDuration)
     {
         if (numberOfChannels is <= 0)
             return Error.Validation(description: "Number of channels must be greater than zero.");
 
-        if (numberOfRequiredAttachedMessages is <= 0)
-            return Error.Validation(description: "Number of required attached messages must be greater than zero.");
+        if (attachmentCount is <= 0)
+            return Error.Validation(description: "Attachment count must be greater than zero.");
 
         return burstDuration is <= 0
             ? Error.Validation(description: "Burst duration must be greater than zero seconds.")
@@ -56,6 +56,6 @@ public sealed class SpamModule(ImageSpamSettingsService settingsService) : Slash
     private static string FormatSettings(ImageBurstSpamDetectorOptions settings) =>
         "Image spam detection settings: "
         + $"{settings.DistinctChannelThreshold} channel(s), "
-        + $"{settings.RequiredAttachedMessageCount} required attached message(s), "
+        + $"{settings.RequiredAttachmentCount} attachment(s) per message, "
         + $"{settings.Window}s burst duration.";
 }

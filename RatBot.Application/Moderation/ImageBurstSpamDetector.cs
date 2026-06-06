@@ -46,8 +46,7 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
                 .Order()
                 .ToArray();
 
-            if (channelIds.Length < options.DistinctChannelThreshold
-                || buffer.Count < options.RequiredAttachedMessageCount)
+            if (channelIds.Length < options.DistinctChannelThreshold)
                 return null;
 
             _handlingLocks[key] = now + options.HandlingLockDuration;

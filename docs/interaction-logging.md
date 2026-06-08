@@ -37,6 +37,7 @@ Do not log message content, modal content, free-form option text, usernames, cha
 The collector promotes low-cardinality fields to Loki labels:
 
 - `service_name`, `service_instance_id`, `environment`, `level`
+- `instrumentation_scope_name`
 - `log_area`, `event_kind`, `component`, `outcome`
 - `interaction_type`, `command_group`, `command_name`
 

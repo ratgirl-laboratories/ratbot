@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using RatBot.Discord.Commands.Hello;
 using RatBot.Discord.Configuration;
 using RatBot.Discord.Gateway;
+using RatBot.Discord.Logging;
 using IResult = Discord.Interactions.IResult;
 
 namespace RatBot.Discord.Handlers;
@@ -159,12 +160,12 @@ public sealed class DiscordInteractionHandler(
         {
             await context.Interaction.RespondAsync($"Command failed: {reason}", ephemeral: true);
 
-            interactionLogger.Debug(
-                "interaction_diag diag_stage={DiagStage} diag_outcome={DiagOutcome} has_responded={HasResponded}",
-                "precondition_response",
-                "success",
-                context.Interaction.HasResponded
-            );
+            interactionLogger
+                .ForContext("diag_stage", "precondition_response")
+                .ForContext("diag_outcome", "success")
+                .ForContext("event_kind", "interaction.precondition_response")
+                .ForContext("outcome", "success")
+                .Debug("interaction_diag has_responded={HasResponded}", context.Interaction.HasResponded);
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
         {
@@ -185,12 +186,13 @@ public sealed class DiscordInteractionHandler(
     private static void LogCommandUsage(
         ILogger interactionLogger,
         IInteractionContext context,
-        SocketInteraction interaction)
+        CommandUsageDetails usage)
     {
-        CommandUsageDetails usage = GetCommandUsageDetails(interaction);
-
         interactionLogger
             .ForContext("method_context", $"{nameof(DiscordInteractionHandler)}.{nameof(LogCommandUsage)}")
+            .ForContext("event_kind", "interaction.command_invoked")
+            .ForContext("component", "interaction_dispatch")
+            .ForContext("outcome", "received")
             .ForContext("command_name", usage.CommandName)
             .ForContext("invoker_user_id", context.User.Id)
             .ForContext("invokee_user_id", usage.InvokeeUserId)
@@ -244,12 +246,16 @@ public sealed class DiscordInteractionHandler(
         Stopwatch totalStopwatch = Stopwatch.StartNew();
 
         ILogger interactionLogger = CreateInteractionDiagnosticsLogger(interaction)
-            .ForContext("diag_component", "interaction_dispatch");
+            .ForContext("diag_component", "interaction_dispatch")
+            .ForContext("component", "interaction_dispatch");
+        InteractionLogScope? interactionLogScope = null;
 
         try
         {
             IInteractionContext context = new SocketInteractionContext(discordClient, interaction);
             _interactionStopwatches[interaction.Id] = totalStopwatch;
+            CommandUsageDetails usage = GetCommandUsageDetails(interaction);
+            interactionLogScope = InteractionLogScope.Begin(CreateInteractionLogScopeDetails(interaction, context, usage));
 
             interactionLogger = interactionLogger
                 .ForContext("user_id", context.User.Id)
@@ -257,30 +263,36 @@ public sealed class DiscordInteractionHandler(
                 .ForContext("channel_id", context.Channel?.Id);
 
             if (interaction.Type == InteractionType.ApplicationCommand)
-                LogCommandUsage(interactionLogger, context, interaction);
+                LogCommandUsage(interactionLogger, context, usage);
 
             IResult result = await interactionService.ExecuteCommandAsync(context, services);
 
             if (result.IsSuccess)
             {
-                interactionLogger.Debug(
-                    "interaction_diag diag_stage={DiagStage} diag_outcome={DiagOutcome} dispatch_ms={DispatchMs} has_responded={HasResponded}",
-                    "dispatch",
-                    "success",
-                    Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2),
-                    interaction.HasResponded
-                );
+                interactionLogger
+                    .ForContext("diag_stage", "dispatch")
+                    .ForContext("diag_outcome", "success")
+                    .ForContext("event_kind", "interaction.dispatch_completed")
+                    .ForContext("outcome", "success")
+                    .Debug(
+                        "interaction_diag dispatch_ms={DispatchMs} has_responded={HasResponded}",
+                        Math.Round(totalStopwatch.Elapsed.TotalMilliseconds, 2),
+                        interaction.HasResponded
+                    );
 
                 return;
             }
 
-            interactionLogger.Warning(
-                "interaction_diag diag_stage={DiagStage} diag_outcome={DiagOutcome} command_error={CommandError} command_reason={CommandReason}",
-                "dispatch",
-                "failed",
-                result.Error?.ToString() ?? "None",
-                result.ErrorReason ?? string.Empty
-            );
+            interactionLogger
+                .ForContext("diag_stage", "dispatch")
+                .ForContext("diag_outcome", "failed")
+                .ForContext("event_kind", "interaction.dispatch_completed")
+                .ForContext("outcome", "failed")
+                .Warning(
+                    "interaction_diag command_error={CommandError} command_reason={CommandReason}",
+                    result.Error?.ToString() ?? "None",
+                    result.ErrorReason ?? string.Empty
+                );
 
             _interactionStopwatches.TryRemove(interaction.Id, out _);
 
@@ -296,17 +308,32 @@ public sealed class DiscordInteractionHandler(
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
         {
             _interactionStopwatches.TryRemove(interaction.Id, out _);
-            interactionLogger.Warning(ex, "Unknown interaction received by dispatch pipeline.");
+            interactionLogger
+                .ForContext("event_kind", "interaction.dispatch_failed")
+                .ForContext("diag_stage", "dispatch")
+                .ForContext("diag_outcome", "unknown_interaction")
+                .ForContext("outcome", "unknown_interaction")
+                .Warning(ex, "Unknown interaction received by dispatch pipeline.");
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
         {
             _interactionStopwatches.TryRemove(interaction.Id, out _);
-            interactionLogger.Information(ex, "Interaction was already acknowledged.");
+            interactionLogger
+                .ForContext("event_kind", "interaction.dispatch_failed")
+                .ForContext("diag_stage", "dispatch")
+                .ForContext("diag_outcome", "already_acknowledged")
+                .ForContext("outcome", "already_acknowledged")
+                .Information(ex, "Interaction was already acknowledged.");
         }
         catch (Exception ex)
         {
             _interactionStopwatches.TryRemove(interaction.Id, out _);
-            interactionLogger.Error(ex, "Unhandled exception executing interaction.");
+            interactionLogger
+                .ForContext("event_kind", "interaction.unhandled_exception")
+                .ForContext("diag_stage", "dispatch")
+                .ForContext("diag_outcome", "failed")
+                .ForContext("outcome", "failed")
+                .Error(ex, "Unhandled exception executing interaction.");
 
             try
             {
@@ -317,8 +344,17 @@ public sealed class DiscordInteractionHandler(
             }
             catch (Exception followupEx)
             {
-                interactionLogger.Warning(followupEx, "Failed to send interaction error response.");
+                interactionLogger
+                    .ForContext("event_kind", "interaction.response_failed")
+                    .ForContext("diag_stage", "error_response")
+                    .ForContext("diag_outcome", "failed")
+                    .ForContext("outcome", "failed")
+                    .Warning(followupEx, "Failed to send interaction error response.");
             }
+        }
+        finally
+        {
+            interactionLogScope?.Dispose();
         }
     }
 
@@ -330,11 +366,17 @@ public sealed class DiscordInteractionHandler(
             ? null
             : Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2);
 
+        string commandName = context.Interaction is SocketInteraction socketInteraction
+            ? GetInteractionName(socketInteraction)
+            : command.Name;
+
         ILogger interactionLogger = CreateInteractionDiagnosticsLogger(context)
             .ForContext("diag_component", "interaction_execution")
+            .ForContext("component", "interaction_execution")
             .ForContext("command_module", command.Module.Name)
             .ForContext("command_group", command.Module.SlashGroupName)
-            .ForContext("command_name", command.Name)
+            .ForContext("command_name", commandName)
+            .ForContext("command_leaf_name", command.Name)
             .ForContext("command_method", command.MethodName)
             .ForContext("command_run_mode", command.RunMode.ToString())
             .ForContext("user_id", context.User.Id)
@@ -347,43 +389,52 @@ public sealed class DiscordInteractionHandler(
 
         if (result.IsSuccess)
         {
-            interactionLogger.Debug(
-                "interaction_diag diag_stage={DiagStage} diag_outcome={DiagOutcome} total_ms={TotalMs} has_responded={HasResponded}",
-                "execute_complete",
-                "success",
-                totalMs,
-                context.Interaction.HasResponded
-            );
+            interactionLogger
+                .ForContext("diag_stage", "execute_complete")
+                .ForContext("diag_outcome", "success")
+                .ForContext("event_kind", "interaction.execution_completed")
+                .ForContext("outcome", "success")
+                .Debug(
+                    "interaction_diag total_ms={TotalMs} has_responded={HasResponded}",
+                    totalMs,
+                    context.Interaction.HasResponded
+                );
 
             return;
         }
 
         if (exception is not null)
         {
-            interactionLogger.Error(
-                exception,
-                "interaction_diag diag_stage={DiagStage} diag_outcome={DiagOutcome} total_ms={TotalMs} has_responded={HasResponded} command_error={CommandError} command_reason={CommandReason}",
-                "execute_complete",
-                "failed",
-                totalMs,
-                context.Interaction.HasResponded,
-                result.Error?.ToString() ?? "None",
-                result.ErrorReason ?? string.Empty
-            );
+            interactionLogger
+                .ForContext("diag_stage", "execute_complete")
+                .ForContext("diag_outcome", "failed")
+                .ForContext("event_kind", "interaction.execution_completed")
+                .ForContext("outcome", "failed")
+                .Error(
+                    exception,
+                    "interaction_diag total_ms={TotalMs} has_responded={HasResponded} command_error={CommandError} command_reason={CommandReason}",
+                    totalMs,
+                    context.Interaction.HasResponded,
+                    result.Error?.ToString() ?? "None",
+                    result.ErrorReason ?? string.Empty
+                );
 
             await TryRespondToUnmetPreconditionAsync(context, result, interactionLogger);
             return;
         }
 
-        interactionLogger.Warning(
-            "interaction_diag diag_stage={DiagStage} diag_outcome={DiagOutcome} total_ms={TotalMs} has_responded={HasResponded} command_error={CommandError} command_reason={CommandReason}",
-            "execute_complete",
-            "failed",
-            totalMs,
-            context.Interaction.HasResponded,
-            result.Error?.ToString() ?? "None",
-            result.ErrorReason ?? string.Empty
-        );
+        interactionLogger
+            .ForContext("diag_stage", "execute_complete")
+            .ForContext("diag_outcome", "failed")
+            .ForContext("event_kind", "interaction.execution_completed")
+            .ForContext("outcome", "failed")
+            .Warning(
+                "interaction_diag total_ms={TotalMs} has_responded={HasResponded} command_error={CommandError} command_reason={CommandReason}",
+                totalMs,
+                context.Interaction.HasResponded,
+                result.Error?.ToString() ?? "None",
+                result.ErrorReason ?? string.Empty
+            );
 
         await TryRespondToUnmetPreconditionAsync(context, result, interactionLogger);
     }
@@ -508,4 +559,21 @@ public sealed class DiscordInteractionHandler(
         ulong? InvokeeUserId,
         string? InvokeeUsername,
         string? InvokeeSource);
+
+    private InteractionLogScopeDetails CreateInteractionLogScopeDetails(
+        SocketInteraction interaction,
+        IInteractionContext context,
+        CommandUsageDetails usage) =>
+        new InteractionLogScopeDetails(
+            _serviceInstanceId,
+            Environment.ProcessId,
+            interaction.Id,
+            interaction.Type.ToString(),
+            GetInteractionName(interaction),
+            interaction.CreatedAt.UtcDateTime.ToString("O"),
+            context.User.Id,
+            context.Guild?.Id,
+            context.Channel?.Id,
+            interaction.Type == InteractionType.ApplicationCommand ? usage.CommandName : null
+        );
 }

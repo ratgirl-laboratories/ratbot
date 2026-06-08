@@ -29,7 +29,7 @@ processors:
     actions:
       - action: insert
         key: loki.attribute.labels
-        value: service_name,service_instance_id,environment,level,diag_event,diag_component,diag_stage,diag_outcome,interaction_type
+        value: service_name,service_instance_id,environment,level,log_area,event_kind,component,outcome,interaction_type,command_group,command_name,diag_event,diag_component,diag_stage,diag_outcome
   batch:
     timeout: 1s
     send_batch_size: 1024

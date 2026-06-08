@@ -1,15 +1,26 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using RatBot.Infrastructure.Data;
 using Discord.Rest;
 
 namespace RatBot.Discord.Commands.AdventureLeaderboard;
 
-public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> dbContextFactory, ILogger logger)
+public sealed class AdventureAccessController(
+    IDbContextFactory<BotDbContext> dbContextFactory,
+    IOptions<AdventureLeaderboardOptions> options,
+    ILogger logger)
 {
     private static readonly AllowedMentions UserMentionsOnly = new AllowedMentions(AllowedMentionTypes.Users);
     private readonly ILogger _logger = logger.ForContext<AdventureAccessController>();
+    private readonly AdventureLeaderboardOptions _options = options.Value;
+
+    private readonly record struct AdventureRoleGrantResult(
+        ImmutableHashSet<ulong> ReadyUserIds,
+        int Attempted,
+        int AlreadyPresent,
+        int Failures);
 
     private async static Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(
         SocketGuild guild,
@@ -111,11 +122,16 @@ public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> db
                 threadIdsByScorePart,
                 guildMembers.Keys.ToImmutableHashSet());
 
+        AdventureRoleGrantResult roleGrantResult =
+            await EnsureEligibleUsersHaveAdventurerRoleAsync(grants, guildMembers, requestOptions)
+                .ConfigureAwait(false);
+
         int attempted = 0;
         int alreadyPresent = 0;
         int failures = 0;
         int notificationFailures = 0;
         int skippedThreads = 0;
+        int skippedForRoleFailures = 0;
 
         foreach (IGrouping<ulong, AdventureAccessGrant> accessGrants in grants.Grants.GroupBy(grant => grant.ThreadId))
         {
@@ -139,6 +155,12 @@ public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> db
 
             foreach (AdventureAccessGrant grant in accessGrants)
             {
+                if (!roleGrantResult.ReadyUserIds.Contains(grant.UserId))
+                {
+                    skippedForRoleFailures++;
+                    continue;
+                }
+
                 if (currentMemberIds.Contains(grant.UserId))
                 {
                     alreadyPresent++;
@@ -180,14 +202,81 @@ public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> db
         }
 
         _logger.Information(
-            "Adventure forum access sync completed. ThreadLinks={ThreadLinkCount} GuildUsersConsidered={GuildUserCount} GrantsAttempted={GrantsAttempted} GrantsAlreadyPresent={GrantsAlreadyPresent} Failures={Failures} NotificationFailures={NotificationFailures} ThreadsSkipped={ThreadsSkipped}.",
+            "Adventure forum access sync completed. ThreadLinks={ThreadLinkCount} GuildUsersConsidered={GuildUserCount} RoleGrantsAttempted={RoleGrantsAttempted} RoleGrantsAlreadyPresent={RoleGrantsAlreadyPresent} RoleGrantFailures={RoleGrantFailures} GrantsAttempted={GrantsAttempted} GrantsAlreadyPresent={GrantsAlreadyPresent} GrantsSkippedForRoleFailures={GrantsSkippedForRoleFailures} Failures={Failures} NotificationFailures={NotificationFailures} ThreadsSkipped={ThreadsSkipped}.",
             links.Length,
             guildMembers.Count,
+            roleGrantResult.Attempted,
+            roleGrantResult.AlreadyPresent,
+            roleGrantResult.Failures,
             attempted,
             alreadyPresent,
+            skippedForRoleFailures,
             failures,
             notificationFailures,
             skippedThreads);
+    }
+
+    private async Task<AdventureRoleGrantResult> EnsureEligibleUsersHaveAdventurerRoleAsync(
+        AdventureAccessGrants grants,
+        ImmutableDictionary<ulong, IGuildUser> guildMembers,
+        RequestOptions requestOptions)
+    {
+        ImmutableHashSet<ulong> eligibleUserIds = grants.Grants
+            .Select(grant => grant.UserId)
+            .ToImmutableHashSet();
+
+        if (_options.AdventurerRoleId == 0)
+            return new AdventureRoleGrantResult(eligibleUserIds, 0, 0, 0);
+
+        ImmutableHashSet<ulong>.Builder readyUserIds = ImmutableHashSet.CreateBuilder<ulong>();
+        int attempted = 0;
+        int alreadyPresent = 0;
+        int failures = 0;
+
+        foreach (ulong userId in eligibleUserIds.Order())
+        {
+            if (!guildMembers.TryGetValue(userId, out IGuildUser? user))
+            {
+                failures++;
+                continue;
+            }
+
+            if (user.RoleIds.Contains(_options.AdventurerRoleId))
+            {
+                alreadyPresent++;
+                readyUserIds.Add(userId);
+                continue;
+            }
+
+            attempted++;
+
+            try
+            {
+                await user.AddRoleAsync(_options.AdventurerRoleId, requestOptions).ConfigureAwait(false);
+                readyUserIds.Add(userId);
+
+                _logger.Information(
+                    "Granted adventure role {RoleId} to user {UserId}.",
+                    _options.AdventurerRoleId,
+                    userId);
+            }
+            catch (OperationCanceledException) when (requestOptions.CancelToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failures++;
+
+                _logger.Warning(
+                    ex,
+                    "Failed to grant adventure role {RoleId} to user {UserId}; skipping adventure forum thread access for this sync.",
+                    _options.AdventurerRoleId,
+                    userId);
+            }
+        }
+
+        return new AdventureRoleGrantResult(readyUserIds.ToImmutable(), attempted, alreadyPresent, failures);
     }
 
     private async Task<bool> SendAdventureThreadWelcomeAsync(

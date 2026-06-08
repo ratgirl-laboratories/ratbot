@@ -5,7 +5,6 @@ namespace RatBot.Discord.Commands.AdventureLeaderboard;
 
 public static class AdventureLeaderboardFormatter
 {
-    private const int MaxVisibleRows = 25;
     private const int MaxDisplayNameLength = 32;
 
     public static AdventureLeaderboardViewModel Format(
@@ -16,8 +15,9 @@ public static class AdventureLeaderboardFormatter
     {
         ImmutableArray<AdventureEntryRow> sortedRows = snapshot.Rows
             .OrderByDescending(row => row.Score)
+            .ThenBy(row => IsGuildMember(row, guildMemberUserIds) ? 0 : 1)
+            .ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(row => row.ApiOrder)
-            .Take(MaxVisibleRows)
             .ToImmutableArray();
 
         ImmutableArray<AdventureLeaderboardViewRow> rows = FormatRows(sortedRows, guildMemberUserIds);
@@ -98,4 +98,7 @@ public static class AdventureLeaderboardFormatter
             BuildProgressBar(row.Progress),
             displayName);
     }
+
+    private static bool IsGuildMember(AdventureEntryRow row, ImmutableHashSet<ulong> guildMemberUserIds) =>
+        ulong.TryParse(row.UserId, out ulong userId) && guildMemberUserIds.Contains(userId);
 }

@@ -2,8 +2,6 @@ namespace RatBot.Domain.Adventure;
 
 public sealed class AdventureLeaderboardMessageState
 {
-    public const int SingletonId = 1;
-
     private AdventureLeaderboardMessageState()
     {
     }
@@ -21,6 +19,7 @@ public sealed class AdventureLeaderboardMessageState
     public string LastRenderHash { get; private set; } = string.Empty;
 
     public static AdventureLeaderboardMessageState Create(
+        int sequencePosition,
         ulong guildId,
         ulong channelId,
         ulong messageId,
@@ -28,7 +27,7 @@ public sealed class AdventureLeaderboardMessageState
         string lastRenderHash) =>
         new AdventureLeaderboardMessageState
         {
-            Id = SingletonId,
+            Id = sequencePosition,
             GuildId = guildId,
             ChannelId = channelId,
             MessageId = messageId,

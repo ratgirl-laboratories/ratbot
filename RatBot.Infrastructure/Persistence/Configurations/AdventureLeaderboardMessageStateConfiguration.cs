@@ -7,11 +7,7 @@ public sealed class AdventureLeaderboardMessageStateConfiguration : IEntityTypeC
 {
     public void Configure(EntityTypeBuilder<AdventureLeaderboardMessageState> builder)
     {
-        builder.ToTable(
-            "AdventureLeaderboardMessageState",
-            table => table.HasCheckConstraint(
-                "CK_AdventureLeaderboardMessageState_SingletonId",
-                $"\"Id\" = {AdventureLeaderboardMessageState.SingletonId}"));
+        builder.ToTable("AdventureLeaderboardMessageState");
 
         builder.HasKey(x => x.Id);
 

@@ -118,14 +118,17 @@ public readonly record struct AdventureThreadLinkage(int ScorePartIndex, string 
 
 public sealed partial class AdventureLeaderboardManager
 {
-    private readonly record struct TrackedLeaderboardMessage(
+    private readonly record struct TrackedLeaderboardMessageSequence(
         ulong GuildId,
         ulong ChannelId,
-        ulong MessageId,
+        IReadOnlyList<ulong> MessageIds,
         int Year,
         string LastRenderHash);
 
-    private readonly record struct TrackedLeaderboardMessageTarget(IGuild Guild, IUserMessage Message);
+    private readonly record struct TrackedLeaderboardMessageTarget(
+        IGuild Guild,
+        ITextChannel Channel,
+        IReadOnlyList<IUserMessage> Messages);
 }
 
 #pragma warning restore MA0048, MA0008

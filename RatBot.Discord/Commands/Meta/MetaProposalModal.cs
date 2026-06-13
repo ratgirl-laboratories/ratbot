@@ -1,18 +1,17 @@
 namespace RatBot.Discord.Commands.Meta;
 
-[UsedImplicitly]
-public record MetaSuggestModal : IModal
+public record MetaProposalModal : IModal
 {
     [InputLabel("Title")]
-    [ModalTextInput("title", maxLength: 75, placeholder: "The title of your suggestion")]
-    public required string SuggestionTitle { get; [UsedImplicitly] init; }
+    [ModalTextInput("title", maxLength: MetaProposalState.MaxTitleLength, placeholder: "The title of the proposal thread")]
+    public required string ProposalTitle { get; [UsedImplicitly] init; }
 
     [InputLabel("Summary")]
     [ModalTextInput(
         "summary",
         TextInputStyle.Paragraph,
-        maxLength: 1000,
-        placeholder: "Please provide a brief, high-level overview of your suggestion. (1000 characters)"
+        maxLength: 1500,
+        placeholder: "Please provide a brief, high-level overview of your proposal. (1500 characters)"
     )]
     public required string Summary { get; [UsedImplicitly] init; }
 
@@ -22,7 +21,7 @@ public record MetaSuggestModal : IModal
         TextInputStyle.Paragraph,
         maxLength: 1950,
         placeholder:
-        "Please provide a detailed explanation of what your suggestion seeks to address. (1950 characters)"
+        "Please provide a detailed explanation of what your proposal seeks to address. (1950 characters)"
     )]
     public required string Motivation { get; [UsedImplicitly] init; }
 
@@ -32,9 +31,9 @@ public record MetaSuggestModal : IModal
         TextInputStyle.Paragraph,
         maxLength: 1950,
         placeholder:
-        "A detailed description of the proposal and what changes need to be made. (1950 characters)"
+        "Please provide a concrete description of the proposed change or policy. (1950 characters)"
     )]
     public required string Specification { get; [UsedImplicitly] init; }
 
-    string IModal.Title => "Make a suggestion";
+    string IModal.Title => "Make a proposal";
 }

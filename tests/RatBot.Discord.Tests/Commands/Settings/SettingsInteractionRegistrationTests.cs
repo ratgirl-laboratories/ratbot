@@ -115,22 +115,45 @@ public sealed class SettingsInteractionRegistrationTests
     }
 
     [Test]
-    public void SetSuggestForumChannelAsync_HasForumChannelParameter()
+    public void MetaSettingsCommands_HaveExpectedParameters()
     {
-        // Arrange
+        AssertMetaCommand(
+            nameof(SettingsModule.MetaSettingsModule.SetSuggestionsForumChannelAsync),
+            "suggestions",
+            typeof(IForumChannel));
+
+        AssertMetaCommand(
+            nameof(SettingsModule.MetaSettingsModule.SetProposalsForumChannelAsync),
+            "proposals",
+            typeof(IForumChannel));
+
+        AssertMetaCommand(
+            nameof(SettingsModule.MetaSettingsModule.SetCabinetRoleAsync),
+            "cabinet",
+            typeof(IRole));
+
+        AssertMetaCommand(
+            nameof(SettingsModule.MetaSettingsModule.SetCabinetChairRoleAsync),
+            "chair",
+            typeof(IRole));
+
+        AssertMetaCommand(
+            nameof(SettingsModule.MetaSettingsModule.SetCommitteeRoleAsync),
+            "committee",
+            typeof(IRole));
+    }
+
+    private static void AssertMetaCommand(string methodName, string commandName, Type parameterType)
+    {
         MethodInfo method =
-            typeof(SettingsModule.MetaSettingsModule).GetMethod(nameof(SettingsModule.MetaSettingsModule.SetSuggestForumChannelAsync))
-            ?? throw new InvalidOperationException("Expected SetSuggestForumChannelAsync method.");
+            typeof(SettingsModule.MetaSettingsModule).GetMethod(methodName)
+            ?? throw new InvalidOperationException($"Expected {methodName} method.");
 
-        // Act
-        ParameterInfo parameter = method.GetParameters().Single();
-
-        // Assert
-        parameter.ParameterType.ShouldBe(typeof(IForumChannel));
+        method.GetParameters().Single().ParameterType.ShouldBe(parameterType);
 
         SlashCommandAttribute slashCommand =
             method.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
 
-        slashCommand.Name.ShouldBe("suggest");
+        slashCommand.Name.ShouldBe(commandName);
     }
 }

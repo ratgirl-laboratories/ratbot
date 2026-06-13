@@ -33,7 +33,7 @@ public sealed class PostgresDatabaseFixture
         {
             await db.QuorumSettingsRoles.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.QuorumSettings.ExecuteDeleteAsync().ConfigureAwait(false);
-            await db.MetaSuggestions.ExecuteDeleteAsync().ConfigureAwait(false);
+            await db.MetaProposalStates.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.MetaSuggestionSettings.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.AutobannedUsers.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.EmojiUsageCounts.ExecuteDeleteAsync().ConfigureAwait(false);

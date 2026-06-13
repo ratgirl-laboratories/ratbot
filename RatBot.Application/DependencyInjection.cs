@@ -24,7 +24,7 @@ public static class DependencyInjection
             services.AddScoped<AdminSendService>();
             services.AddScoped<ReactionUsageTracker>();
             services.AddScoped<EmojiUsageTracker>();
-            services.AddScoped<MetaSuggestionService>();
+            services.AddScoped<MetaProposalService>();
             services.AddScoped<MetaSuggestionSettingsService>();
             services.AddScoped<IModerationService, ModerationService>();
             services.AddScoped<IQuorumSettingsReader, QuorumSettingsReader>();

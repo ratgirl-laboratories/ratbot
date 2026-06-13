@@ -28,8 +28,8 @@ public static class DependencyInjection
 
             // Repositories and unit of work
             services.AddScoped<IUnitOfWork, BotDbContext>();
-            services.AddScoped<IRepository<MetaSuggestion>, BotDbContext>();
             services.AddScoped<IRepository<MetaSuggestionSettings>, BotDbContext>();
+            services.AddScoped<IMetaProposalRepository, BotDbContext>();
 
             services.AddScoped<IAutobannedUserRepository, AutobannedUserRepository>();
             services.AddScoped<IImageSpamSettingsStore, ImageSpamSettingsStore>();

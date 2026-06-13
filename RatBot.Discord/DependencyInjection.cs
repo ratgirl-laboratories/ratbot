@@ -4,6 +4,7 @@ using RatBot.Application.Common.Interfaces;
 using RatBot.Discord.BackgroundWorkers;
 using RatBot.Discord.Commands.AdventureLeaderboard;
 using RatBot.Discord.Commands.Emoji;
+using RatBot.Discord.Commands.Meta;
 using RatBot.Discord.Forum;
 using RatBot.Discord.Commands.Settings;
 using RatBot.Discord.Configuration;
@@ -45,6 +46,7 @@ public static class DependencyInjection
                             | GatewayIntents.GuildMembers
                             | GatewayIntents.GuildMessages
                             | GatewayIntents.GuildMessageReactions
+                            | GatewayIntents.GuildMessagePolls
                             | GatewayIntents.MessageContent,
                     }
                 );
@@ -67,6 +69,9 @@ public static class DependencyInjection
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<ImageBurstSpamGatewayHandler>());
             services.AddSingleton<UserUpdatedGatewayHandler>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<UserUpdatedGatewayHandler>());
+            services.AddSingleton<MetaProposalPollResolver>();
+            services.AddSingleton<MetaProposalGatewayHandler>();
+            services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<MetaProposalGatewayHandler>());
             services.AddSingleton<GuildMemberCacheService>();
             services.AddSingleton<ITrackedEmojiCatalog, TrackedEmojiCatalog>();
             services.AddSingleton<AdventureLeaderboardClient>();
@@ -84,9 +89,11 @@ public static class DependencyInjection
             services.AddHostedService<GuildMemberCacheBackgroundWorker>();
             services.AddHostedService<EmojiAnalyticsBackgroundWorker>();
             services.AddHostedService<RoleColourSyncBackgroundWorker>();
+            services.AddHostedService<MetaProposalPollBackgroundWorker>();
             services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardManager>());
 
             services.AddSingleton<IForumThreadClient, ForumThreadClient>();
+            services.AddSingleton<MetaProposalDiscordWorkflow>();
         }
     }
 }

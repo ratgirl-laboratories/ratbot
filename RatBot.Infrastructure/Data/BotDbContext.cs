@@ -9,12 +9,13 @@ namespace RatBot.Infrastructure.Data;
 ///     Entity Framework Core database context for RatBot persistence.
 /// </summary>
 public sealed class BotDbContext(DbContextOptions<BotDbContext> options)
-    : DbContext(options), IUnitOfWork, IRepository<MetaSuggestion>, IRepository<MetaSuggestionSettings>, IEmojiRepository
+    : DbContext(options), IUnitOfWork, IRepository<MetaSuggestionSettings>, IEmojiRepository, IMetaProposalRepository
 {
     public DbSet<QuorumSettings> QuorumSettings => Set<QuorumSettings>();
     public DbSet<QuorumSettingsRole> QuorumSettingsRoles => Set<QuorumSettingsRole>();
     public DbSet<EmojiUsageCount> EmojiUsageCounts => Set<EmojiUsageCount>();
     public DbSet<MetaSuggestionSettings> MetaSuggestionSettings => Set<MetaSuggestionSettings>();
+    public DbSet<MetaProposalState> MetaProposalStates => Set<MetaProposalState>();
     public DbSet<AutobannedUser> AutobannedUsers => Set<AutobannedUser>();
     public DbSet<ImageSpamSettings> ImageSpamSettings => Set<ImageSpamSettings>();
     public DbSet<RoleColourOption> RoleColourOptions => Set<RoleColourOption>();
@@ -34,16 +35,7 @@ public sealed class BotDbContext(DbContextOptions<BotDbContext> options)
 
     #region Aggregates
 
-    #region MetaSuggestions
-
-    public DbSet<MetaSuggestion> MetaSuggestions => Set<MetaSuggestion>();
-    public void Add(MetaSuggestion aggregate) => MetaSuggestions.Add(aggregate);
-    public void Delete(MetaSuggestion aggregate) => MetaSuggestions.Remove(aggregate);
-
-    public Task<ErrorOr<MetaSuggestion>> TryFindAsync(long id) =>
-        MetaSuggestions
-            .FirstOrDefaultAsync(s => s.Id == id)
-            .ToErrorOr(Error.NotFound("MetaSuggestion.NotFound", $"Suggestion {id} not found."));
+    #region MetaProposal
 
     public void Add(MetaSuggestionSettings aggregate) => MetaSuggestionSettings.Add(aggregate);
     public void Delete(MetaSuggestionSettings aggregate) => MetaSuggestionSettings.Remove(aggregate);
@@ -52,6 +44,40 @@ public sealed class BotDbContext(DbContextOptions<BotDbContext> options)
         MetaSuggestionSettings
             .FirstOrDefaultAsync(s => s.GuildId == (ulong)id)
             .ToErrorOr(Error.NotFound("MetaSuggestionSettings.NotFound", $"Meta suggest settings for Guild {id}"));
+
+    public Task<MetaProposalState?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        MetaProposalStates.FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public Task<MetaProposalState?> FindBySuggestionThreadAsync(
+        ulong suggestionThreadChannelId,
+        CancellationToken ct = default) =>
+        MetaProposalStates.FirstOrDefaultAsync(x => x.SuggestionThreadChannelId == suggestionThreadChannelId, ct);
+
+    public Task<MetaProposalState?> FindByProposalThreadAsync(ulong threadChannelId, CancellationToken ct = default) =>
+        MetaProposalStates.FirstOrDefaultAsync(
+            x => x.SuggestionThreadChannelId == threadChannelId
+                 || x.ProposalThreadChannelId == threadChannelId,
+            ct);
+
+    public Task<MetaProposalState?> FindByPollMessageAsync(ulong pollMessageId, CancellationToken ct = default) =>
+        MetaProposalStates.FirstOrDefaultAsync(x => x.PollMessageId == pollMessageId, ct);
+
+    public async Task<IReadOnlyList<MetaProposalState>> FindExpiredPollsAsync(
+        DateTimeOffset nowUtc,
+        int limit,
+        CancellationToken ct = default) =>
+        await MetaProposalStates
+            .Where(x =>
+                x.Status == MetaProposalStatus.PollActive
+                && x.PollExpiresAtUtc != null
+                && x.PollExpiresAtUtc <= nowUtc
+                && x.PollMessageId != null)
+            .OrderBy(x => x.PollExpiresAtUtc)
+            .Take(limit)
+            .ToListAsync(ct);
+
+    public void Add(MetaProposalState state) => MetaProposalStates.Add(state);
+    public void Delete(MetaProposalState state) => MetaProposalStates.Remove(state);
 
     #endregion
 

@@ -56,6 +56,7 @@ public sealed class MetaProposalGatewayHandler(
                 _logger.Warning(
                     "Ignoring meta suggestion thread {ThreadId} because owner id was unavailable.",
                     thread.Id);
+
                 return;
             }
 
@@ -99,12 +100,10 @@ public sealed class MetaProposalGatewayHandler(
             ErrorOr<MetaProposalState> clearResult = await service.ClearDeletedPollByMessageAsync(message.Id);
 
             if (!clearResult.IsError)
-            {
                 _logger.Information(
                     "Cleared deleted meta proposal poll message {PollMessageId} for state {StateId}.",
                     message.Id,
                     clearResult.Value.Id);
-            }
         }
         catch (Exception ex)
         {

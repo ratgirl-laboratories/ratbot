@@ -6,7 +6,10 @@ public sealed class InteractionLogScope : IDisposable
 {
     private readonly IReadOnlyList<IDisposable> _properties;
 
-    private InteractionLogScope(IReadOnlyList<IDisposable> properties) => _properties = properties;
+    private InteractionLogScope(IReadOnlyList<IDisposable> properties)
+    {
+        _properties = properties;
+    }
 
     public static InteractionLogScope Begin(InteractionLogScopeDetails details)
     {

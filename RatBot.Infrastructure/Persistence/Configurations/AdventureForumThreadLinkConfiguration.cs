@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using RatBot.Domain.Adventure;
 
 namespace RatBot.Infrastructure.Persistence.Configurations;
 

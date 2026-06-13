@@ -22,8 +22,9 @@ public sealed class AdventureLeaderboardClient(IOptions<AdventureLeaderboardOpti
 
         IReadOnlyList<AdventureEntryDto>? rows =
             await response.Content.ReadFromJsonAsync<IReadOnlyList<AdventureEntryDto>>(
-                JsonOptions,
-                cancellationToken).ConfigureAwait(false);
+                    JsonOptions,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
         return rows ?? [];
     }

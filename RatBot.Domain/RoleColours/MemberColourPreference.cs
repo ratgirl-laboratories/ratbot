@@ -2,9 +2,10 @@ namespace RatBot.Domain.RoleColours;
 
 public sealed class MemberColourPreference
 {
-
     // EF Core private ctor
-    private MemberColourPreference() { }
+    private MemberColourPreference()
+    {
+    }
 
     public Id PreferenceId { get; private set; } = Id.Empty;
 
@@ -40,6 +41,7 @@ public sealed class MemberColourPreference
     {
         if (id.Equals(RoleColourOption.Id.Empty))
             throw new ArgumentException("Selected option id must be a real id.");
+
         Kind = MemberColourPreferenceKind.ConfiguredOption;
         SelectedOptionId = id;
     }
@@ -49,6 +51,7 @@ public sealed class MemberColourPreference
         Kind = MemberColourPreferenceKind.NoColour;
         SelectedOptionId = null;
     }
+
     public readonly record struct Id(Guid Value)
     {
         public static Id Empty { get; } = new Id(Guid.Empty);

@@ -1,7 +1,7 @@
 namespace RatBot.Discord.Handlers;
 
 /// <summary>
-/// Temporary placeholder reconciler. Replace with real implementation that derives DCRs from preference and SCRs.
+///     Temporary placeholder reconciler. Replace with real implementation that derives DCRs from preference and SCRs.
 /// </summary>
 public sealed class NoOpRoleColourReconciler : IRoleColourReconciler
 {

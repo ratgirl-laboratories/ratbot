@@ -15,14 +15,18 @@ public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions
         get
         {
             lock (_gate)
+            {
                 return _current;
+            }
         }
     }
 
     public void Update(ImageBurstSpamDetectorOptions options)
     {
         lock (_gate)
+        {
             _current = options;
+        }
     }
 
     public void Update(int window, int distinctChannelThreshold)

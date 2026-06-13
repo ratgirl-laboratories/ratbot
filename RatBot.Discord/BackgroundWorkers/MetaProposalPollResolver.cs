@@ -8,6 +8,32 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
     private const int MaxFinalizationRetries = 3;
     private readonly ILogger _logger = logger.ForContext<MetaProposalPollResolver>();
 
+    private static bool SubmitWon(Poll poll, PollResults results)
+    {
+        PollAnswer submitAnswer = poll.Answers.FirstOrDefault(answer => string.Equals(
+            answer.PollMedia.Text,
+            "Submit",
+            StringComparison.Ordinal));
+
+        PollAnswer doNotSubmitAnswer = poll.Answers.FirstOrDefault(answer => string.Equals(
+            answer.PollMedia.Text,
+            "Do Not Submit",
+            StringComparison.Ordinal));
+
+        if (submitAnswer.AnswerId == 0 || doNotSubmitAnswer.AnswerId == 0)
+            return false;
+
+        uint submitCount = results.AnswerCounts
+            .FirstOrDefault(count => count.AnswerId == submitAnswer.AnswerId)
+            .Count;
+
+        uint doNotSubmitCount = results.AnswerCounts
+            .FirstOrDefault(count => count.AnswerId == doNotSubmitAnswer.AnswerId)
+            .Count;
+
+        return submitCount > 0 && submitCount > doNotSubmitCount;
+    }
+
     public async Task ResolveExpiredPollAsync(
         MetaProposalService service,
         MetaProposalState state,
@@ -21,7 +47,7 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
             return;
         }
 
-        await ResolvePollMessageAsync(service, state, pollMessage, requestFinalization: true, ct);
+        await ResolvePollMessageAsync(service, state, pollMessage, true, ct);
     }
 
     public Task ResolveFinalizedPollAsync(
@@ -29,7 +55,7 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
         MetaProposalState state,
         IUserMessage pollMessage,
         CancellationToken ct) =>
-        ResolvePollMessageAsync(service, state, pollMessage, requestFinalization: false, ct);
+        ResolvePollMessageAsync(service, state, pollMessage, false, ct);
 
     private async Task ResolvePollMessageAsync(
         MetaProposalService service,
@@ -43,7 +69,7 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
         if (pollValue is null)
         {
             if (requestFinalization)
-                await CompletePollAsync(service, state, submitWon: false, ct);
+                await CompletePollAsync(service, state, false, ct);
 
             return;
         }
@@ -57,7 +83,7 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
 
             if (state.PollFinalizationRetries >= MaxFinalizationRetries)
             {
-                await CompletePollAsync(service, state, submitWon: false, ct);
+                await CompletePollAsync(service, state, false, ct);
                 return;
             }
 
@@ -67,7 +93,10 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
             }
             catch (Exception ex)
             {
-                _logger.Debug(ex, "Could not request finalization for meta proposal poll {PollMessageId}.", pollMessage.Id);
+                _logger.Debug(
+                    ex,
+                    "Could not request finalization for meta proposal poll {PollMessageId}.",
+                    pollMessage.Id);
             }
 
             await service.RecordPollFinalizationRetryAsync(state.Id, ct);
@@ -106,7 +135,7 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
         ErrorOr<ulong> publishResult = await workflow.PublishProposalAsync(
             updated,
             settingsResult.Value,
-            pingCabinet: false,
+            false,
             ct);
 
         if (!publishResult.IsError)
@@ -123,27 +152,5 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
 
         if (!errorMessage.IsError)
             await service.RecordPublicationFailureAsync(updated.Id, errorMessage.Value, DateTimeOffset.UtcNow, ct);
-    }
-
-    private static bool SubmitWon(Poll poll, PollResults results)
-    {
-        PollAnswer submitAnswer = poll.Answers.FirstOrDefault(
-            answer => string.Equals(answer.PollMedia.Text, "Submit", StringComparison.Ordinal));
-
-        PollAnswer doNotSubmitAnswer = poll.Answers.FirstOrDefault(
-            answer => string.Equals(answer.PollMedia.Text, "Do Not Submit", StringComparison.Ordinal));
-
-        if (submitAnswer.AnswerId == 0 || doNotSubmitAnswer.AnswerId == 0)
-            return false;
-
-        uint submitCount = results.AnswerCounts
-            .FirstOrDefault(count => count.AnswerId == submitAnswer.AnswerId)
-            .Count;
-
-        uint doNotSubmitCount = results.AnswerCounts
-            .FirstOrDefault(count => count.AnswerId == doNotSubmitAnswer.AnswerId)
-            .Count;
-
-        return submitCount > 0 && submitCount > doNotSubmitCount;
     }
 }

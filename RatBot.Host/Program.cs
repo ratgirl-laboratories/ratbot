@@ -37,23 +37,23 @@ public static class Program
             .WriteTo.Console(LogEventLevel.Debug)
             .WriteTo.File(
                 "logs/verbose-.log",
-                restrictedToMinimumLevel: LogEventLevel.Verbose,
+                LogEventLevel.Verbose,
                 rollingInterval: RollingInterval.Day)
             .WriteTo.File(
                 "logs/debug-.log",
-                restrictedToMinimumLevel: LogEventLevel.Debug,
+                LogEventLevel.Debug,
                 rollingInterval: RollingInterval.Day)
             .WriteTo.File(
                 "logs/info-.log",
-                restrictedToMinimumLevel: LogEventLevel.Information,
+                LogEventLevel.Information,
                 rollingInterval: RollingInterval.Day)
             .WriteTo.File(
                 "logs/warning-.log",
-                restrictedToMinimumLevel: LogEventLevel.Warning,
+                LogEventLevel.Warning,
                 rollingInterval: RollingInterval.Day)
             .WriteTo.File(
                 "logs/error-.log",
-                restrictedToMinimumLevel: LogEventLevel.Error,
+                LogEventLevel.Error,
                 rollingInterval: RollingInterval.Day);
 
         ConfigureOpenTelemetryLogs(config, loggerConfiguration);

@@ -4,7 +4,6 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class ListRoleColourOptions
 {
-
     public async static Task<IReadOnlyList<RoleColourOption>> ExecuteAsync(
         BotDbContext db,
         Query query,
@@ -17,5 +16,6 @@ public static class ListRoleColourOptions
 
         return await q.ToListAsync(ct);
     }
+
     public sealed record Query(bool IncludeDisabled);
 }

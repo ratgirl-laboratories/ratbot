@@ -45,7 +45,7 @@ public static class UpsertRoleColourOption
             await db.RoleColourOptions.AddAsync(option, ct);
             await db.SaveChangesAsync(ct);
 
-            return new Result(option, Created: true, PreviousDisplayRoleId: null);
+            return new Result(option, true, null);
         }
 
         ulong previousDisplayRoleId = option.DisplayRoleId;
@@ -56,7 +56,7 @@ public static class UpsertRoleColourOption
 
         await db.SaveChangesAsync(ct);
 
-        return new Result(option, Created: false, PreviousDisplayRoleId: previousDisplayRoleId);
+        return new Result(option, false, previousDisplayRoleId);
     }
 
     public sealed record Result(RoleColourOption Option, bool Created, ulong? PreviousDisplayRoleId);

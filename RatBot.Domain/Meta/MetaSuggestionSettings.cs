@@ -30,8 +30,26 @@ public sealed class MetaSuggestionSettings
             CommitteeRoleId = committeeRoleId,
         };
 
-    public ErrorOr<Success> SetSuggestionsForum(ulong channelId) => SetId(channelId, value => SuggestionsForumChannelId = value);
-    public ErrorOr<Success> SetProposalsForum(ulong channelId) => SetId(channelId, value => ProposalsForumChannelId = value);
+    private static ErrorOr<Success> SetId(ulong id, Action<ulong> assign)
+    {
+        if (id == 0)
+            return Required("Id");
+
+        assign(id);
+        return Result.Success;
+    }
+
+    private static Error Required(string fieldName) =>
+        Error.Validation(
+            $"MetaSuggestionSettings.{fieldName}Required",
+            $"Meta proposal setting {fieldName} must be configured.");
+
+    public ErrorOr<Success> SetSuggestionsForum(ulong channelId) =>
+        SetId(channelId, value => SuggestionsForumChannelId = value);
+
+    public ErrorOr<Success> SetProposalsForum(ulong channelId) =>
+        SetId(channelId, value => ProposalsForumChannelId = value);
+
     public ErrorOr<Success> SetCabinetRole(ulong roleId) => SetId(roleId, value => CabinetRoleId = value);
     public ErrorOr<Success> SetCabinetChairRole(ulong roleId) => SetId(roleId, value => CabinetChairRoleId = value);
     public ErrorOr<Success> SetCommitteeRole(ulong roleId) => SetId(roleId, value => CommitteeRoleId = value);
@@ -55,18 +73,4 @@ public sealed class MetaSuggestionSettings
 
         return Result.Success;
     }
-
-    private static ErrorOr<Success> SetId(ulong id, Action<ulong> assign)
-    {
-        if (id == 0)
-            return Required("Id");
-
-        assign(id);
-        return Result.Success;
-    }
-
-    private static Error Required(string fieldName) =>
-        Error.Validation(
-            $"MetaSuggestionSettings.{fieldName}Required",
-            $"Meta proposal setting {fieldName} must be configured.");
 }

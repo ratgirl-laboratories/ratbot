@@ -14,13 +14,14 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
                 FullMode = BoundedChannelFullMode.DropOldest,
             });
 
+    private readonly ConcurrentQueue<DateTimeOffset> _completedTimestamps = new ConcurrentQueue<DateTimeOffset>();
+
     private readonly ConcurrentDictionary<(ulong GuildId, ulong UserId), byte> _dedupe =
         new ConcurrentDictionary<(ulong GuildId, ulong UserId), byte>();
 
-    private readonly ConcurrentQueue<DateTimeOffset> _completedTimestamps = new ConcurrentQueue<DateTimeOffset>();
+    private int _inFlight;
 
     private int _pending;
-    private int _inFlight;
 
     public ChannelReader<IRoleColourSyncQueue.WorkItem> Reader => _channel.Reader;
 
@@ -36,10 +37,8 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
         bool ok = _channel.Writer.TryWrite(item);
 
         if (!ok)
-        {
             // Fallback to async write; shouldn't normally happen
             _ = _channel.Writer.WriteAsync(item).AsTask();
-        }
 
         return true;
     }
@@ -74,7 +73,7 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
             _completedTimestamps.TryDequeue(out _);
 
         // Also drop items older than 2 minutes
-        while (_completedTimestamps.TryPeek(out DateTimeOffset head) && (now - head) > TimeSpan.FromMinutes(2))
+        while (_completedTimestamps.TryPeek(out DateTimeOffset head) && now - head > TimeSpan.FromMinutes(2))
             _completedTimestamps.TryDequeue(out _);
     }
 
@@ -83,10 +82,10 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
         (double? perSec, TimeSpan? eta) = ComputeThroughputAndEta();
 
         return new IRoleColourSyncQueue.Status(
-            Pending: Volatile.Read(ref _pending),
-            InFlight: Volatile.Read(ref _inFlight),
-            PerSecond: perSec,
-            Eta: eta);
+            Volatile.Read(ref _pending),
+            Volatile.Read(ref _inFlight),
+            perSec,
+            eta);
     }
 
     private (double? perSec, TimeSpan? eta) ComputeThroughputAndEta()

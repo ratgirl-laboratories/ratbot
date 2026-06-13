@@ -20,6 +20,7 @@ public sealed class MetaProposalService(
             return MetaProposalErrors.SettingsNotConfigured;
 
         ErrorOr<Success> configured = settings.Value.EnsureProposalWorkflowConfigured();
+
         return configured.IsError
             ? configured.Errors
             : settings.Value;

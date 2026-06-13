@@ -4,10 +4,10 @@ namespace RatBot.Application.Moderation;
 
 public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorSettings settings)
 {
-    private readonly Lock _gate = new Lock();
-
     private readonly Dictionary<ImageBurstBufferKey, Queue<ImageBurstMessage>> _buffers =
         new Dictionary<ImageBurstBufferKey, Queue<ImageBurstMessage>>();
+
+    private readonly Lock _gate = new Lock();
 
     private readonly Dictionary<ImageBurstBufferKey, DateTimeOffset> _handlingLocks =
         new Dictionary<ImageBurstBufferKey, DateTimeOffset>();
@@ -21,6 +21,15 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
         : this(timeProvider, CreateSettings(options))
     {
     }
+
+    private static void PruneOldMessages(Queue<ImageBurstMessage> buffer, DateTimeOffset cutoff)
+    {
+        while (buffer.Count > 0 && buffer.Peek().Timestamp < cutoff)
+            buffer.Dequeue();
+    }
+
+    private static ImageBurstSpamDetectorSettings CreateSettings(ImageBurstSpamDetectorOptions options)
+        => new ImageBurstSpamDetectorSettings(options);
 
     public ImageBurstDetection? Observe(ImageBurstMessage message)
     {
@@ -66,12 +75,6 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
         return newBuffer;
     }
 
-    private static void PruneOldMessages(Queue<ImageBurstMessage> buffer, DateTimeOffset cutoff)
-    {
-        while (buffer.Count > 0 && buffer.Peek().Timestamp < cutoff)
-            buffer.Dequeue();
-    }
-
     private void PruneExpiredLocks(DateTimeOffset now)
     {
         ImageBurstBufferKey[] expiredKeys = _handlingLocks
@@ -85,7 +88,4 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
 
     [StructLayout(LayoutKind.Auto)]
     private readonly record struct ImageBurstBufferKey(ulong GuildId, ulong UserId);
-
-    private static ImageBurstSpamDetectorSettings CreateSettings(ImageBurstSpamDetectorOptions options)
-        => new ImageBurstSpamDetectorSettings(options);
 }

@@ -4,8 +4,7 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class SetNoColourPreference
 {
-
-    public static async Task<Result> ExecuteAsync(
+    public async static Task<Result> ExecuteAsync(
         BotDbContext db,
         Command command,
         CancellationToken ct)
@@ -26,6 +25,7 @@ public static class SetNoColourPreference
         await db.SaveChangesAsync(ct);
         return Result.Ok();
     }
+
     public sealed record Command(ulong UserId);
 
     public sealed record Result(bool Success, string? ErrorDescription)

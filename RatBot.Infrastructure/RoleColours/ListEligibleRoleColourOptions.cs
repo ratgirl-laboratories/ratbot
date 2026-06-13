@@ -3,11 +3,10 @@ using RatBot.Infrastructure.Data;
 namespace RatBot.Infrastructure.RoleColours;
 
 /// <summary>
-/// Query for listing enabled RoleColourOptions which the member is currently entitled to via SCR membership.
+///     Query for listing enabled RoleColourOptions which the member is currently entitled to via SCR membership.
 /// </summary>
 public static class ListEligibleRoleColourOptions
 {
-
     public static Task<IReadOnlyList<RoleColourOption>> ExecuteAsync(
         BotDbContext db,
         Query query,
@@ -23,6 +22,7 @@ public static class ListEligibleRoleColourOptions
 
         return q.ToListAsync(ct).ContinueWith<IReadOnlyList<RoleColourOption>>(t => t.Result, ct);
     }
+
     public sealed record Query(
         IReadOnlyCollection<ulong> CurrentMemberRoleIds
     );

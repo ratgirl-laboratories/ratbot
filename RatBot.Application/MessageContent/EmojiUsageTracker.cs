@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using RatBot.Application.Common.Interfaces;
 using RatBot.Domain.Emoji;
@@ -17,6 +17,19 @@ public sealed class EmojiUsageTracker(
         TimeSpan.FromMilliseconds(100));
 
     private readonly ILogger _logger = logger.ForContext<EmojiUsageTracker>();
+
+    private static IEnumerable<ulong> ExtractEmojiIds(string messageContent) =>
+        EmojiRegex
+            .Matches(messageContent)
+            .Select(match => match.Groups["id"].Value)
+            .Select(TryParseEmojiId)
+            .Where(id => id.HasValue)
+            .Select(id => id.GetValueOrDefault());
+
+    private static ulong? TryParseEmojiId(string id) =>
+        ulong.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out ulong emojiId)
+            ? emojiId
+            : null;
 
     public async Task RecordMessageBatchUsageAsync(IEnumerable<string> messageContents, CancellationToken ct = default)
     {
@@ -48,12 +61,13 @@ public sealed class EmojiUsageTracker(
             if (updatedRowCount != 0)
                 continue;
 
-            emojiRepository.EmojiUsageCounts.Add(new EmojiUsageCount
-            {
-                EmojiId = emojiId,
-                ReactionUsageCount = 0,
-                MessageUsageCount = count,
-            });
+            emojiRepository.EmojiUsageCounts.Add(
+                new EmojiUsageCount
+                {
+                    EmojiId = emojiId,
+                    ReactionUsageCount = 0,
+                    MessageUsageCount = count,
+                });
 
             await emojiRepository.SaveChangesAsync(ct).ConfigureAwait(false);
         }
@@ -61,19 +75,6 @@ public sealed class EmojiUsageTracker(
         foreach ((ulong Id, int N) usage in usages)
             _logger.Verbose("Recorded {EmojiUsageCount} message usages for emoji {EmojiId}.", usage.N, usage.Id);
     }
-
-    private static IEnumerable<ulong> ExtractEmojiIds(string messageContent) =>
-        EmojiRegex
-            .Matches(messageContent)
-            .Select(match => match.Groups["id"].Value)
-            .Select(TryParseEmojiId)
-            .Where(id => id.HasValue)
-            .Select(id => id.GetValueOrDefault());
-
-    private static ulong? TryParseEmojiId(string id) =>
-        ulong.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out ulong emojiId)
-            ? emojiId
-            : null;
 
     private Task<int> PruneUntrackedEmojiAsync(IReadOnlyCollection<ulong> trackedEmojiIds, CancellationToken ct) =>
         emojiRepository.EmojiUsageCounts

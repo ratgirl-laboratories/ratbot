@@ -49,7 +49,7 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(ephemeral: true);
+            await DeferAsync(true);
 
             ErrorOr<RoleColourOption> result = await RegisterRoleColourOption.ExecuteAsync(
                 dbContext,
@@ -73,12 +73,12 @@ public sealed class SettingsModule : SlashCommandBase
                         + $"Queued {queued} member(s) for colour sync. Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.";
 
                     ComponentBuilder components =
-                        (status.Pending + status.InFlight) == 0
+                        status.Pending + status.InFlight == 0
                             ? new ComponentBuilder()
                             : new ComponentBuilder().WithButton(
-                                label: LABEL_REFRESH,
-                                customId: $"colour-sync-refresh:{Context.User.Id}",
-                                style: ButtonStyle.Primary
+                                LABEL_REFRESH,
+                                $"colour-sync-refresh:{Context.User.Id}",
+                                ButtonStyle.Primary
                             );
 
                     await FollowupAsync(message, ephemeral: true, components: components.Build());
@@ -112,7 +112,7 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(ephemeral: true);
+            await DeferAsync(true);
 
             ErrorOr<UpsertRoleColourOption.Result> result = await UpsertRoleColourOption.ExecuteAsync(
                 dbContext,
@@ -146,12 +146,12 @@ public sealed class SettingsModule : SlashCommandBase
                         + $"Queued {queued} member(s) for colour sync. Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.";
 
                     ComponentBuilder components =
-                        (status.Pending + status.InFlight) == 0
+                        status.Pending + status.InFlight == 0
                             ? new ComponentBuilder()
                             : new ComponentBuilder().WithButton(
-                                label: LABEL_REFRESH,
-                                customId: $"colour-sync-refresh:{Context.User.Id}",
-                                style: ButtonStyle.Primary
+                                LABEL_REFRESH,
+                                $"colour-sync-refresh:{Context.User.Id}",
+                                ButtonStyle.Primary
                             );
 
                     await FollowupAsync(message, ephemeral: true, components: components.Build());
@@ -170,7 +170,7 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(ephemeral: true);
+            await DeferAsync(true);
 
             ErrorOr<RoleColourOption> result = await DeleteRoleColourOption.ExecuteAsync(
                 dbContext,
@@ -191,12 +191,12 @@ public sealed class SettingsModule : SlashCommandBase
                     string eta = FormatEta(status);
 
                     ComponentBuilder components =
-                        (status.Pending + status.InFlight) == 0
+                        status.Pending + status.InFlight == 0
                             ? new ComponentBuilder()
                             : new ComponentBuilder().WithButton(
-                                label: LABEL_REFRESH,
-                                customId: $"colour-sync-refresh:{Context.User.Id}",
-                                style: ButtonStyle.Primary
+                                LABEL_REFRESH,
+                                $"colour-sync-refresh:{Context.User.Id}",
+                                ButtonStyle.Primary
                             );
 
                     await FollowupAsync(
@@ -248,7 +248,7 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(ephemeral: true);
+            await DeferAsync(true);
 
             // Load enabled options and gather SCR set
             List<RoleColourOption> enabled = await dbContext
@@ -269,12 +269,12 @@ public sealed class SettingsModule : SlashCommandBase
             string eta = FormatEta(status);
 
             ComponentBuilder components =
-                (status.Pending + status.InFlight) == 0
+                status.Pending + status.InFlight == 0
                     ? new ComponentBuilder()
                     : new ComponentBuilder().WithButton(
-                        label: LABEL_REFRESH,
-                        customId: $"colour-sync-refresh:{Context.User.Id}",
-                        style: ButtonStyle.Primary
+                        LABEL_REFRESH,
+                        $"colour-sync-refresh:{Context.User.Id}",
+                        ButtonStyle.Primary
                     );
 
             await FollowupAsync(
@@ -378,7 +378,7 @@ public sealed class SettingsModule : SlashCommandBase
             IRoleColourSyncQueue.Status status = syncQueue.GetStatus();
             string eta = FormatEta(status);
 
-            bool done = (status.Pending + status.InFlight) == 0;
+            bool done = status.Pending + status.InFlight == 0;
 
             string content = done
                 ? "Role colour sync complete. Queue is empty."
@@ -387,24 +387,20 @@ public sealed class SettingsModule : SlashCommandBase
             ComponentBuilder components = done
                 ? new ComponentBuilder()
                 : new ComponentBuilder().WithButton(
-                    label: LABEL_REFRESH,
-                    customId: $"colour-sync-refresh:{ownerUserId}",
-                    style: ButtonStyle.Primary);
+                    LABEL_REFRESH,
+                    $"colour-sync-refresh:{ownerUserId}",
+                    ButtonStyle.Primary);
 
             try
             {
                 if (Context.Interaction is SocketMessageComponent smc)
-                {
                     await smc.UpdateAsync(m =>
                     {
                         m.Content = content;
                         m.Components = components.Build();
                     });
-                }
                 else
-                {
                     await RespondAsync(content, ephemeral: true, components: components.Build());
-                }
             }
             catch
             {

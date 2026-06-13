@@ -16,6 +16,14 @@ public sealed class ImageBurstSpamGatewayHandler(
     private readonly ILogger _logger = logger.ForContext<ImageBurstSpamGatewayHandler>();
     private readonly DiscordOptions _options = options.Value;
 
+    private static bool HasStaffPermissions(GuildPermissions permissions) =>
+        permissions.Administrator
+        || permissions.ManageGuild
+        || permissions.ManageMessages
+        || permissions.BanMembers
+        || permissions.KickMembers
+        || permissions.ModerateMembers;
+
     public async Task InitializeAsync(CancellationToken ct)
     {
         using IServiceScope scope = scopeFactory.CreateScope();
@@ -91,19 +99,12 @@ public sealed class ImageBurstSpamGatewayHandler(
         || user.Roles.Any(role => _options.ImageBurstSpamAllowlistedRoleIds.Contains(role.Id))
         || HasStaffPermissions(user.GuildPermissions);
 
-    private static bool HasStaffPermissions(GuildPermissions permissions) =>
-        permissions.Administrator
-        || permissions.ManageGuild
-        || permissions.ManageMessages
-        || permissions.BanMembers
-        || permissions.KickMembers
-        || permissions.ModerateMembers;
-
     private async Task HandleDetectionAsync(ImageBurstDetection detection)
     {
         SocketGuild guild = discordClient.GetGuild(detection.GuildId);
 
         ImageBurstSpamDetectorOptions currentSettings = detectorSettings.Current;
+
         string reason =
             "Automatic image-burst spam detection: "
             + $"{detection.ChannelIds.Count} channels with {currentSettings.RequiredAttachmentCount}+ attachments "

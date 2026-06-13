@@ -3,7 +3,10 @@ namespace RatBot.Discord.Commands.Meta;
 public record MetaProposalModal : IModal
 {
     [InputLabel("Title")]
-    [ModalTextInput("title", maxLength: MetaProposalState.MaxTitleLength, placeholder: "The title of the proposal thread")]
+    [ModalTextInput(
+        "title",
+        maxLength: MetaProposalState.MaxTitleLength,
+        placeholder: "The title of the proposal thread")]
     public required string ProposalTitle { get; [UsedImplicitly] init; }
 
     [InputLabel("Summary")]

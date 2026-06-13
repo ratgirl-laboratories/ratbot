@@ -6,6 +6,14 @@ public sealed class ImageSpamSettingsService(
     IImageSpamSettingsStore store,
     ImageBurstSpamDetectorSettings detectorSettings)
 {
+
+    private static ImageBurstSpamDetectorOptions ToOptions(ImageSpamSettings settings) =>
+        new ImageBurstSpamDetectorOptions
+        {
+            Window = settings.BurstDurationSeconds,
+            DistinctChannelThreshold = settings.RequiredChannelCount,
+            RequiredAttachmentCount = settings.RequiredAttachmentCount,
+        };
     public async Task<ImageBurstSpamDetectorOptions> GetCurrentAsync(CancellationToken ct)
     {
         ImageSpamSettings? settings = await store.GetAsync(ct).ConfigureAwait(false);
@@ -34,12 +42,4 @@ public sealed class ImageSpamSettingsService(
 
         return options;
     }
-
-    private static ImageBurstSpamDetectorOptions ToOptions(ImageSpamSettings settings) =>
-        new ImageBurstSpamDetectorOptions
-        {
-            Window = settings.BurstDurationSeconds,
-            DistinctChannelThreshold = settings.RequiredChannelCount,
-            RequiredAttachmentCount = settings.RequiredAttachmentCount,
-        };
 }

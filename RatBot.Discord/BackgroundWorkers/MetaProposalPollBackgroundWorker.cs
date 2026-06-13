@@ -16,7 +16,6 @@ public sealed class MetaProposalPollBackgroundWorker(
         _logger.Information("Meta proposal poll background worker started.");
 
         while (!stoppingToken.IsCancellationRequested)
-        {
             try
             {
                 await ResolveExpiredPollsAsync(stoppingToken);
@@ -31,13 +30,13 @@ public sealed class MetaProposalPollBackgroundWorker(
                 _logger.Warning(ex, "Meta proposal poll background worker encountered an error.");
                 await Task.Delay(PollInterval, stoppingToken);
             }
-        }
     }
 
     private async Task ResolveExpiredPollsAsync(CancellationToken ct)
     {
         using IServiceScope scope = scopeFactory.CreateScope();
         MetaProposalService service = scope.ServiceProvider.GetRequiredService<MetaProposalService>();
+
         IReadOnlyList<MetaProposalState> expiredPolls = await service.FindExpiredPollsAsync(
             DateTimeOffset.UtcNow,
             BatchSize,

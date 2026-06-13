@@ -6,6 +6,9 @@ namespace RatBot.Domain.Tests.RoleColours;
 [TestFixture]
 public sealed class MemberColourPreferenceTests
 {
+
+    private static RoleColourOption CreateRoleColourOption() =>
+        RoleColourOption.Create("red", "Red", 10, 20).Value;
     [Test]
     public void CreateForOption_StoresConfiguredOptionSelection()
     {
@@ -54,7 +57,4 @@ public sealed class MemberColourPreferenceTests
         preference.SelectedOptionId.ShouldBe(option.OptionId);
         preference.IsNoColourSelected.ShouldBeFalse();
     }
-
-    private static RoleColourOption CreateRoleColourOption() =>
-        RoleColourOption.Create("red", "Red", 10, 20).Value;
 }

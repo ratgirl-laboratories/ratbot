@@ -4,8 +4,8 @@ using RatBot.Infrastructure.Data;
 namespace RatBot.Discord.Handlers;
 
 /// <summary>
-/// Reconciles a member's Display Colour Role (DCR) based on their stored preference,
-/// currently enabled colour options, and current Source Colour Roles (SCRs).
+///     Reconciles a member's Display Colour Role (DCR) based on their stored preference,
+///     currently enabled colour options, and current Source Colour Roles (SCRs).
 /// </summary>
 public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILogger logger) : IRoleColourReconciler
 {
@@ -49,6 +49,7 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
         List<RoleColourOption> allOptions = await db.RoleColourOptions
             .AsNoTracking()
             .ToListAsync(ct);
+
         List<RoleColourOption> enabledOptions = allOptions
             .Where(o => o.IsEnabled)
             .ToList();

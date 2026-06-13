@@ -186,8 +186,7 @@ public sealed class DiscordInteractionHandler(
     private static void LogCommandUsage(
         ILogger interactionLogger,
         IInteractionContext context,
-        CommandUsageDetails usage)
-    {
+        CommandUsageDetails usage) =>
         interactionLogger
             .ForContext("method_context", $"{nameof(DiscordInteractionHandler)}.{nameof(LogCommandUsage)}")
             .ForContext("event_kind", "interaction.command_invoked")
@@ -199,7 +198,6 @@ public sealed class DiscordInteractionHandler(
             .ForContext("invokee_username", usage.InvokeeUsername)
             .ForContext("invokee_source", usage.InvokeeSource)
             .Debug("Command invoked");
-    }
 
     public async Task InitializeAsync(CancellationToken ct)
     {
@@ -248,6 +246,7 @@ public sealed class DiscordInteractionHandler(
         ILogger interactionLogger = CreateInteractionDiagnosticsLogger(interaction)
             .ForContext("diag_component", "interaction_dispatch")
             .ForContext("component", "interaction_dispatch");
+
         InteractionLogScope? interactionLogScope = null;
 
         try
@@ -255,7 +254,9 @@ public sealed class DiscordInteractionHandler(
             IInteractionContext context = new SocketInteractionContext(discordClient, interaction);
             _interactionStopwatches[interaction.Id] = totalStopwatch;
             CommandUsageDetails usage = GetCommandUsageDetails(interaction);
-            interactionLogScope = InteractionLogScope.Begin(CreateInteractionLogScopeDetails(interaction, context, usage));
+
+            interactionLogScope =
+                InteractionLogScope.Begin(CreateInteractionLogScopeDetails(interaction, context, usage));
 
             interactionLogger = interactionLogger
                 .ForContext("user_id", context.User.Id)
@@ -308,6 +309,7 @@ public sealed class DiscordInteractionHandler(
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)10062)
         {
             _interactionStopwatches.TryRemove(interaction.Id, out _);
+
             interactionLogger
                 .ForContext("event_kind", "interaction.dispatch_failed")
                 .ForContext("diag_stage", "dispatch")
@@ -318,6 +320,7 @@ public sealed class DiscordInteractionHandler(
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
         {
             _interactionStopwatches.TryRemove(interaction.Id, out _);
+
             interactionLogger
                 .ForContext("event_kind", "interaction.dispatch_failed")
                 .ForContext("diag_stage", "dispatch")
@@ -328,6 +331,7 @@ public sealed class DiscordInteractionHandler(
         catch (Exception ex)
         {
             _interactionStopwatches.TryRemove(interaction.Id, out _);
+
             interactionLogger
                 .ForContext("event_kind", "interaction.unhandled_exception")
                 .ForContext("diag_stage", "dispatch")
@@ -554,12 +558,6 @@ public sealed class DiscordInteractionHandler(
             : interactionLogger;
     }
 
-    private readonly record struct CommandUsageDetails(
-        string CommandName,
-        ulong? InvokeeUserId,
-        string? InvokeeUsername,
-        string? InvokeeSource);
-
     private InteractionLogScopeDetails CreateInteractionLogScopeDetails(
         SocketInteraction interaction,
         IInteractionContext context,
@@ -576,4 +574,10 @@ public sealed class DiscordInteractionHandler(
             context.Channel?.Id,
             interaction.Type == InteractionType.ApplicationCommand ? usage.CommandName : null
         );
+
+    private readonly record struct CommandUsageDetails(
+        string CommandName,
+        ulong? InvokeeUserId,
+        string? InvokeeUsername,
+        string? InvokeeSource);
 }

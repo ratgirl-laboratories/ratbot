@@ -4,8 +4,7 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class DeleteRoleColourOption
 {
-
-    public static async Task<ErrorOr<RoleColourOption>> ExecuteAsync(
+    public async static Task<ErrorOr<RoleColourOption>> ExecuteAsync(
         BotDbContext db,
         Command command,
         CancellationToken ct)
@@ -39,5 +38,6 @@ public static class DeleteRoleColourOption
 
         return option;
     }
+
     public sealed record Command(string Key);
 }

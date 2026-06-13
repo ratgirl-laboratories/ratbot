@@ -18,11 +18,11 @@ public sealed class QuorumSettings
         TargetId = target.TargetId;
     }
 
-    public ulong GuildId { get; private set; }
+    public ulong GuildId { get; }
 
-    public QuorumSettingsType TargetType { get; private set; }
+    public QuorumSettingsType TargetType { get; }
 
-    public ulong TargetId { get; private set; }
+    public ulong TargetId { get; }
 
     public IReadOnlyCollection<QuorumSettingsRole> Roles => _roles;
 

@@ -2,6 +2,15 @@ namespace RatBot.Application.Common.Extensions;
 
 public static class ErrorOrExtensions
 {
+    public async static Task<ErrorOr<T>> ToErrorOr<T>(this Task<T?> task, Error error) where T : class
+    {
+        T? value = await task;
+
+        return value is not null
+            ? value
+            : error;
+    }
+
     extension<T>(ErrorOr<T> source)
     {
         public ErrorOr<TResult> Select<TResult>(Func<T, TResult> selector) =>
@@ -80,14 +89,5 @@ public static class ErrorOrExtensions
                 ? inner.Errors
                 : project(source.Value, inner.Value);
         }
-    }
-
-    public async static Task<ErrorOr<T>> ToErrorOr<T>(this Task<T?> task, Error error) where T : class
-    {
-        T? value = await task;
-
-        return value is not null
-            ? value
-            : error;
     }
 }

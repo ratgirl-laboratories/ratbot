@@ -10,8 +10,38 @@ public sealed class EmojiAnalyticsBackgroundWorker(
     IServiceScopeFactory scopeFactory,
     ILogger logger) : BackgroundService
 {
-    private readonly ILogger _logger = logger.ForContext<EmojiAnalyticsBackgroundWorker>();
     private const int BatchSize = 100;
+    private readonly ILogger _logger = logger.ForContext<EmojiAnalyticsBackgroundWorker>();
+
+    private static Queue<string> DrainBatch(ChannelReader<string> reader)
+    {
+        Queue<string> batch = new Queue<string>();
+
+        while (reader.TryRead(out string? item))
+        {
+            batch.Enqueue(item);
+
+            if (batch.Count >= BatchSize)
+                break;
+        }
+
+        return batch;
+    }
+
+    private static Queue<ulong> DrainReactionBatch(ChannelReader<ulong> reader)
+    {
+        Queue<ulong> batch = new Queue<ulong>();
+
+        while (reader.TryRead(out ulong item))
+        {
+            batch.Enqueue(item);
+
+            if (batch.Count >= BatchSize)
+                break;
+        }
+
+        return batch;
+    }
 
     protected async override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -64,36 +94,6 @@ public sealed class EmojiAnalyticsBackgroundWorker(
             : reactionWaitTask;
 
         return await otherTask.ConfigureAwait(false);
-    }
-
-    private static Queue<string> DrainBatch(ChannelReader<string> reader)
-    {
-        Queue<string> batch = new Queue<string>();
-
-        while (reader.TryRead(out string? item))
-        {
-            batch.Enqueue(item);
-
-            if (batch.Count >= BatchSize)
-                break;
-        }
-
-        return batch;
-    }
-
-    private static Queue<ulong> DrainReactionBatch(ChannelReader<ulong> reader)
-    {
-        Queue<ulong> batch = new Queue<ulong>();
-
-        while (reader.TryRead(out ulong item))
-        {
-            batch.Enqueue(item);
-
-            if (batch.Count >= BatchSize)
-                break;
-        }
-
-        return batch;
     }
 
     private async Task ProcessReactionBatchAsync(Queue<ulong> emojiBatch, CancellationToken ct)

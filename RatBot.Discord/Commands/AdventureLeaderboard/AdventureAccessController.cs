@@ -1,9 +1,9 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using Discord.Rest;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RatBot.Infrastructure.Data;
-using Discord.Rest;
 
 namespace RatBot.Discord.Commands.AdventureLeaderboard;
 
@@ -15,12 +15,6 @@ public sealed class AdventureAccessController(
     private static readonly AllowedMentions UserMentionsOnly = new AllowedMentions(AllowedMentionTypes.Users);
     private readonly ILogger _logger = logger.ForContext<AdventureAccessController>();
     private readonly AdventureLeaderboardOptions _options = options.Value;
-
-    private readonly record struct AdventureRoleGrantResult(
-        ImmutableHashSet<ulong> ReadyUserIds,
-        int Attempted,
-        int AlreadyPresent,
-        int Failures);
 
     private async static Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(
         SocketGuild guild,
@@ -287,9 +281,10 @@ public sealed class AdventureAccessController(
         try
         {
             await thread.SendMessageAsync(
-                $"Congratulations, Adventurer {MentionUtils.MentionUser(user.Id)}!",
-                allowedMentions: UserMentionsOnly,
-                options: requestOptions).ConfigureAwait(false);
+                    $"Congratulations, Adventurer {MentionUtils.MentionUser(user.Id)}!",
+                    allowedMentions: UserMentionsOnly,
+                    options: requestOptions)
+                .ConfigureAwait(false);
 
             return true;
         }
@@ -332,10 +327,8 @@ public sealed class AdventureAccessController(
         try
         {
             if (thread.IsArchived)
-            {
                 await thread.ModifyAsync(properties => properties.Archived = false, requestOptions)
                     .ConfigureAwait(false);
-            }
 
             if (!thread.HasJoined)
                 await thread.JoinAsync(requestOptions).ConfigureAwait(false);
@@ -352,4 +345,10 @@ public sealed class AdventureAccessController(
             return false;
         }
     }
+
+    private readonly record struct AdventureRoleGrantResult(
+        ImmutableHashSet<ulong> ReadyUserIds,
+        int Attempted,
+        int AlreadyPresent,
+        int Failures);
 }

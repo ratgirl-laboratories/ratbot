@@ -7,6 +7,29 @@ public sealed class ImageBurstSpamDetectorTests
 {
     private static readonly DateTimeOffset BaseTimestamp = new DateTimeOffset(2026, 5, 31, 12, 0, 0, TimeSpan.Zero);
 
+    private static ImageBurstSpamDetector CreateDetector(TimeProvider timeProvider) =>
+        new ImageBurstSpamDetector(
+            timeProvider,
+            new ImageBurstSpamDetectorOptions
+            {
+                Window = 45,
+                DistinctChannelThreshold = 4,
+                RequiredAttachmentCount = 2,
+                HandlingLockDuration = TimeSpan.FromMinutes(5),
+            });
+
+    private static ImageBurstMessage CreateMessage(
+        ulong guildId = 1,
+        ulong userId = 2,
+        ulong channelId = 10,
+        DateTimeOffset? timestamp = null) =>
+        new ImageBurstMessage(
+            guildId,
+            userId,
+            channelId,
+            timestamp ?? BaseTimestamp,
+            [new ImageBurstAttachment("https://cdn.example/a.png"), new ImageBurstAttachment("https://cdn.example/b.png")]);
+
     [Test]
     public void Observe_WithFourDistinctChannelsInsideWindow_ReturnsDetection()
     {
@@ -125,29 +148,6 @@ public sealed class ImageBurstSpamDetectorTests
         // Assert
         detection.ShouldBeNull();
     }
-
-    private static ImageBurstSpamDetector CreateDetector(TimeProvider timeProvider) =>
-        new ImageBurstSpamDetector(
-            timeProvider,
-            new ImageBurstSpamDetectorOptions
-            {
-                Window = 45,
-                DistinctChannelThreshold = 4,
-                RequiredAttachmentCount = 2,
-                HandlingLockDuration = TimeSpan.FromMinutes(5),
-            });
-
-    private static ImageBurstMessage CreateMessage(
-        ulong guildId = 1,
-        ulong userId = 2,
-        ulong channelId = 10,
-        DateTimeOffset? timestamp = null) =>
-        new ImageBurstMessage(
-            guildId,
-            userId,
-            channelId,
-            timestamp ?? BaseTimestamp,
-            [new ImageBurstAttachment("https://cdn.example/a.png"), new ImageBurstAttachment("https://cdn.example/b.png")]);
 
     private sealed class TestTimeProvider(DateTimeOffset timestamp) : TimeProvider
     {

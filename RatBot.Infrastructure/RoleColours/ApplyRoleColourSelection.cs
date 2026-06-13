@@ -4,7 +4,6 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class ApplyRoleColourSelection
 {
-
     public async static Task<Result> ExecuteAsync(
         BotDbContext db,
         Command command,
@@ -41,6 +40,7 @@ public static class ApplyRoleColourSelection
         await db.SaveChangesAsync(ct);
         return Result.Ok();
     }
+
     public sealed record Command(
         ulong UserId,
         RoleColourOption.Id SelectedOptionId,

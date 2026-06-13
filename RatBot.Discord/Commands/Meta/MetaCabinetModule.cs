@@ -112,7 +112,7 @@ public sealed class MetaCabinetModule(
             return;
         }
 
-        await DeferAsync(ephemeral: true);
+        await DeferAsync(true);
 
         ErrorOr<MetaSuggestionSettings> settingsResult = await metaProposalService.GetSettingsAsync(Context.Guild.Id);
 

@@ -16,11 +16,11 @@ public sealed class EmojiModule(
 {
     private const string UsagePageCustomIdPrefix = "emoji-usage";
 
+    private static string BuildUsagePageCustomId(ulong ownerUserId, int page) =>
+        $"{UsagePageCustomIdPrefix}:page:{ownerUserId}:{page}";
+
     [SlashCommand("usage", "Show top emojis by usage.")]
-    public async Task UsageAsync()
-    {
-        await RespondWithUsagePageAsync(1).ConfigureAwait(false);
-    }
+    public async Task UsageAsync() => await RespondWithUsagePageAsync(1).ConfigureAwait(false);
 
     [ComponentInteraction($"{UsagePageCustomIdPrefix}:page:*:*", true)]
     public async Task UsagePageAsync(ulong ownerUserId, int page)
@@ -74,7 +74,6 @@ public sealed class EmojiModule(
 
     private ComponentBuilderV2 BuildUsagePageComponents(EmojiUsagePage page, ulong ownerUserId) =>
         new ComponentBuilderV2(
-        [
             new ContainerBuilder()
                 .WithTextDisplay(
                     new TextDisplayBuilder().WithContent($"## Emoji Usage Counts (Page {page.Page}/{page.TotalPages})")
@@ -93,8 +92,7 @@ public sealed class EmojiModule(
                         .WithLabel("Next")
                         .WithCustomId(BuildUsagePageCustomId(ownerUserId, page.Page + 1))
                         .WithDisabled(page.Page >= page.TotalPages),
-                ]),
-        ]);
+                ]));
 
     private string BuildUsagePageText(IReadOnlyList<EmojiUsageCount> rows)
     {
@@ -105,9 +103,6 @@ public sealed class EmojiModule(
 
         return text.ToString();
     }
-
-    private static string BuildUsagePageCustomId(ulong ownerUserId, int page) =>
-        $"{UsagePageCustomIdPrefix}:page:{ownerUserId}:{page}";
 
     private string FormatEmojiForDisplay(ulong emojiId)
     {

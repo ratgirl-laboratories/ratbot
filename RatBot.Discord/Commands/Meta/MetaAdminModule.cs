@@ -8,6 +8,18 @@ public sealed class MetaAdminModule(
     MetaProposalService metaProposalService,
     MetaProposalDiscordWorkflow workflow) : SlashCommandBase
 {
+
+    private static string FormatState(MetaProposalState state) =>
+        $"""
+         Id: `{state.Id}`
+         Status: `{state.Status}`
+         Guild: `{state.GuildId}`
+         Suggestion thread: `{state.SuggestionThreadChannelId}`
+         Proposal thread: `{state.ProposalThreadChannelId?.ToString() ?? "none"}`
+         Failed poll attempts: `{state.FailedPollAttempts}`
+         Poll message: `{state.PollMessageId?.ToString() ?? "none"}`
+         Publication retry failures: `{state.PublicationRetryFailures}`
+         """;
     [SlashCommand("state", "View meta proposal state.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task StateAsync([Summary("id", "State id.")] string id)
@@ -40,12 +52,12 @@ public sealed class MetaAdminModule(
             return;
         }
 
-        await DeferAsync(ephemeral: true);
+        await DeferAsync(true);
 
         ErrorOr<ulong> publishResult = await workflow.PublishProposalAsync(
             state,
             settingsResult.Value,
-            pingCabinet: false);
+            false);
 
         if (publishResult.IsError)
         {
@@ -95,7 +107,8 @@ public sealed class MetaAdminModule(
             return;
         }
 
-        ErrorOr<Success> forgetResult = await metaProposalService.ForgetUnsubmittedSuggestionAsync(stateResult.Value.Id);
+        ErrorOr<Success> forgetResult =
+            await metaProposalService.ForgetUnsubmittedSuggestionAsync(stateResult.Value.Id);
 
         await forgetResult.SwitchFirstAsync(
             async _ => await RespondAsync("Suggestion state forgotten.", ephemeral: true),
@@ -106,7 +119,8 @@ public sealed class MetaAdminModule(
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task PublishAsync(
         [Summary("id", "State id.")] string id,
-        [Summary("thread", "Proposal thread.")] IThreadChannel thread)
+        [Summary("thread", "Proposal thread.")]
+        IThreadChannel thread)
     {
         ErrorOr<MetaProposalState> stateResult = await FindStateAsync(id);
 
@@ -129,16 +143,4 @@ public sealed class MetaAdminModule(
             ? metaProposalService.GetByIdAsync(stateId)
             : Task.FromResult<ErrorOr<MetaProposalState>>(
                 Error.Validation("MetaProposal.InvalidStateId", "State id must be a GUID."));
-
-    private static string FormatState(MetaProposalState state) =>
-        $"""
-         Id: `{state.Id}`
-         Status: `{state.Status}`
-         Guild: `{state.GuildId}`
-         Suggestion thread: `{state.SuggestionThreadChannelId}`
-         Proposal thread: `{state.ProposalThreadChannelId?.ToString() ?? "none"}`
-         Failed poll attempts: `{state.FailedPollAttempts}`
-         Poll message: `{state.PollMessageId?.ToString() ?? "none"}`
-         Publication retry failures: `{state.PublicationRetryFailures}`
-         """;
 }

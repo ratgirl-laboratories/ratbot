@@ -9,8 +9,8 @@ public sealed class AdventureLeaderboardComponentBuilder
     private const int MaxContainersPerMessage = 5;
 
     private static string BuildHeader(AdventureLeaderboardViewModel model) =>
-        $"# Practical Python Adventure Leaderboard\n" +
-        $"Year {model.Year} • {model.TotalEntrants} entrants • updated {FormatTimestamp(model.LastUpdated)}";
+        $"# Practical Python Adventure Leaderboard\n"
+        + $"Year {model.Year} • {model.TotalEntrants} entrants • updated {FormatTimestamp(model.LastUpdated)}";
 
     private static string BuildRows(IReadOnlyList<AdventureLeaderboardViewRow> rows)
     {
@@ -39,21 +39,6 @@ public sealed class AdventureLeaderboardComponentBuilder
     private static string FormatTimestamp(DateTimeOffset timestamp) =>
         $"<t:{timestamp.ToUnixTimeSeconds()}:R>";
 
-    public IReadOnlyList<MessageComponent> Build(AdventureLeaderboardViewModel model)
-    {
-        List<ContainerBuilder> containers = BuildContainers(model);
-        List<MessageComponent> components = new List<MessageComponent>();
-
-        for (int index = 0; index < containers.Count; index += MaxContainersPerMessage)
-        {
-            components.Add(new ComponentBuilderV2(
-                    containers.Skip(index).Take(MaxContainersPerMessage).Cast<IMessageComponentBuilder>())
-                .Build());
-        }
-
-        return components;
-    }
-
     private static List<ContainerBuilder> BuildContainers(AdventureLeaderboardViewModel model)
     {
         List<ContainerBuilder> containers = new List<ContainerBuilder>();
@@ -61,25 +46,28 @@ public sealed class AdventureLeaderboardComponentBuilder
 
         if (rowChunks.Count == 0)
         {
-            containers.Add(new ContainerBuilder()
-                .WithAccentColor(Color.Teal)
-                .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildHeader(model)))
-                .WithSeparator(new SeparatorBuilder(true, SeparatorSpacingSize.Small))
-                .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(model.Rows))));
+            containers.Add(
+                new ContainerBuilder()
+                    .WithAccentColor(Color.Teal)
+                    .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildHeader(model)))
+                    .WithSeparator(new SeparatorBuilder())
+                    .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(model.Rows))));
 
             return containers;
         }
 
-        containers.Add(new ContainerBuilder()
-            .WithAccentColor(Color.Teal)
-            .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildHeader(model)))
-            .WithSeparator(new SeparatorBuilder(true, SeparatorSpacingSize.Small))
-            .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(rowChunks[0]))));
+        containers.Add(
+            new ContainerBuilder()
+                .WithAccentColor(Color.Teal)
+                .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildHeader(model)))
+                .WithSeparator(new SeparatorBuilder())
+                .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(rowChunks[0]))));
 
         foreach (IReadOnlyList<AdventureLeaderboardViewRow> rows in rowChunks.Skip(1))
-            containers.Add(new ContainerBuilder()
-                .WithAccentColor(Color.Teal)
-                .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(rows))));
+            containers.Add(
+                new ContainerBuilder()
+                    .WithAccentColor(Color.Teal)
+                    .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(rows))));
 
         return containers;
     }
@@ -94,5 +82,19 @@ public sealed class AdventureLeaderboardComponentBuilder
             chunks.Add(rows.Skip(index).Take(MaxRowsPerContainer).ToArray());
 
         return chunks;
+    }
+
+    public IReadOnlyList<MessageComponent> Build(AdventureLeaderboardViewModel model)
+    {
+        List<ContainerBuilder> containers = BuildContainers(model);
+        List<MessageComponent> components = new List<MessageComponent>();
+
+        for (int index = 0; index < containers.Count; index += MaxContainersPerMessage)
+            components.Add(
+                new ComponentBuilderV2(
+                        containers.Skip(index).Take(MaxContainersPerMessage))
+                    .Build());
+
+        return components;
     }
 }

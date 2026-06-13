@@ -15,15 +15,15 @@ public sealed partial class AdventureLeaderboardManager(
     ILogger logger)
     : BackgroundService
 {
-
     private const MessageFlags LeaderboardMessageFlags =
         MessageFlags.ComponentsV2 | MessageFlags.SuppressNotification;
+
     private static readonly AllowedMentions UserMentionsOnly = new AllowedMentions(AllowedMentionTypes.Users);
+    private readonly HashSet<ulong> _excludedUserIds = new HashSet<ulong>();
 
     private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
     private readonly ILogger _logger = logger.ForContext<AdventureLeaderboardManager>();
     private readonly AdventureLeaderboardOptions _options = options.Value;
-    private readonly HashSet<ulong> _excludedUserIds = new HashSet<ulong>();
     private TrackedLeaderboardMessageSequence? _trackedMessageSequence;
 
     private async static Task<IReadOnlySet<ulong>> FindGuildMemberUserIdsAsync(
@@ -54,6 +54,19 @@ public sealed partial class AdventureLeaderboardManager(
         IReadOnlySet<ulong> guildMemberUserIds,
         IReadOnlySet<ulong> excludedUserIds) =>
         $"{snapshot.Hash}:{string.Join(',', guildMemberUserIds.Order())}:{string.Join(',', excludedUserIds.Order())}";
+
+    private static Task ModifyLeaderboardMessageAsync(
+        IUserMessage message,
+        MessageComponent components,
+        CancellationToken cancellationToken) =>
+        message.ModifyAsync(
+            properties =>
+            {
+                properties.Components = components;
+                properties.AllowedMentions = UserMentionsOnly;
+                properties.Flags = LeaderboardMessageFlags;
+            },
+            new RequestOptions { CancelToken = cancellationToken });
 
     public async Task<IUserMessage> CreateLeaderboardMessageAsync(
         ITextChannel channel,
@@ -237,11 +250,9 @@ public sealed partial class AdventureLeaderboardManager(
             return;
         }
 
-        if (string.Equals(renderHash, trackedSequence.LastRenderHash, StringComparison.Ordinal) &&
-            components.Count == trackedSequence.MessageIds.Count)
-        {
+        if (string.Equals(renderHash, trackedSequence.LastRenderHash, StringComparison.Ordinal)
+            && components.Count == trackedSequence.MessageIds.Count)
             return;
-        }
 
         TrackedLeaderboardMessageSequence updatedTrackedSequence =
             await ReconcileTrackedMessageSequenceAsync(
@@ -268,7 +279,12 @@ public sealed partial class AdventureLeaderboardManager(
 
         List<ulong> updatedMessageIds = new List<ulong>(messageIds);
 
-        await AppendNewLeaderboardMessagesAsync(target.Channel, target.Messages.Count, components, updatedMessageIds, cancellationToken)
+        await AppendNewLeaderboardMessagesAsync(
+                target.Channel,
+                target.Messages.Count,
+                components,
+                updatedMessageIds,
+                cancellationToken)
             .ConfigureAwait(false);
 
         await DeleteSurplusLeaderboardMessagesAsync(target.Messages, components.Count, cancellationToken)
@@ -386,7 +402,6 @@ public sealed partial class AdventureLeaderboardManager(
             .ConfigureAwait(false);
 
         for (int index = 0; index < trackedSequence.MessageIds.Count; index++)
-        {
             dbContext.AdventureLeaderboardMessageState.Add(
                 AdventureLeaderboardMessageState.Create(
                     index + 1,
@@ -395,7 +410,6 @@ public sealed partial class AdventureLeaderboardManager(
                     trackedSequence.MessageIds[index],
                     trackedSequence.Year,
                     trackedSequence.LastRenderHash));
-        }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -462,9 +476,10 @@ public sealed partial class AdventureLeaderboardManager(
         return componentBuilder.Build(model);
     }
 
-    private async Task<(TrackedLeaderboardMessageTarget? Target, bool ShouldRecreateSequence)> FindTrackedMessageTargetAsync(
-        TrackedLeaderboardMessageSequence trackedSequence,
-        CancellationToken cancellationToken)
+    private async Task<(TrackedLeaderboardMessageTarget? Target, bool ShouldRecreateSequence)>
+        FindTrackedMessageTargetAsync(
+            TrackedLeaderboardMessageSequence trackedSequence,
+            CancellationToken cancellationToken)
     {
         SocketGuild? guild = discordClient.GetGuild(trackedSequence.GuildId);
         ITextChannel? channel = guild?.GetTextChannel(trackedSequence.ChannelId);
@@ -564,19 +579,6 @@ public sealed partial class AdventureLeaderboardManager(
 
         return messages;
     }
-
-    private static Task ModifyLeaderboardMessageAsync(
-        IUserMessage message,
-        MessageComponent components,
-        CancellationToken cancellationToken) =>
-        message.ModifyAsync(
-            properties =>
-            {
-                properties.Components = components;
-                properties.AllowedMentions = UserMentionsOnly;
-                properties.Flags = LeaderboardMessageFlags;
-            },
-            new RequestOptions { CancelToken = cancellationToken });
 
     private async Task<TrackedLeaderboardMessageSequence> RecreateTrackedMessageSequenceAsync(
         ITextChannel channel,

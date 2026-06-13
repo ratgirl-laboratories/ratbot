@@ -7,6 +7,15 @@ public sealed class MetaModule(
     MetaProposalService metaProposalService,
     MetaProposalDiscordWorkflow workflow) : SlashCommandBase
 {
+
+    private static bool CanSubmitProposalModal(
+        MetaProposalState state,
+        MetaSuggestionSettings settings,
+        IGuildUser user,
+        uint hours) =>
+        MetaCommandPermissions.IsAuthorOrAdmin(state, user)
+        || MetaCommandPermissions.IsCabinet(settings, user)
+        || hours != MetaCommandIds.DefaultPollHours && MetaCommandPermissions.CanOverrideDuration(settings, user);
     [SlashCommand("propose", "Create a proposal poll in this suggestion thread.")]
     public async Task ProposeAsync()
     {
@@ -34,6 +43,7 @@ public sealed class MetaModule(
 
         string customId =
             $"{MetaCommandIds.ProposalModalPrefix}:{Context.User.Id}:{thread.Id}:{MetaCommandIds.DefaultPollHours}";
+
         await Context.Interaction.RespondWithModalAsync<MetaProposalModal>(customId);
     }
 
@@ -56,7 +66,7 @@ public sealed class MetaModule(
             return;
         }
 
-        await DeferAsync(ephemeral: true);
+        await DeferAsync(true);
 
         ErrorOr<MetaSuggestionSettings> settingsResult = await metaProposalService.GetSettingsAsync(Context.Guild.Id);
 
@@ -91,7 +101,10 @@ public sealed class MetaModule(
         if (hours != MetaCommandIds.DefaultPollHours
             && !MetaCommandPermissions.CanOverrideDuration(settingsResult.Value, user))
         {
-            await FollowupAsync("Only administrators or the Cabinet Chair may override poll duration.", ephemeral: true);
+            await FollowupAsync(
+                "Only administrators or the Cabinet Chair may override poll duration.",
+                ephemeral: true);
+
             return;
         }
 
@@ -110,6 +123,7 @@ public sealed class MetaModule(
         }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
+
         ErrorOr<MetaProposalState> startResult = await metaProposalService.StartPollAsync(
             thread.Id,
             Context.User.Id,
@@ -135,7 +149,7 @@ public sealed class MetaModule(
             return;
         }
 
-        await DeferAsync(ephemeral: true);
+        await DeferAsync(true);
 
         ErrorOr<MetaProposalState> retryStart = await metaProposalService.MarkPublicationRetryStartedAsync(
             stateId,
@@ -159,7 +173,7 @@ public sealed class MetaModule(
         ErrorOr<ulong> publishResult = await workflow.PublishProposalAsync(
             state,
             settingsResult.Value,
-            pingCabinet: state.PublicationRetryFailures >= MetaProposalState.MaxPublicationRetryFailuresBeforePing);
+            state.PublicationRetryFailures >= MetaProposalState.MaxPublicationRetryFailuresBeforePing);
 
         if (!publishResult.IsError)
         {
@@ -174,17 +188,11 @@ public sealed class MetaModule(
             state.PublicationErrorMessageId);
 
         if (!errorMessage.IsError)
-            await metaProposalService.RecordPublicationFailureAsync(state.Id, errorMessage.Value, DateTimeOffset.UtcNow);
+            await metaProposalService.RecordPublicationFailureAsync(
+                state.Id,
+                errorMessage.Value,
+                DateTimeOffset.UtcNow);
 
         await FollowupAsync(publishResult.FirstError.Description, ephemeral: true);
     }
-
-    private static bool CanSubmitProposalModal(
-        MetaProposalState state,
-        MetaSuggestionSettings settings,
-        IGuildUser user,
-        uint hours) =>
-        MetaCommandPermissions.IsAuthorOrAdmin(state, user)
-        || MetaCommandPermissions.IsCabinet(settings, user)
-        || (hours != MetaCommandIds.DefaultPollHours && MetaCommandPermissions.CanOverrideDuration(settings, user));
 }

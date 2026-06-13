@@ -11,6 +11,7 @@ public sealed class MetaSuggestionSettingsService(IUnitOfWork uow, ILogger logge
         _ = ct;
         IRepository<MetaSuggestionSettings> settings = uow.GetRepository<MetaSuggestionSettings>();
         ErrorOr<MetaSuggestionSettings> setting = await settings.TryFindAsync((long)guildId);
+
         return setting.IsError
             ? MetaProposalErrors.SettingsNotConfigured
             : setting.Value;

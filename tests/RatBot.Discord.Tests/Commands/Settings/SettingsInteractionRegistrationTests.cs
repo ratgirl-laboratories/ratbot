@@ -14,6 +14,20 @@ namespace RatBot.Discord.Tests.Commands.Settings;
 [TestFixture]
 public sealed class SettingsInteractionRegistrationTests
 {
+
+    private static void AssertMetaCommand(string methodName, string commandName, Type parameterType)
+    {
+        MethodInfo method =
+            typeof(SettingsModule.MetaSettingsModule).GetMethod(methodName)
+            ?? throw new InvalidOperationException($"Expected {methodName} method.");
+
+        method.GetParameters().Single().ParameterType.ShouldBe(parameterType);
+
+        SlashCommandAttribute slashCommand =
+            method.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
+
+        slashCommand.Name.ShouldBe(commandName);
+    }
     [Test]
     public void ImageSpamConfigAsync_HasExpectedSlashCommandMetadata()
     {
@@ -87,18 +101,6 @@ public sealed class SettingsInteractionRegistrationTests
         command.Parameters.Select(parameter => parameter.IsRequired).ShouldBe([false, false, false]);
     }
 
-    private sealed class FakeImageSpamSettingsStore : IImageSpamSettingsStore
-    {
-        public Task<ImageSpamSettings?> GetAsync(CancellationToken ct) => Task.FromResult<ImageSpamSettings?>(null);
-
-        public Task<ImageSpamSettings> UpsertAsync(
-            int? requiredChannelCount,
-            int? requiredAttachmentCount,
-            int? burstDurationSeconds,
-            CancellationToken ct) =>
-            Task.FromResult(ImageSpamSettings.CreateDefault());
-    }
-
     [Test]
     public void MetaSettingsModule_HasExpectedGroupMetadata()
     {
@@ -143,17 +145,15 @@ public sealed class SettingsInteractionRegistrationTests
             typeof(IRole));
     }
 
-    private static void AssertMetaCommand(string methodName, string commandName, Type parameterType)
+    private sealed class FakeImageSpamSettingsStore : IImageSpamSettingsStore
     {
-        MethodInfo method =
-            typeof(SettingsModule.MetaSettingsModule).GetMethod(methodName)
-            ?? throw new InvalidOperationException($"Expected {methodName} method.");
+        public Task<ImageSpamSettings?> GetAsync(CancellationToken ct) => Task.FromResult<ImageSpamSettings?>(null);
 
-        method.GetParameters().Single().ParameterType.ShouldBe(parameterType);
-
-        SlashCommandAttribute slashCommand =
-            method.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
-
-        slashCommand.Name.ShouldBe(commandName);
+        public Task<ImageSpamSettings> UpsertAsync(
+            int? requiredChannelCount,
+            int? requiredAttachmentCount,
+            int? burstDurationSeconds,
+            CancellationToken ct) =>
+            Task.FromResult(ImageSpamSettings.CreateDefault());
     }
 }

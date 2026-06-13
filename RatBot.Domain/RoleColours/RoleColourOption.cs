@@ -31,21 +31,17 @@ public sealed class RoleColourOption
     public static ErrorOr<RoleColourOption> Create(string key, string label, ulong sourceRoleId, ulong displayRoleId)
     {
         if (sourceRoleId == displayRoleId)
-        {
             return Error.Validation(
                 "RoleColourOption.RolesMustDiffer",
                 "Source and display role IDs must be different.");
-        }
 
         if (string.IsNullOrWhiteSpace(key))
             return Error.Validation("RoleColourOption.KeyRequired", "Key is required.");
 
         if (string.IsNullOrWhiteSpace(label))
-        {
             return Error.Validation(
                 "RoleColourOption.LabelRequired",
                 "Label is required.");
-        }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
@@ -69,21 +65,17 @@ public sealed class RoleColourOption
     public ErrorOr<Success> Update(string key, string label, ulong displayRoleId)
     {
         if (SourceRoleId == displayRoleId)
-        {
             return Error.Validation(
                 "RoleColourOption.RolesMustDiffer",
                 "Source and display role IDs must be different.");
-        }
 
         if (string.IsNullOrWhiteSpace(key))
             return Error.Validation("RoleColourOption.KeyRequired", "Key is required.");
 
         if (string.IsNullOrWhiteSpace(label))
-        {
             return Error.Validation(
                 "RoleColourOption.LabelRequired",
                 "Label is required.");
-        }
 
         string trimmedKey = key.Trim();
 

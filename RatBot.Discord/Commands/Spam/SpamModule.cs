@@ -6,6 +6,28 @@ namespace RatBot.Discord.Commands.Spam;
 [DefaultMemberPermissions(GuildPermission.Administrator)]
 public sealed class SpamModule(ImageSpamSettingsService settingsService) : SlashCommandBase
 {
+
+    private static ErrorOr<Success> Validate(
+        int? numberOfChannels,
+        int? attachmentCount,
+        int? burstDuration)
+    {
+        if (numberOfChannels is <= 0)
+            return Error.Validation(description: "Number of channels must be greater than zero.");
+
+        if (attachmentCount is <= 0)
+            return Error.Validation(description: "Attachment count must be greater than zero.");
+
+        return burstDuration is <= 0
+            ? Error.Validation(description: "Burst duration must be greater than zero seconds.")
+            : Result.Success;
+    }
+
+    private static string FormatSettings(ImageBurstSpamDetectorOptions settings) =>
+        "Image spam detection settings: "
+        + $"{settings.DistinctChannelThreshold} channel(s), "
+        + $"{settings.RequiredAttachmentCount} attachment(s) per message, "
+        + $"{settings.Window}s burst duration.";
     [SlashCommand("image-spam-config", "View or update image spam detection settings.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task ImageSpamConfigAsync(
@@ -36,26 +58,4 @@ public sealed class SpamModule(ImageSpamSettingsService settingsService) : Slash
 
         await RespondAsync(FormatSettings(settings), ephemeral: true).ConfigureAwait(false);
     }
-
-    private static ErrorOr<Success> Validate(
-        int? numberOfChannels,
-        int? attachmentCount,
-        int? burstDuration)
-    {
-        if (numberOfChannels is <= 0)
-            return Error.Validation(description: "Number of channels must be greater than zero.");
-
-        if (attachmentCount is <= 0)
-            return Error.Validation(description: "Attachment count must be greater than zero.");
-
-        return burstDuration is <= 0
-            ? Error.Validation(description: "Burst duration must be greater than zero seconds.")
-            : Result.Success;
-    }
-
-    private static string FormatSettings(ImageBurstSpamDetectorOptions settings) =>
-        "Image spam detection settings: "
-        + $"{settings.DistinctChannelThreshold} channel(s), "
-        + $"{settings.RequiredAttachmentCount} attachment(s) per message, "
-        + $"{settings.Window}s burst duration.";
 }

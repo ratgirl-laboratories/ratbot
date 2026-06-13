@@ -4,13 +4,13 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class DisableRoleColourOption
 {
-
     public async static Task<ErrorOr<RoleColourOption>> ExecuteAsync(
         BotDbContext db,
         Command command,
         CancellationToken ct)
     {
         string key = command.Key.Trim();
+
         if (string.IsNullOrWhiteSpace(key))
             return Error.Validation(description: "Key is required.");
 
@@ -30,5 +30,6 @@ public static class DisableRoleColourOption
         await db.SaveChangesAsync(ct);
         return option;
     }
+
     public sealed record Command(string Key);
 }

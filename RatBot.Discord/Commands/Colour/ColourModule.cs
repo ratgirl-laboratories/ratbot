@@ -85,7 +85,7 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         }
 
         Log.Debug("colour_remove start guild_id={GuildId} user_id={UserId}", Context.Guild.Id, Context.User.Id);
-        await DeferAsync(ephemeral: true);
+        await DeferAsync(true);
 
         SetNoColourPreference.Result res = await SetNoColourPreference.ExecuteAsync(
             db,
@@ -168,14 +168,10 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
             .WithButton("Apply", applyId);
 
         if (Context.Interaction is SocketMessageComponent smc)
-        {
             await smc.UpdateAsync(m => { m.Components = builder.Build(); });
-        }
         else
-        {
             // Fallback: acknowledge with an ephemeral response if somehow not a component
             await RespondAsync("Selection updated.", ephemeral: true, components: builder.Build());
-        }
     }
 
     [ComponentInteraction($"{SwapPrefix}:apply:*:*", true)]
@@ -237,17 +233,13 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         string label = option?.Label ?? "your chosen colour";
 
         if (Context.Interaction is SocketMessageComponent smc2)
-        {
             await smc2.UpdateAsync(m =>
             {
                 m.Content = $"You are now wearing {label}.";
                 m.Components = new ComponentBuilder().Build();
             });
-        }
         else
-        {
             await RespondAsync($"You are now wearing {label}.", ephemeral: true);
-        }
 
         Sessions.TryRemove(nonce, out _);
     }
@@ -264,9 +256,7 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         try
         {
             if (Context.Interaction is SocketMessageComponent smc)
-            {
                 await smc.UpdateAsync(m => { m.Components = new ComponentBuilder().Build(); });
-            }
         }
         catch
         {

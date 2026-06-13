@@ -10,5 +10,5 @@ public sealed class AdventureLeaderboardOptions
 
     public TimeSpan RefreshInterval => TimeSpan.FromSeconds(Math.Max(10, RefreshIntervalSeconds));
 
-    private int RefreshIntervalSeconds { get; init; } = 60;
+    private int RefreshIntervalSeconds { get; } = 60;
 }

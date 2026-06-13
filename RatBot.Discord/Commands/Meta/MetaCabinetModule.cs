@@ -97,6 +97,67 @@ public sealed class MetaCabinetModule(
         await Context.Interaction.RespondWithModalAsync<MetaVetoModal>(customId);
     }
 
+    [SlashCommand("close", "End the suggestion poll immediately.")]
+    [RequireUserPermission(GuildPermission.BanMembers)]
+    public async Task CloseAsync()
+    {
+        if (Context.Guild is null || Context.Channel is not IThreadChannel thread)
+        {
+            await RespondAsync("This command can only be used in a tracked suggestion thread.", ephemeral: true);
+            return;
+        }
+
+        ErrorOr<MetaSuggestionSettings> settingsResult = await metaProposalService.GetSettingsAsync(Context.Guild.Id);
+
+        if (settingsResult.IsError)
+        {
+            await RespondAsync(settingsResult.FirstError.Description, ephemeral: true);
+            return;
+        }
+
+        if (Context.User is not IGuildUser user || !MetaCommandPermissions.IsCabinet(settingsResult.Value, user))
+        {
+            await RespondAsync("Only Cabinet, Cabinet Chair, or administrators may use this command.", ephemeral: true);
+            return;
+        }
+
+        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(thread.Id);
+
+        if (stateResult.IsError)
+        {
+            await RespondAsync(stateResult.FirstError.Description, ephemeral: true);
+            return;
+        }
+
+        MetaProposalState state = stateResult.Value;
+
+        if (state.Status is not MetaProposalStatus.PollActive)
+        {
+            await RespondAsync("There is no active poll for this suggestion.", ephemeral: true);
+            return;
+        }
+
+        IUserMessage? pollMessage = await workflow.GetPollMessageAsync(state);
+
+        if (pollMessage?.Poll is null)
+        {
+            await RespondAsync("The poll message could not be found or does not contain a poll.", ephemeral: true);
+            return;
+        }
+
+        await DeferAsync(ephemeral: true);
+
+        try
+        {
+            await pollMessage.EndPollAsync(null);
+            await FollowupAsync("Poll ended immediately.", ephemeral: true);
+        }
+        catch (Exception)
+        {
+            await FollowupAsync("Failed to end the poll.", ephemeral: true);
+        }
+    }
+
     [ModalInteraction($"{MetaCommandIds.VetoModalPrefix}:*:*", true)]
     public async Task VetoModalAsync(ulong userId, ulong threadId, MetaVetoModal modal)
     {

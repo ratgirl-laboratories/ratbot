@@ -114,6 +114,14 @@ public sealed class MetaModule(
             return;
         }
 
+        await workflow.SendProposalContentAsync(
+            thread,
+            Context.User.Id,
+            modal.ProposalTitle,
+            modal.Summary,
+            modal.Motivation,
+            modal.Specification);
+
         ErrorOr<IUserMessage> pollResult = await workflow.CreateProposalPollAsync(thread, hours);
 
         if (pollResult.IsError)

@@ -50,6 +50,41 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
             $"<@&{settings.CabinetRoleId}> recovered proposal publication after {state.PublicationRetryFailures} failed retry attempts.",
             allowedMentions: RoleMentionsOnly);
 
+    public async Task SendProposalContentAsync(
+        IThreadChannel suggestionThread,
+        ulong authorId,
+        string title,
+        string summary,
+        string motivation,
+        string specification)
+    {
+        ComponentBuilderV2 builder = new ComponentBuilderV2(
+            new ContainerBuilder()
+                .WithAccentColor(Color.Teal)
+                .WithTextDisplay(new TextDisplayBuilder().WithContent($"# {title}"))
+                .WithTextDisplay(
+                    new TextDisplayBuilder().WithContent(
+                        $"**Author:** <@{authorId}>\n**Date:** <t:{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}:F>")),
+            new ContainerBuilder()
+                .WithAccentColor(Color.Teal)
+                .WithTextDisplay(new TextDisplayBuilder().WithContent("## Summary"))
+                .WithTextDisplay(new TextDisplayBuilder().WithContent(summary)),
+            new ContainerBuilder()
+                .WithAccentColor(Color.Teal)
+                .WithTextDisplay(new TextDisplayBuilder().WithContent("## Motivation"))
+                .WithTextDisplay(new TextDisplayBuilder().WithContent(motivation)),
+            new ContainerBuilder()
+                .WithAccentColor(Color.Teal)
+                .WithTextDisplay(new TextDisplayBuilder().WithContent("## Specification"))
+                .WithTextDisplay(new TextDisplayBuilder().WithContent(specification))
+        );
+
+        await suggestionThread.SendMessageAsync(
+            components: builder.Build(),
+            flags: MessageFlags.ComponentsV2,
+            allowedMentions: NoMentions);
+    }
+
     public async Task<ErrorOr<IUserMessage>> CreateProposalPollAsync(
         IThreadChannel suggestionThread,
         uint durationHours,

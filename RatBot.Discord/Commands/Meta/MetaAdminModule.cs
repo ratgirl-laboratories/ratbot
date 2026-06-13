@@ -31,6 +31,17 @@ public sealed class MetaAdminModule(
             async error => await RespondAsync(error.Description, ephemeral: true));
     }
 
+    [SlashCommand("get", "Get the state GUID for the current thread.")]
+    [RequireUserPermission(GuildPermission.Administrator)]
+    public async Task GetAsync()
+    {
+        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForAnyThreadAsync(Context.Channel.Id);
+
+        await stateResult.SwitchFirstAsync(
+            async state => await RespondAsync($"State Id: `{state.Id}`", ephemeral: true),
+            async error => await RespondAsync(error.Description, ephemeral: true));
+    }
+
     [SlashCommand("retry", "Retry proposal publication.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task RetryAsync([Summary("id", "State id.")] string id)

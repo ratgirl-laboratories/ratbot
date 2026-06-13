@@ -141,6 +141,7 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
         if (!publishResult.IsError)
         {
             await service.RecordPublishedAsync(updated.Id, publishResult.Value, ct);
+            await workflow.LockArchiveThreadAsync(updated.SuggestionThreadChannelId);
             return;
         }
 

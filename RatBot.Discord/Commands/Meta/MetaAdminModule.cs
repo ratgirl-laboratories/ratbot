@@ -22,9 +22,9 @@ public sealed class MetaAdminModule(
 
     [SlashCommand("state", "View meta proposal state.")]
     [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task StateAsync([Summary("id", "State id.")] string id)
+    public async Task StateAsync([Summary("id", "State id.")] string? id = null)
     {
-        ErrorOr<MetaProposalState> stateResult = await FindStateAsync(id);
+        ErrorOr<MetaProposalState> stateResult = await ResolveStateAsync(id);
 
         await stateResult.SwitchFirstAsync(
             async state => await RespondAsync(FormatState(state), ephemeral: true),
@@ -44,9 +44,9 @@ public sealed class MetaAdminModule(
 
     [SlashCommand("retry", "Retry proposal publication.")]
     [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task RetryAsync([Summary("id", "State id.")] string id)
+    public async Task RetryAsync([Summary("id", "State id.")] string? id = null)
     {
-        ErrorOr<MetaProposalState> stateResult = await FindStateAsync(id);
+        ErrorOr<MetaProposalState> stateResult = await ResolveStateAsync(id);
 
         if (stateResult.IsError)
         {
@@ -79,6 +79,9 @@ public sealed class MetaAdminModule(
         ErrorOr<MetaProposalState> updated =
             await metaProposalService.RecordPublishedAsync(state.Id, publishResult.Value);
 
+        if (!updated.IsError)
+            await workflow.LockArchiveThreadAsync(updated.Value.SuggestionThreadChannelId);
+
         await updated.SwitchFirstAsync(
             async _ => await FollowupAsync("Proposal marked published.", ephemeral: true),
             async error => await FollowupAsync(error.Description, ephemeral: true));
@@ -86,9 +89,9 @@ public sealed class MetaAdminModule(
 
     [SlashCommand("close", "Terminalize a suggestion.")]
     [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task CloseAsync([Summary("id", "State id.")] string id)
+    public async Task CloseAsync([Summary("id", "State id.")] string? id = null)
     {
-        ErrorOr<MetaProposalState> stateResult = await FindStateAsync(id);
+        ErrorOr<MetaProposalState> stateResult = await ResolveStateAsync(id);
 
         if (stateResult.IsError)
         {
@@ -108,9 +111,9 @@ public sealed class MetaAdminModule(
 
     [SlashCommand("forget", "Forget unsubmitted state.")]
     [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task ForgetAsync([Summary("id", "State id.")] string id)
+    public async Task ForgetAsync([Summary("id", "State id.")] string? id = null)
     {
-        ErrorOr<MetaProposalState> stateResult = await FindStateAsync(id);
+        ErrorOr<MetaProposalState> stateResult = await ResolveStateAsync(id);
 
         if (stateResult.IsError)
         {
@@ -129,11 +132,10 @@ public sealed class MetaAdminModule(
     [SlashCommand("publish", "Mark as manually published.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task PublishAsync(
-        [Summary("id", "State id.")] string id,
-        [Summary("thread", "Proposal thread.")]
-        IThreadChannel thread)
+        IThreadChannel thread,
+        [Summary("id", "State id.")] string? id = null)
     {
-        ErrorOr<MetaProposalState> stateResult = await FindStateAsync(id);
+        ErrorOr<MetaProposalState> stateResult = await ResolveStateAsync(id);
 
         if (stateResult.IsError)
         {
@@ -144,9 +146,20 @@ public sealed class MetaAdminModule(
         ErrorOr<MetaProposalState> updated =
             await metaProposalService.MarkPublishedAsync(stateResult.Value.Id, thread.Id);
 
+        if (!updated.IsError)
+            await workflow.LockArchiveThreadAsync(updated.Value.SuggestionThreadChannelId);
+
         await updated.SwitchFirstAsync(
             async _ => await RespondAsync("Proposal marked published.", ephemeral: true),
             async error => await RespondAsync(error.Description, ephemeral: true));
+    }
+
+    private async Task<ErrorOr<MetaProposalState>> ResolveStateAsync(string? id)
+    {
+        if (id is not null)
+            return await FindStateAsync(id);
+
+        return await metaProposalService.GetForAnyThreadAsync(Context.Channel.Id);
     }
 
     private Task<ErrorOr<MetaProposalState>> FindStateAsync(string id) =>

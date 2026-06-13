@@ -8,7 +8,6 @@ public sealed class MetaAdminModule(
     MetaProposalService metaProposalService,
     MetaProposalDiscordWorkflow workflow) : SlashCommandBase
 {
-
     private static string FormatState(MetaProposalState state) =>
         $"""
          Id: `{state.Id}`
@@ -20,6 +19,7 @@ public sealed class MetaAdminModule(
          Poll message: `{state.PollMessageId?.ToString() ?? "none"}`
          Publication retry failures: `{state.PublicationRetryFailures}`
          """;
+
     [SlashCommand("state", "View meta proposal state.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task StateAsync([Summary("id", "State id.")] string id)
@@ -52,12 +52,12 @@ public sealed class MetaAdminModule(
             return;
         }
 
-        await DeferAsync(true);
+        await DeferAsync(ephemeral: true);
 
         ErrorOr<ulong> publishResult = await workflow.PublishProposalAsync(
             state,
             settingsResult.Value,
-            false);
+            pingCabinet: false);
 
         if (publishResult.IsError)
         {

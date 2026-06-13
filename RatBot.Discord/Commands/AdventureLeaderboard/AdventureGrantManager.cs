@@ -29,3 +29,4 @@ public static class AdventureGrantManager
         return new AdventureAccessGrants(grants.ToImmutable());
     }
 }
+

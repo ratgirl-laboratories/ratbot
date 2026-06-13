@@ -25,14 +25,14 @@ public static class DependencyInjection
             services.AddSingleton<IRpsGameStore, RpsGameStore>();
 
             // Repositories and unit of work
-            services.AddScoped<IUnitOfWork, BotDbContext>();
-            services.AddScoped<IRepository<MetaSuggestionSettings>, BotDbContext>();
-            services.AddScoped<IMetaProposalRepository, BotDbContext>();
+            services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<BotDbContext>());
+            services.AddScoped<IRepository<MetaSuggestionSettings>>(sp => sp.GetRequiredService<BotDbContext>());
+            services.AddScoped<IMetaProposalRepository>(sp => sp.GetRequiredService<BotDbContext>());
 
             services.AddScoped<IAutobannedUserRepository, AutobannedUserRepository>();
             services.AddScoped<IImageSpamSettingsStore, ImageSpamSettingsStore>();
             services.AddScoped<IQuorumSettingsRepository, QuorumSettingsRepository>();
-            services.AddScoped<IEmojiRepository, BotDbContext>();
+            services.AddScoped<IEmojiRepository>(sp => sp.GetRequiredService<BotDbContext>());
         }
     }
 }

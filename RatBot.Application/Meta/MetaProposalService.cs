@@ -83,7 +83,7 @@ public sealed class MetaProposalService(
         CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindBySuggestionThreadAsync(suggestionThreadChannelId, ct);
-        return state is null ? MetaProposalErrors.SuggestionNotTracked : state;
+        return state is not null ? state : MetaProposalErrors.SuggestionNotTracked;
     }
 
     public async Task<ErrorOr<MetaProposalState>> GetForAnyThreadAsync(
@@ -91,13 +91,13 @@ public sealed class MetaProposalService(
         CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByProposalThreadAsync(threadChannelId, ct);
-        return state is null ? MetaProposalErrors.ThreadNotTracked : state;
+        return state is not null ? state : MetaProposalErrors.ThreadNotTracked;
     }
 
     public async Task<ErrorOr<MetaProposalState>> GetByIdAsync(Guid stateId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByIdAsync(stateId, ct);
-        return state is null ? MetaProposalErrors.ThreadNotTracked : state;
+        return state is not null ? state : MetaProposalErrors.ThreadNotTracked;
     }
 
     public async Task<ErrorOr<MetaProposalState>> GetByPollMessageAsync(
@@ -105,7 +105,7 @@ public sealed class MetaProposalService(
         CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByPollMessageAsync(pollMessageId, ct);
-        return state is null ? MetaProposalErrors.ThreadNotTracked : state;
+        return state is not null ? state : MetaProposalErrors.ThreadNotTracked;
     }
 
     public async Task<ErrorOr<MetaProposalState>> StartPollAsync(

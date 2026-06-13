@@ -35,7 +35,7 @@ public sealed class MetaCabinetModule(
         }
 
         if (hours != MetaCommandIds.DefaultPollHours
-            && !MetaCommandPermissions.CanOverrideDuration(settingsResult.Value, user))
+            && !MetaCommandPermissions.IsChairOrAdmin(settingsResult.Value, user))
         {
             await RespondAsync("Only administrators or the Cabinet Chair may override poll duration.", ephemeral: true);
             return;
@@ -115,9 +115,9 @@ public sealed class MetaCabinetModule(
             return;
         }
 
-        if (Context.User is not IGuildUser user || !MetaCommandPermissions.IsCabinet(settingsResult.Value, user))
+        if (Context.User is not IGuildUser user || !MetaCommandPermissions.IsChairOrAdmin(settingsResult.Value, user))
         {
-            await RespondAsync("Only Cabinet, Cabinet Chair, or administrators may use this command.", ephemeral: true);
+            await RespondAsync("Only the Cabinet Chair or administrators may use this command.", ephemeral: true);
             return;
         }
 

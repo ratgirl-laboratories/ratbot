@@ -15,7 +15,7 @@ public sealed class MetaModule(
         uint hours) =>
         MetaCommandPermissions.IsAuthorOrAdmin(state, user)
         || MetaCommandPermissions.IsCabinet(settings, user)
-        || hours != MetaCommandIds.DefaultPollHours && MetaCommandPermissions.CanOverrideDuration(settings, user);
+        || hours != MetaCommandIds.DefaultPollHours && MetaCommandPermissions.IsChairOrAdmin(settings, user);
     [SlashCommand("propose", "Create a proposal poll in this suggestion thread.")]
     public async Task ProposeAsync()
     {
@@ -99,7 +99,7 @@ public sealed class MetaModule(
         }
 
         if (hours != MetaCommandIds.DefaultPollHours
-            && !MetaCommandPermissions.CanOverrideDuration(settingsResult.Value, user))
+            && !MetaCommandPermissions.IsChairOrAdmin(settingsResult.Value, user))
         {
             await FollowupAsync(
                 "Only administrators or the Cabinet Chair may override poll duration.",

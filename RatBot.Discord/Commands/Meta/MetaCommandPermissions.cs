@@ -2,8 +2,6 @@ namespace RatBot.Discord.Commands.Meta;
 
 internal static class MetaCommandPermissions
 {
-    public static bool IsAdmin(IGuildUser user) => user.GuildPermissions.Administrator;
-
     public static bool IsCabinet(MetaSuggestionSettings settings, IGuildUser user) =>
         IsAdmin(user)
         || user.RoleIds.Contains(settings.CabinetRoleId)
@@ -17,6 +15,8 @@ internal static class MetaCommandPermissions
     public static bool IsAuthorOrAdmin(MetaProposalState state, IGuildUser user) =>
         IsAdmin(user) || user.Id == state.OriginalThreadAuthorUserId;
 
-    public static bool CanOverrideDuration(MetaSuggestionSettings settings, IGuildUser user) =>
+    public static bool IsChairOrAdmin(MetaSuggestionSettings settings, IGuildUser user) =>
         IsAdmin(user) || user.RoleIds.Contains(settings.CabinetChairRoleId);
+
+    private static bool IsAdmin(IGuildUser user) => user.GuildPermissions.Administrator;
 }

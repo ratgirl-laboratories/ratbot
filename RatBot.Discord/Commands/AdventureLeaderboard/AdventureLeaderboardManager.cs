@@ -473,7 +473,7 @@ public sealed partial class AdventureLeaderboardManager(
             guildMemberUserIds,
             DateTimeOffset.UtcNow);
 
-        return componentBuilder.Build(model);
+        return AdventureLeaderboardComponentBuilder.Build(model);
     }
 
     private async Task<(TrackedLeaderboardMessageTarget? Target, bool ShouldRecreateSequence)>

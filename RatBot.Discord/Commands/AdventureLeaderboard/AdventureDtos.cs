@@ -101,7 +101,7 @@ public readonly record struct AdventureLeaderboardViewModel(
     int TotalEntrants,
     int VisibleEntrants,
     DateTimeOffset LastUpdated,
-    IReadOnlyList<AdventureLeaderboardViewRow> Rows);
+    ImmutableArray<AdventureLeaderboardViewRow> Rows);
 
 public readonly record struct AdventureLeaderboardViewRow(
     int Rank,

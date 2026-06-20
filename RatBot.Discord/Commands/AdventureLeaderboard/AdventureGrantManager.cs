@@ -7,7 +7,7 @@ public static class AdventureGrantManager
     public static AdventureAccessGrants GenerateAdventureAccessGrants(
         AdventureEntrySnapshot snapshot,
         ImmutableDictionary<int, ulong> threadIdsByScorePart,
-        ImmutableHashSet<ulong> guildMemberUserIds)
+        ImmutableHashSet<ulong> adventurerUserIds)
     {
         ImmutableHashSet<AdventureAccessGrant>.Builder grants = ImmutableHashSet.CreateBuilder<AdventureAccessGrant>();
 
@@ -16,7 +16,7 @@ public static class AdventureGrantManager
             if (!ulong.TryParse(row.UserId, out ulong userId))
                 continue;
 
-            if (!guildMemberUserIds.Contains(userId))
+            if (!adventurerUserIds.Contains(userId))
                 continue;
 
             IReadOnlySet<int> completedParts = AdventureScorePart.CompletedParts(row.Progress);
@@ -29,4 +29,3 @@ public static class AdventureGrantManager
         return new AdventureAccessGrants(grants.ToImmutable());
     }
 }
-

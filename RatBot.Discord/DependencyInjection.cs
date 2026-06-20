@@ -31,7 +31,9 @@ public static class DependencyInjection
                 .ValidateOnStart();
 
             services.AddOptions<AdventureLeaderboardOptions>()
-                .Bind(configuration.GetSection(AdventureLeaderboardOptions.SectionName));
+                .Bind(configuration.GetSection(AdventureLeaderboardOptions.SectionName))
+                .Validate(options => options.AdventurerRoleId != 0, "Adventure role id is required.")
+                .ValidateOnStart();
 
             services.AddSingleton(sp =>
             {

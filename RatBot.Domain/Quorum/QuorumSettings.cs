@@ -7,9 +7,7 @@ public sealed class QuorumSettings
 {
     private readonly List<QuorumSettingsRole> _roles = [];
 
-    private QuorumSettings()
-    {
-    }
+    private QuorumSettings() { }
 
     private QuorumSettings(QuorumTarget target)
     {
@@ -28,10 +26,7 @@ public sealed class QuorumSettings
 
     public double Proportion { get; private set; }
 
-    public static ErrorOr<QuorumSettings> Create(
-        QuorumTarget target,
-        IEnumerable<ulong> roleIds,
-        Proportion proportion)
+    public static ErrorOr<QuorumSettings> Create(QuorumTarget target, IEnumerable<ulong> roleIds, Proportion proportion)
     {
         ErrorOr<QuorumTarget> targetResult = QuorumTarget.Create(target.GuildId, target.TargetType, target.TargetId);
 
@@ -41,15 +36,12 @@ public sealed class QuorumSettings
         QuorumSettings settings = new QuorumSettings(targetResult.Value);
         ErrorOr<Success> updateResult = settings.Update(roleIds, proportion);
 
-        return updateResult.IsError
-            ? updateResult.Errors
-            : settings;
+        return updateResult.IsError ? updateResult.Errors : settings;
     }
 
     public ErrorOr<Success> Update(IEnumerable<ulong> roleIds, Proportion proportion)
     {
-        ErrorOr<Proportion> quorumProportionResult =
-            Quorum.Proportion.Create(proportion.Value);
+        ErrorOr<Proportion> quorumProportionResult = Quorum.Proportion.Create(proportion.Value);
 
         if (quorumProportionResult.IsError)
             return quorumProportionResult.Errors;
@@ -70,14 +62,13 @@ public sealed class QuorumSettings
         _roles.Clear();
 
         _roles.AddRange(
-            roleIds
-                .Select(roleId => new QuorumSettingsRole
-                {
-                    Id = roleId,
-                    GuildId = GuildId,
-                    TargetType = TargetType,
-                    TargetId = TargetId,
-                })
+            roleIds.Select(roleId => new QuorumSettingsRole
+            {
+                Id = roleId,
+                GuildId = GuildId,
+                TargetType = TargetType,
+                TargetId = TargetId,
+            })
         );
     }
 }

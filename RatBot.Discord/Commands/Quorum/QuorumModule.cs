@@ -7,9 +7,7 @@ public sealed class QuorumModule(ILogger logger, IQuorumSettingsReader settingsR
     private readonly ILogger _logger = logger.ForContext<QuorumModule>();
 
     private static string DescribeError(Error error) =>
-        error.Type == ErrorType.NotFound
-            ? "No quorum settings found for this channel or category."
-            : error.Description;
+        error.Type == ErrorType.NotFound ? "No quorum settings found for this channel or category." : error.Description;
 
     [SlashCommand("count", "Count the number of members needed for quorum.")]
     public async Task CountAsync()
@@ -22,10 +20,7 @@ public sealed class QuorumModule(ILogger logger, IQuorumSettingsReader settingsR
 
         ICategoryChannel? category = await currentChannel.GetCategoryAsync();
 
-        ErrorOr<QuorumSettings> configResult = await settingsReader.GetEffectiveAsync(
-            currentChannel.GuildId,
-            currentChannel.Id,
-            category?.Id);
+        ErrorOr<QuorumSettings> configResult = await settingsReader.GetEffectiveAsync(currentChannel.GuildId, currentChannel.Id, category?.Id);
 
         await configResult.SwitchFirstAsync(
             async config => await RespondAsync(GetQuorumCount(config), ephemeral: false),
@@ -39,9 +34,7 @@ public sealed class QuorumModule(ILogger logger, IQuorumSettingsReader settingsR
 
         SocketGuild guild = Context.Guild!;
 
-        SocketRole[] roles = config.Roles.Select(role => guild.GetRole(role.Id))
-            .Where(role => role is not null)
-            .ToArray();
+        SocketRole[] roles = config.Roles.Select(role => guild.GetRole(role.Id)).Where(role => role is not null).ToArray();
 
         HashSet<ulong> usersWithRoles = roles.SelectMany(role => role.Members).Select(user => user.Id).ToHashSet();
 

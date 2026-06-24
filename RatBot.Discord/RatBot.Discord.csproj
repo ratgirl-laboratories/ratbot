@@ -6,16 +6,19 @@
         <Version>0.0.1-1</Version>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Discord.Net.Interactions"/>
-        <PackageReference Include="Discord.Net.WebSocket"/>
-        <PackageReference Include="ErrorOr"/>
-        <PackageReference Include="JetBrains.Annotations"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting"/>
-        <PackageReference Include="Serilog"/>
+        <PackageReference Include="Discord.Net.Interactions" />
+        <PackageReference Include="Discord.Net.WebSocket" />
+        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="JetBrains.Annotations" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Serilog" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\RatBot.Application\RatBot.Application.csproj"/>
-        <ProjectReference Include="..\RatBot.Infrastructure\RatBot.Infrastructure.csproj"/>
-        <ProjectReference Include="..\RatBot.Domain\RatBot.Domain.csproj"/>
+        <ProjectReference Include="..\RatBot.Application\RatBot.Application.csproj" />
+        <ProjectReference Include="..\RatBot.Infrastructure\RatBot.Infrastructure.csproj" />
+        <ProjectReference Include="..\RatBot.Domain\RatBot.Domain.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="TemporaryPingRole\" />
     </ItemGroup>
 </Project>

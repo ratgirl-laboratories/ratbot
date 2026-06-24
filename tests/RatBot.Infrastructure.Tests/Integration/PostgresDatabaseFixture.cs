@@ -25,7 +25,7 @@ public sealed class PostgresDatabaseFixture
         return new BotDbContext(options);
     }
 
-    public async static Task ResetAsync()
+    public static async Task ResetAsync()
     {
         BotDbContext db = CreateDbContext();
 
@@ -43,8 +43,7 @@ public sealed class PostgresDatabaseFixture
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        _container = new PostgreSqlBuilder("postgres:17-alpine")
-            .Build();
+        _container = new PostgreSqlBuilder("postgres:17-alpine").Build();
 
         await _container.StartAsync();
 

@@ -11,20 +11,16 @@ public sealed class AdventureLeaderboardClient(IOptions<AdventureLeaderboardOpti
 
     private readonly AdventureLeaderboardOptions _options = options.Value;
 
-    public async Task<IReadOnlyList<AdventureEntryDto>> GetLeaderboardAsync(
-        int year,
-        CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<AdventureEntryDto>> GetLeaderboardAsync(int year, CancellationToken cancellationToken)
     {
         Uri uri = new Uri(new Uri(_options.BaseUrl, UriKind.Absolute), year.ToString());
 
         using HttpResponseMessage response = await HttpClient.GetAsync(uri, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        IReadOnlyList<AdventureEntryDto>? rows =
-            await response.Content.ReadFromJsonAsync<IReadOnlyList<AdventureEntryDto>>(
-                    JsonOptions,
-                    cancellationToken)
-                .ConfigureAwait(false);
+        IReadOnlyList<AdventureEntryDto>? rows = await response
+            .Content.ReadFromJsonAsync<IReadOnlyList<AdventureEntryDto>>(JsonOptions, cancellationToken)
+            .ConfigureAwait(false);
 
         return rows ?? [];
     }

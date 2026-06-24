@@ -2,10 +2,7 @@ using RatBot.Discord.BackgroundWorkers;
 
 namespace RatBot.Discord.Gateway;
 
-public sealed class UserUpdatedGatewayHandler(
-    DiscordSocketClient discordClient,
-    IRoleColourSyncQueue syncQueue,
-    ILogger logger)
+public sealed class UserUpdatedGatewayHandler(DiscordSocketClient discordClient, IRoleColourSyncQueue syncQueue, ILogger logger)
     : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<UserUpdatedGatewayHandler>();
@@ -34,9 +31,10 @@ public sealed class UserUpdatedGatewayHandler(
 
                 IReadOnlyCollection<ulong> afterRoles = ((IGuildUser)after).RoleIds;
 
-                bool rolesChanged = beforeRoles is null
-                                    || beforeRoles.Count != afterRoles.Count
-                                    || !beforeRoles.OrderBy(x => x).SequenceEqual(afterRoles.OrderBy(x => x));
+                bool rolesChanged =
+                    beforeRoles is null
+                    || beforeRoles.Count != afterRoles.Count
+                    || !beforeRoles.OrderBy(x => x).SequenceEqual(afterRoles.OrderBy(x => x));
 
                 if (!rolesChanged)
                     return Task.CompletedTask;

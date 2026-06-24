@@ -19,20 +19,20 @@ namespace RatBot.Infrastructure.Migrations
                     ChannelId = table.Column<long>(type: "bigint", nullable: false),
                     MessageId = table.Column<long>(type: "bigint", nullable: false),
                     Year = table.Column<int>(type: "integer", nullable: false),
-                    LastRenderHash = table.Column<string>(type: "text", nullable: false)
+                    LastRenderHash = table.Column<string>(type: "text", nullable: false),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AdventureLeaderboardMessageState", x => x.Id);
                     table.CheckConstraint("CK_AdventureLeaderboardMessageState_SingletonId", "\"Id\" = 1");
-                });
+                }
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "AdventureLeaderboardMessageState");
+            migrationBuilder.DropTable(name: "AdventureLeaderboardMessageState");
         }
     }
 }

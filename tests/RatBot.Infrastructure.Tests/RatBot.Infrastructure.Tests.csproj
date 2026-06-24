@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <LangVersion>latest</LangVersion>
@@ -9,24 +8,23 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="coverlet.collector"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-        <PackageReference Include="NUnit"/>
-        <PackageReference Include="NUnit.Analyzers"/>
-        <PackageReference Include="NUnit3TestAdapter"/>
-        <PackageReference Include="Shouldly"/>
-        <PackageReference Include="Testcontainers"/>
-        <PackageReference Include="Testcontainers.PostgreSql"/>
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NUnit" />
+        <PackageReference Include="NUnit.Analyzers" />
+        <PackageReference Include="NUnit3TestAdapter" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="Testcontainers" />
+        <PackageReference Include="Testcontainers.PostgreSql" />
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="NUnit.Framework"/>
+        <Using Include="NUnit.Framework" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\RatBot.Application\RatBot.Application.csproj"/>
-        <ProjectReference Include="..\..\RatBot.Domain\RatBot.Domain.csproj"/>
-        <ProjectReference Include="..\..\RatBot.Infrastructure\RatBot.Infrastructure.csproj"/>
+        <ProjectReference Include="..\..\RatBot.Application\RatBot.Application.csproj" />
+        <ProjectReference Include="..\..\RatBot.Domain\RatBot.Domain.csproj" />
+        <ProjectReference Include="..\..\RatBot.Infrastructure\RatBot.Infrastructure.csproj" />
     </ItemGroup>
-
 </Project>

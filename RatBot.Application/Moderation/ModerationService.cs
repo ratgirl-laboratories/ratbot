@@ -6,11 +6,7 @@ public sealed class ModerationService(IAutobannedUserRepository autobannedUsers,
 {
     private readonly ILogger _logger = logger.ForContext<ModerationService>();
 
-    public async Task<ErrorOr<AutobannedUser>> RegisterAutobanAsync(
-        ulong guildId,
-        ulong userId,
-        ulong modId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<AutobannedUser>> RegisterAutobanAsync(ulong guildId, ulong userId, ulong modId, CancellationToken ct = default)
     {
         AutobannedUser? existing = await autobannedUsers.GetAsync(guildId, userId, ct);
 
@@ -21,11 +17,7 @@ public sealed class ModerationService(IAutobannedUserRepository autobannedUsers,
 
         await autobannedUsers.AddAsync(autobannedUser, ct);
 
-        _logger.Information(
-            "Registered user {BannedUserId} for autoban in guild {GuildId} by moderator {ModeratorId}.",
-            userId,
-            guildId,
-            modId);
+        _logger.Information("Registered user {BannedUserId} for autoban in guild {GuildId} by moderator {ModeratorId}.", userId, guildId, modId);
 
         return autobannedUser;
     }

@@ -2,10 +2,7 @@ using RatBot.Application.Common;
 
 namespace RatBot.Application.Meta;
 
-public sealed class MetaProposalService(
-    IUnitOfWork uow,
-    IMetaProposalRepository proposals,
-    ILogger logger)
+public sealed class MetaProposalService(IUnitOfWork uow, IMetaProposalRepository proposals, ILogger logger)
 {
     private static readonly TimeSpan PublicationRetryCooldown = TimeSpan.FromSeconds(10);
     private readonly ILogger _logger = logger.ForContext<MetaProposalService>();
@@ -21,9 +18,7 @@ public sealed class MetaProposalService(
 
         ErrorOr<Success> configured = settings.Value.EnsureProposalWorkflowConfigured();
 
-        return configured.IsError
-            ? configured.Errors
-            : settings.Value;
+        return configured.IsError ? configured.Errors : settings.Value;
     }
 
     public async Task<ErrorOr<MetaProposalState>> TrackSuggestionThreadAsync(
@@ -32,7 +27,8 @@ public sealed class MetaProposalService(
         ulong suggestionsForumChannelId,
         ulong originalThreadAuthorUserId,
         DateTimeOffset nowUtc,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         MetaProposalState? existing = await proposals.FindBySuggestionThreadAsync(suggestionThreadChannelId, ct);
 
@@ -45,7 +41,8 @@ public sealed class MetaProposalService(
             suggestionThreadChannelId,
             suggestionsForumChannelId,
             originalThreadAuthorUserId,
-            nowUtc);
+            nowUtc
+        );
 
         if (create.IsError)
             return create.Errors;
@@ -53,17 +50,12 @@ public sealed class MetaProposalService(
         proposals.Add(create.Value);
         await uow.SaveChangesAsync(ct);
 
-        _logger.Information(
-            "Tracked meta suggestion thread {SuggestionThreadChannelId} in guild {GuildId}.",
-            suggestionThreadChannelId,
-            guildId);
+        _logger.Information("Tracked meta suggestion thread {SuggestionThreadChannelId} in guild {GuildId}.", suggestionThreadChannelId, guildId);
 
         return create.Value;
     }
 
-    public async Task<ErrorOr<Success>> ForgetDeletedUnsubmittedSuggestionAsync(
-        ulong suggestionThreadChannelId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<Success>> ForgetDeletedUnsubmittedSuggestionAsync(ulong suggestionThreadChannelId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindBySuggestionThreadAsync(suggestionThreadChannelId, ct);
 
@@ -78,17 +70,13 @@ public sealed class MetaProposalService(
         return Result.Success;
     }
 
-    public async Task<ErrorOr<MetaProposalState>> GetForSuggestionThreadAsync(
-        ulong suggestionThreadChannelId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> GetForSuggestionThreadAsync(ulong suggestionThreadChannelId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindBySuggestionThreadAsync(suggestionThreadChannelId, ct);
         return state is not null ? state : MetaProposalErrors.SuggestionNotTracked;
     }
 
-    public async Task<ErrorOr<MetaProposalState>> GetForAnyThreadAsync(
-        ulong threadChannelId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> GetForAnyThreadAsync(ulong threadChannelId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByProposalThreadAsync(threadChannelId, ct);
         return state is not null ? state : MetaProposalErrors.ThreadNotTracked;
@@ -100,9 +88,7 @@ public sealed class MetaProposalService(
         return state is not null ? state : MetaProposalErrors.ThreadNotTracked;
     }
 
-    public async Task<ErrorOr<MetaProposalState>> GetByPollMessageAsync(
-        ulong pollMessageId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> GetByPollMessageAsync(ulong pollMessageId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByPollMessageAsync(pollMessageId, ct);
         return state is not null ? state : MetaProposalErrors.ThreadNotTracked;
@@ -118,7 +104,8 @@ public sealed class MetaProposalService(
         ulong pollMessageId,
         DateTimeOffset pollExpiresAtUtc,
         DateTimeOffset nowUtc,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         MetaProposalState? state = await proposals.FindBySuggestionThreadAsync(suggestionThreadChannelId, ct);
 
@@ -133,7 +120,8 @@ public sealed class MetaProposalService(
             specification,
             pollMessageId,
             pollExpiresAtUtc,
-            nowUtc);
+            nowUtc
+        );
 
         if (result.IsError)
             return result.Errors;
@@ -142,10 +130,7 @@ public sealed class MetaProposalService(
         return state;
     }
 
-    public async Task<ErrorOr<MetaProposalState>> CompletePollAsync(
-        Guid stateId,
-        bool submitWon,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> CompletePollAsync(Guid stateId, bool submitWon, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByIdAsync(stateId, ct);
 
@@ -161,9 +146,7 @@ public sealed class MetaProposalService(
         return state;
     }
 
-    public async Task<ErrorOr<MetaProposalState>> ClearDeletedPollAsync(
-        Guid stateId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> ClearDeletedPollAsync(Guid stateId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByIdAsync(stateId, ct);
 
@@ -179,9 +162,7 @@ public sealed class MetaProposalService(
         return state;
     }
 
-    public async Task<ErrorOr<MetaProposalState>> ClearDeletedPollByMessageAsync(
-        ulong pollMessageId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> ClearDeletedPollByMessageAsync(ulong pollMessageId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByPollMessageAsync(pollMessageId, ct);
 
@@ -197,9 +178,7 @@ public sealed class MetaProposalService(
         return state;
     }
 
-    public async Task<ErrorOr<MetaProposalState>> RecordPollFinalizationRetryAsync(
-        Guid stateId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> RecordPollFinalizationRetryAsync(Guid stateId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByIdAsync(stateId, ct);
 
@@ -215,16 +194,10 @@ public sealed class MetaProposalService(
         return state;
     }
 
-    public Task<IReadOnlyList<MetaProposalState>> FindExpiredPollsAsync(
-        DateTimeOffset nowUtc,
-        int limit,
-        CancellationToken ct = default) =>
+    public Task<IReadOnlyList<MetaProposalState>> FindExpiredPollsAsync(DateTimeOffset nowUtc, int limit, CancellationToken ct = default) =>
         proposals.FindExpiredPollsAsync(nowUtc, limit, ct);
 
-    public async Task<ErrorOr<MetaProposalState>> RecordPublishedAsync(
-        Guid stateId,
-        ulong proposalThreadChannelId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> RecordPublishedAsync(Guid stateId, ulong proposalThreadChannelId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByIdAsync(stateId, ct);
 
@@ -244,7 +217,8 @@ public sealed class MetaProposalService(
         Guid stateId,
         ulong errorMessageId,
         DateTimeOffset nowUtc,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         MetaProposalState? state = await proposals.FindByIdAsync(stateId, ct);
 
@@ -263,15 +237,15 @@ public sealed class MetaProposalService(
     public async Task<ErrorOr<MetaProposalState>> MarkPublicationRetryStartedAsync(
         Guid stateId,
         DateTimeOffset nowUtc,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         MetaProposalState? state = await proposals.FindByIdAsync(stateId, ct);
 
         if (state is null)
             return MetaProposalErrors.ThreadNotTracked;
 
-        if (state.LastPublicationRetryAtUtc is { } lastRetry
-            && nowUtc - lastRetry < PublicationRetryCooldown)
+        if (state.LastPublicationRetryAtUtc is { } lastRetry && nowUtc - lastRetry < PublicationRetryCooldown)
             return MetaProposalErrors.RetryCooldownActive;
 
         ErrorOr<Success> result = state.MarkPublicationRetryStarted(nowUtc);
@@ -288,7 +262,8 @@ public sealed class MetaProposalService(
         ulong vetoedByUserId,
         string reason,
         DateTimeOffset nowUtc,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         MetaProposalState? state = await proposals.FindByProposalThreadAsync(threadChannelId, ct);
 
@@ -328,19 +303,14 @@ public sealed class MetaProposalService(
             return MetaProposalErrors.ThreadNotTracked;
 
         if (state.HasSubmittedProposal || state.IsTerminal)
-            return Error.Conflict(
-                "MetaProposal.CannotForgetSubmitted",
-                "Only unsubmitted suggestion state can be forgotten.");
+            return Error.Conflict("MetaProposal.CannotForgetSubmitted", "Only unsubmitted suggestion state can be forgotten.");
 
         proposals.Delete(state);
         await uow.SaveChangesAsync(ct);
         return Result.Success;
     }
 
-    public async Task<ErrorOr<MetaProposalState>> MarkPublishedAsync(
-        Guid stateId,
-        ulong proposalThreadChannelId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> MarkPublishedAsync(Guid stateId, ulong proposalThreadChannelId, CancellationToken ct = default)
     {
         MetaProposalState? state = await proposals.FindByIdAsync(stateId, ct);
 

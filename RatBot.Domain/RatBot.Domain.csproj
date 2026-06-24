@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
-        <PackageReference Include="ErrorOr"/>
-        <PackageReference Include="JetBrains.Annotations"/>
+        <PackageReference Include="ErrorOr" />
+        <PackageReference Include="JetBrains.Annotations" />
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="TemporaryPingRole\" />
     </ItemGroup>
 </Project>

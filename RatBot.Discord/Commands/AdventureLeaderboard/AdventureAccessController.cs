@@ -10,16 +10,18 @@ namespace RatBot.Discord.Commands.AdventureLeaderboard;
 public sealed class AdventureAccessController(
     IDbContextFactory<BotDbContext> dbContextFactory,
     IOptions<AdventureLeaderboardOptions> options,
-    ILogger logger)
+    ILogger logger
+)
 {
     private static readonly AllowedMentions UserMentionsOnly = new AllowedMentions(AllowedMentionTypes.Users);
     private readonly ILogger _logger = logger.ForContext<AdventureAccessController>();
     private readonly AdventureLeaderboardOptions _options = options.Value;
 
-    private async static Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(
+    private static async Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(
         SocketGuild guild,
         AdventureEntrySnapshot snapshot,
-        RequestOptions options)
+        RequestOptions options
+    )
     {
         ImmutableDictionary<ulong, IGuildUser>.Builder members = ImmutableDictionary.CreateBuilder<ulong, IGuildUser>();
 
@@ -28,10 +30,8 @@ public sealed class AdventureAccessController(
             if (!ulong.TryParse(row.UserId, out ulong userId))
                 continue;
 
-            IGuildUser? member = guild.GetUser(userId)
-                                 ?? await ((IGuild)guild)
-                                     .GetUserAsync(userId, CacheMode.AllowDownload, options)
-                                     .ConfigureAwait(false);
+            IGuildUser? member =
+                guild.GetUser(userId) ?? await ((IGuild)guild).GetUserAsync(userId, CacheMode.AllowDownload, options).ConfigureAwait(false);
 
             if (member is not null)
                 members.Add(userId, member);
@@ -40,14 +40,13 @@ public sealed class AdventureAccessController(
         return members.ToImmutable();
     }
 
-    private async static Task<HashSet<ulong>> GetThreadMemberIdsAsync(IThreadChannel thread, RequestOptions options)
+    private static async Task<HashSet<ulong>> GetThreadMemberIdsAsync(IThreadChannel thread, RequestOptions options)
     {
         switch (thread)
         {
             case SocketThreadChannel socketThread:
             {
-                IReadOnlyCollection<SocketThreadUser> users =
-                    await socketThread.GetUsersAsync(options).ConfigureAwait(false);
+                IReadOnlyCollection<SocketThreadUser> users = await socketThread.GetUsersAsync(options).ConfigureAwait(false);
 
                 return users.Select(user => user.Id).ToHashSet();
             }
@@ -55,11 +54,10 @@ public sealed class AdventureAccessController(
             {
                 HashSet<ulong> memberIds = new HashSet<ulong>();
 
-                ConfiguredCancelableAsyncEnumerable<IReadOnlyCollection<RestThreadUser>> userAsyncEnumerator =
-                    restThread
-                        .GetThreadUsersAsync(100, options)
-                        .WithCancellation(options.CancelToken)
-                        .ConfigureAwait(false);
+                ConfiguredCancelableAsyncEnumerable<IReadOnlyCollection<RestThreadUser>> userAsyncEnumerator = restThread
+                    .GetThreadUsersAsync(100, options)
+                    .WithCancellation(options.CancelToken)
+                    .ConfigureAwait(false);
 
                 await foreach (IReadOnlyCollection<RestThreadUser> users in userAsyncEnumerator)
                 foreach (RestThreadUser user in users)
@@ -78,15 +76,11 @@ public sealed class AdventureAccessController(
 
         try
         {
-            await using BotDbContext dbContext =
-                await dbContextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
+            await using BotDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
 
-            links = (await dbContext.AdventureForumThreadLinks
-                    .AsNoTracking()
-                    .OrderBy(link => link.ScorePartIndex)
-                    .ToListAsync(ct)
-                    .ConfigureAwait(false))
-                .ToImmutableArray();
+            links = (
+                await dbContext.AdventureForumThreadLinks.AsNoTracking().OrderBy(link => link.ScorePartIndex).ToListAsync(ct).ConfigureAwait(false)
+            ).ToImmutableArray();
         }
         catch (Exception ex)
         {
@@ -102,24 +96,16 @@ public sealed class AdventureAccessController(
 
         RequestOptions requestOptions = new RequestOptions { CancelToken = ct };
 
-        ImmutableDictionary<ulong, IGuildUser> guildMembers =
-            await ResolveGuildMembersAsync(guild, snapshot, requestOptions)
-                .ConfigureAwait(false);
+        ImmutableDictionary<ulong, IGuildUser> guildMembers = await ResolveGuildMembersAsync(guild, snapshot, requestOptions).ConfigureAwait(false);
 
-        ImmutableDictionary<int, ulong> threadIdsByScorePart = links.ToImmutableDictionary(
-            link => link.ScorePartIndex,
-            link => link.ThreadId);
+        ImmutableDictionary<int, ulong> threadIdsByScorePart = links.ToImmutableDictionary(link => link.ScorePartIndex, link => link.ThreadId);
 
-        ImmutableHashSet<ulong> adventurerUserIds = guildMembers.Values
-            .Where(user => user.RoleIds.Contains(_options.AdventurerRoleId))
+        ImmutableHashSet<ulong> adventurerUserIds = guildMembers
+            .Values.Where(user => user.RoleIds.Contains(_options.AdventurerRoleId))
             .Select(user => user.Id)
             .ToImmutableHashSet();
 
-        AdventureAccessGrants grants =
-            AdventureGrantManager.GenerateAdventureAccessGrants(
-                snapshot,
-                threadIdsByScorePart,
-                adventurerUserIds);
+        AdventureAccessGrants grants = AdventureGrantManager.GenerateAdventureAccessGrants(snapshot, threadIdsByScorePart, adventurerUserIds);
 
         int attempted = 0;
         int alreadyPresent = 0;
@@ -129,8 +115,7 @@ public sealed class AdventureAccessController(
 
         foreach (IGrouping<ulong, AdventureAccessGrant> accessGrants in grants.Grants.GroupBy(grant => grant.ThreadId))
         {
-            IThreadChannel? thread = await ResolveThreadAsync(guild, accessGrants.Key, requestOptions)
-                .ConfigureAwait(false);
+            IThreadChannel? thread = await ResolveThreadAsync(guild, accessGrants.Key, requestOptions).ConfigureAwait(false);
 
             if (thread is null)
             {
@@ -144,8 +129,7 @@ public sealed class AdventureAccessController(
                 continue;
             }
 
-            HashSet<ulong> currentMemberIds =
-                await GetThreadMemberIdsAsync(thread, requestOptions).ConfigureAwait(false);
+            HashSet<ulong> currentMemberIds = await GetThreadMemberIdsAsync(thread, requestOptions).ConfigureAwait(false);
 
             foreach (AdventureAccessGrant grant in accessGrants)
             {
@@ -184,7 +168,8 @@ public sealed class AdventureAccessController(
                         "Failed to add user {UserId} to adventure forum thread {ThreadId} for score part {ScorePartIndex}.",
                         grant.UserId,
                         grant.ThreadId,
-                        grant.ScorePartIndex);
+                        grant.ScorePartIndex
+                    );
                 }
             }
         }
@@ -198,20 +183,20 @@ public sealed class AdventureAccessController(
             alreadyPresent,
             failures,
             notificationFailures,
-            skippedThreads);
+            skippedThreads
+        );
     }
 
-    private async Task<bool> SendAdventureThreadWelcomeAsync(
-        IThreadChannel thread,
-        IGuildUser user,
-        RequestOptions requestOptions)
+    private async Task<bool> SendAdventureThreadWelcomeAsync(IThreadChannel thread, IGuildUser user, RequestOptions requestOptions)
     {
         try
         {
-            await thread.SendMessageAsync(
+            await thread
+                .SendMessageAsync(
                     $"Congratulations, Adventurer {MentionUtils.MentionUser(user.Id)}!",
                     allowedMentions: UserMentionsOnly,
-                    options: requestOptions)
+                    options: requestOptions
+                )
                 .ConfigureAwait(false);
 
             return true;
@@ -222,11 +207,7 @@ public sealed class AdventureAccessController(
         }
         catch (Exception ex)
         {
-            _logger.Warning(
-                ex,
-                "Failed to send adventure forum thread welcome message to user {UserId} in thread {ThreadId}.",
-                user.Id,
-                thread.Id);
+            _logger.Warning(ex, "Failed to send adventure forum thread welcome message to user {UserId} in thread {ThreadId}.", user.Id, thread.Id);
 
             return false;
         }
@@ -255,8 +236,7 @@ public sealed class AdventureAccessController(
         try
         {
             if (thread.IsArchived)
-                await thread.ModifyAsync(properties => properties.Archived = false, requestOptions)
-                    .ConfigureAwait(false);
+                await thread.ModifyAsync(properties => properties.Archived = false, requestOptions).ConfigureAwait(false);
 
             if (!thread.HasJoined)
                 await thread.JoinAsync(requestOptions).ConfigureAwait(false);
@@ -265,13 +245,9 @@ public sealed class AdventureAccessController(
         }
         catch (Exception ex)
         {
-            _logger.Warning(
-                ex,
-                "Adventure forum thread {ThreadId} is inaccessible or could not be unarchived.",
-                thread.Id);
+            _logger.Warning(ex, "Adventure forum thread {ThreadId} is inaccessible or could not be unarchived.", thread.Id);
 
             return false;
         }
     }
-
 }

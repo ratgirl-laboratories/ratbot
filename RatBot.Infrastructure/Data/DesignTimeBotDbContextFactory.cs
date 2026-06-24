@@ -9,7 +9,6 @@ namespace RatBot.Infrastructure.Data;
 /// </summary>
 public sealed class DesignTimeBotDbContextFactory : IDesignTimeDbContextFactory<BotDbContext>
 {
-
     private static string? BuildFromDiscrete(IConfiguration c)
     {
         string? host = c["DB:Host"] ?? c["Database:Host"] ?? Environment.GetEnvironmentVariable("DB__HOST");
@@ -18,18 +17,14 @@ public sealed class DesignTimeBotDbContextFactory : IDesignTimeDbContextFactory<
         string? user = c["DB:User"] ?? c["Database:User"] ?? Environment.GetEnvironmentVariable("DB__USER");
         string? pwd = c["DB:Password"] ?? c["Database:Password"] ?? Environment.GetEnvironmentVariable("DB__PASSWORD");
 
-        if (string.IsNullOrWhiteSpace(host)
-            || string.IsNullOrWhiteSpace(db)
-            || string.IsNullOrWhiteSpace(user)
-            || string.IsNullOrWhiteSpace(pwd))
+        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(db) || string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pwd))
             return null;
 
-        string resolvedPort = string.IsNullOrWhiteSpace(port)
-            ? "5432"
-            : port;
+        string resolvedPort = string.IsNullOrWhiteSpace(port) ? "5432" : port;
 
         return $"Host={host};Port={resolvedPort};Database={db};Username={user};Password={pwd};SSL Mode=Prefer";
     }
+
     /// <summary>
     ///     Creates a design-time <see cref="BotDbContext" /> instance.
     /// </summary>
@@ -48,11 +43,9 @@ public sealed class DesignTimeBotDbContextFactory : IDesignTimeDbContextFactory<
             ?? BuildFromDiscrete(configurationRoot);
 
         if (string.IsNullOrWhiteSpace(connectionString))
-            throw new InvalidOperationException(
-                "Design-time connection string missing. Set DB__CONNECTION_STRING or discrete DB__* vars.");
+            throw new InvalidOperationException("Design-time connection string missing. Set DB__CONNECTION_STRING or discrete DB__* vars.");
 
-        DbContextOptions<BotDbContext> options =
-            new DbContextOptionsBuilder<BotDbContext>().UseNpgsql(connectionString).Options;
+        DbContextOptions<BotDbContext> options = new DbContextOptionsBuilder<BotDbContext>().UseNpgsql(connectionString).Options;
 
         return new BotDbContext(options);
     }

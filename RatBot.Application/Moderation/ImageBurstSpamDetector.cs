@@ -9,18 +9,13 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
 
     private readonly Lock _gate = new Lock();
 
-    private readonly Dictionary<ImageBurstBufferKey, DateTimeOffset> _handlingLocks =
-        new Dictionary<ImageBurstBufferKey, DateTimeOffset>();
+    private readonly Dictionary<ImageBurstBufferKey, DateTimeOffset> _handlingLocks = new Dictionary<ImageBurstBufferKey, DateTimeOffset>();
 
     public ImageBurstSpamDetector()
-        : this(TimeProvider.System, new ImageBurstSpamDetectorOptions())
-    {
-    }
+        : this(TimeProvider.System, new ImageBurstSpamDetectorOptions()) { }
 
     public ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorOptions options)
-        : this(timeProvider, CreateSettings(options))
-    {
-    }
+        : this(timeProvider, CreateSettings(options)) { }
 
     private static void PruneOldMessages(Queue<ImageBurstMessage> buffer, DateTimeOffset cutoff)
     {
@@ -28,8 +23,8 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
             buffer.Dequeue();
     }
 
-    private static ImageBurstSpamDetectorSettings CreateSettings(ImageBurstSpamDetectorOptions options)
-        => new ImageBurstSpamDetectorSettings(options);
+    private static ImageBurstSpamDetectorSettings CreateSettings(ImageBurstSpamDetectorOptions options) =>
+        new ImageBurstSpamDetectorSettings(options);
 
     public ImageBurstDetection? Observe(ImageBurstMessage message)
     {
@@ -49,11 +44,7 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
             buffer.Enqueue(message);
             PruneOldMessages(buffer, message.Timestamp - TimeSpan.FromSeconds(options.Window));
 
-            ulong[] channelIds = buffer
-                .Select(x => x.ChannelId)
-                .Distinct()
-                .Order()
-                .ToArray();
+            ulong[] channelIds = buffer.Select(x => x.ChannelId).Distinct().Order().ToArray();
 
             if (channelIds.Length < options.DistinctChannelThreshold)
                 return null;
@@ -77,10 +68,7 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
 
     private void PruneExpiredLocks(DateTimeOffset now)
     {
-        ImageBurstBufferKey[] expiredKeys = _handlingLocks
-            .Where(x => x.Value <= now)
-            .Select(x => x.Key)
-            .ToArray();
+        ImageBurstBufferKey[] expiredKeys = _handlingLocks.Where(x => x.Value <= now).Select(x => x.Key).ToArray();
 
         foreach (ImageBurstBufferKey key in expiredKeys)
             _handlingLocks.Remove(key);

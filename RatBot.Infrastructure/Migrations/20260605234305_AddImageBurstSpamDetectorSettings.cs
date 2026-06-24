@@ -17,7 +17,7 @@ namespace RatBot.Infrastructure.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false),
                     RequiredChannelCount = table.Column<int>(type: "integer", nullable: false),
                     RequiredAttachmentCount = table.Column<int>(type: "integer", nullable: false),
-                    BurstDurationSeconds = table.Column<int>(type: "integer", nullable: false)
+                    BurstDurationSeconds = table.Column<int>(type: "integer", nullable: false),
                 },
                 constraints: table =>
                 {
@@ -25,14 +25,14 @@ namespace RatBot.Infrastructure.Migrations
                     table.CheckConstraint("CK_ImageSpamSettings_BurstDurationSeconds_Positive", "\"BurstDurationSeconds\" > 0");
                     table.CheckConstraint("CK_ImageSpamSettings_RequiredAttachmentCount_Positive", "\"RequiredAttachmentCount\" > 0");
                     table.CheckConstraint("CK_ImageSpamSettings_RequiredChannelCount_Positive", "\"RequiredChannelCount\" > 0");
-                });
+                }
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "ImageSpamSettings");
+            migrationBuilder.DropTable(name: "ImageSpamSettings");
         }
     }
 }

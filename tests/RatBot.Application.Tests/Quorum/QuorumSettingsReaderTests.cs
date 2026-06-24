@@ -14,10 +14,7 @@ public sealed class QuorumSettingsReaderTests
     private QuorumTarget _channelTarget;
     private QuorumTarget _categoryTarget;
 
-    private static QuorumSettings CreateSettings(
-        QuorumTarget target,
-        IEnumerable<ulong> roleIds,
-        double quorumProportion) =>
+    private static QuorumSettings CreateSettings(QuorumTarget target, IEnumerable<ulong> roleIds, double quorumProportion) =>
         QuorumSettings.Create(target, roleIds, Proportion.Create(quorumProportion).Value).Value;
 
     [SetUp]
@@ -69,9 +66,7 @@ public sealed class QuorumSettingsReaderTests
         // Arrange
         QuorumSettings categorySettings = CreateSettings(_categoryTarget, [20], 0.5);
 
-        _repository
-            .GetAsync(_channelTarget)
-            .Returns(Task.FromResult<ErrorOr<QuorumSettings>>(Error.NotFound(description: "channel not found")));
+        _repository.GetAsync(_channelTarget).Returns(Task.FromResult<ErrorOr<QuorumSettings>>(Error.NotFound(description: "channel not found")));
 
         _repository.GetAsync(_categoryTarget).Returns(Task.FromResult<ErrorOr<QuorumSettings>>(categorySettings));
 

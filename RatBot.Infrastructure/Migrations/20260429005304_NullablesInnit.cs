@@ -10,21 +10,13 @@ namespace RatBot.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropCheckConstraint(
-                name: "CK_MetaSuggestions_Motivation_NotBlank",
-                table: "MetaSuggestions");
+            migrationBuilder.DropCheckConstraint(name: "CK_MetaSuggestions_Motivation_NotBlank", table: "MetaSuggestions");
 
-            migrationBuilder.DropCheckConstraint(
-                name: "CK_MetaSuggestions_Specification_NotBlank",
-                table: "MetaSuggestions");
+            migrationBuilder.DropCheckConstraint(name: "CK_MetaSuggestions_Specification_NotBlank", table: "MetaSuggestions");
 
-            migrationBuilder.DropCheckConstraint(
-                name: "CK_MetaSuggestions_Summary_NotBlank",
-                table: "MetaSuggestions");
+            migrationBuilder.DropCheckConstraint(name: "CK_MetaSuggestions_Summary_NotBlank", table: "MetaSuggestions");
 
-            migrationBuilder.DropCheckConstraint(
-                name: "CK_MetaSuggestions_Title_NotBlank",
-                table: "MetaSuggestions");
+            migrationBuilder.DropCheckConstraint(name: "CK_MetaSuggestions_Title_NotBlank", table: "MetaSuggestions");
 
             migrationBuilder.AlterColumn<long>(
                 name: "ForumChannelId",
@@ -32,7 +24,8 @@ namespace RatBot.Infrastructure.Migrations
                 type: "bigint",
                 nullable: true,
                 oldClrType: typeof(long),
-                oldType: "bigint");
+                oldType: "bigint"
+            );
         }
 
         /// <inheritdoc />
@@ -46,27 +39,32 @@ namespace RatBot.Infrastructure.Migrations
                 defaultValue: 0L,
                 oldClrType: typeof(long),
                 oldType: "bigint",
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_MetaSuggestions_Motivation_NotBlank",
                 table: "MetaSuggestions",
-                sql: "length(btrim(\"Motivation\")) > 0");
+                sql: "length(btrim(\"Motivation\")) > 0"
+            );
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_MetaSuggestions_Specification_NotBlank",
                 table: "MetaSuggestions",
-                sql: "length(btrim(\"Specification\")) > 0");
+                sql: "length(btrim(\"Specification\")) > 0"
+            );
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_MetaSuggestions_Summary_NotBlank",
                 table: "MetaSuggestions",
-                sql: "length(btrim(\"Summary\")) > 0");
+                sql: "length(btrim(\"Summary\")) > 0"
+            );
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_MetaSuggestions_Title_NotBlank",
                 table: "MetaSuggestions",
-                sql: "length(btrim(\"Title\")) > 0");
+                sql: "length(btrim(\"Title\")) > 0"
+            );
         }
     }
 }

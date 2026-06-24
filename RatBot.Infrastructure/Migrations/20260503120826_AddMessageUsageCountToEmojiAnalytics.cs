@@ -10,30 +10,17 @@ namespace RatBot.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameColumn(
-                name: "UsageCount",
-                table: "EmojiUsageCounts",
-                newName: "ReactionUsageCount");
+            migrationBuilder.RenameColumn(name: "UsageCount", table: "EmojiUsageCounts", newName: "ReactionUsageCount");
 
-            migrationBuilder.AddColumn<int>(
-                name: "MessageUsageCount",
-                table: "EmojiUsageCounts",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
+            migrationBuilder.AddColumn<int>(name: "MessageUsageCount", table: "EmojiUsageCounts", type: "integer", nullable: false, defaultValue: 0);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "MessageUsageCount",
-                table: "EmojiUsageCounts");
+            migrationBuilder.DropColumn(name: "MessageUsageCount", table: "EmojiUsageCounts");
 
-            migrationBuilder.RenameColumn(
-                name: "ReactionUsageCount",
-                table: "EmojiUsageCounts",
-                newName: "UsageCount");
+            migrationBuilder.RenameColumn(name: "ReactionUsageCount", table: "EmojiUsageCounts", newName: "UsageCount");
         }
     }
 }

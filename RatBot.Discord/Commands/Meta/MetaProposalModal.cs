@@ -3,10 +3,7 @@ namespace RatBot.Discord.Commands.Meta;
 public record MetaProposalModal : IModal
 {
     [InputLabel("Title")]
-    [ModalTextInput(
-        "title",
-        maxLength: MetaProposalState.MaxTitleLength,
-        placeholder: "The title of the proposal thread")]
+    [ModalTextInput("title", maxLength: MetaProposalState.MaxTitleLength, placeholder: "The title of the proposal thread")]
     public required string ProposalTitle { get; [UsedImplicitly] init; }
 
     [InputLabel("Summary")]
@@ -23,8 +20,7 @@ public record MetaProposalModal : IModal
         "motivation",
         TextInputStyle.Paragraph,
         maxLength: 1950,
-        placeholder:
-        "Please provide a detailed explanation of what your proposal seeks to address. (1950 characters)"
+        placeholder: "Please provide a detailed explanation of what your proposal seeks to address. (1950 characters)"
     )]
     public required string Motivation { get; [UsedImplicitly] init; }
 
@@ -33,8 +29,7 @@ public record MetaProposalModal : IModal
         "specification",
         TextInputStyle.Paragraph,
         maxLength: 1950,
-        placeholder:
-        "Please provide a concrete description of the proposed change or policy. (1950 characters)"
+        placeholder: "Please provide a concrete description of the proposed change or policy. (1950 characters)"
     )]
     public required string Specification { get; [UsedImplicitly] init; }
 

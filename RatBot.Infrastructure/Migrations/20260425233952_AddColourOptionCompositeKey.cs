@@ -10,29 +10,22 @@ namespace RatBot.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_RoleColourOptions_SourceRoleId",
-                table: "RoleColourOptions");
+            migrationBuilder.DropIndex(name: "IX_RoleColourOptions_SourceRoleId", table: "RoleColourOptions");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoleColourOptions_SourceRoleId_DisplayRoleId",
                 table: "RoleColourOptions",
                 columns: new[] { "SourceRoleId", "DisplayRoleId" },
-                unique: true);
+                unique: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_RoleColourOptions_SourceRoleId_DisplayRoleId",
-                table: "RoleColourOptions");
+            migrationBuilder.DropIndex(name: "IX_RoleColourOptions_SourceRoleId_DisplayRoleId", table: "RoleColourOptions");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_RoleColourOptions_SourceRoleId",
-                table: "RoleColourOptions",
-                column: "SourceRoleId",
-                unique: true);
+            migrationBuilder.CreateIndex(name: "IX_RoleColourOptions_SourceRoleId", table: "RoleColourOptions", column: "SourceRoleId", unique: true);
         }
     }
 }

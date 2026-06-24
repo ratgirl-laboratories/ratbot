@@ -16,9 +16,7 @@ public interface IMetaProposalRepository
     /// <param name="suggestionThreadChannelId">The unique identifier of the suggestion thread channel.</param>
     /// <param name="ct">The cancellation token for the operation.</param>
     /// <returns>The meta proposal state, or null if not found.</returns>
-    Task<MetaProposalState?> FindBySuggestionThreadAsync(
-        ulong suggestionThreadChannelId,
-        CancellationToken ct = default);
+    Task<MetaProposalState?> FindBySuggestionThreadAsync(ulong suggestionThreadChannelId, CancellationToken ct = default);
 
     /// <summary>
     ///     Finds a meta proposal associated with a specified thread channel.
@@ -38,10 +36,7 @@ public interface IMetaProposalRepository
     /// <param name="limit">The maximum number of expired polls to retrieve.</param>
     /// <param name="ct">The cancellation token for the operation.</param>
     /// <returns>A read-only list of meta proposal states with expired polls.</returns>
-    Task<IReadOnlyList<MetaProposalState>> FindExpiredPollsAsync(
-        DateTimeOffset nowUtc,
-        int limit,
-        CancellationToken ct = default);
+    Task<IReadOnlyList<MetaProposalState>> FindExpiredPollsAsync(DateTimeOffset nowUtc, int limit, CancellationToken ct = default);
 
     /// <summary>
     ///     Adds a new meta proposal state to the repository.

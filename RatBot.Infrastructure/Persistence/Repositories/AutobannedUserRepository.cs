@@ -6,9 +6,7 @@ namespace RatBot.Infrastructure.Persistence.Repositories;
 public sealed class AutobannedUserRepository(BotDbContext dbContext) : IAutobannedUserRepository
 {
     public Task<AutobannedUser?> GetAsync(ulong guildId, ulong userId, CancellationToken ct = default) =>
-        dbContext.AutobannedUsers.SingleOrDefaultAsync(
-            user => user.GuildId == guildId && user.BannedUser == userId,
-            ct);
+        dbContext.AutobannedUsers.SingleOrDefaultAsync(user => user.GuildId == guildId && user.BannedUser == userId, ct);
 
     public async Task AddAsync(AutobannedUser user, CancellationToken ct = default)
     {

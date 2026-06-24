@@ -58,7 +58,5 @@ public sealed class AdminModule(AdminSendService adminSendService) : Interaction
     }
 
     private Task RespondEphemeralAsync(string message) =>
-        Context.Interaction.HasResponded
-            ? FollowupAsync(message, ephemeral: true)
-            : RespondAsync(message, ephemeral: true);
+        Context.Interaction.HasResponded ? FollowupAsync(message, ephemeral: true) : RespondAsync(message, ephemeral: true);
 }

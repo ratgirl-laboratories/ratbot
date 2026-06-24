@@ -4,19 +4,16 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class RegisterRoleColourOption
 {
-    public async static Task<ErrorOr<RoleColourOption>> ExecuteAsync(
+    public static async Task<ErrorOr<RoleColourOption>> ExecuteAsync(
         BotDbContext db,
         string key,
         string label,
         ulong sourceRoleId,
         ulong displayRoleId,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
-        ErrorOr<RoleColourOption> optionResult = RoleColourOption.Create(
-            key,
-            label,
-            sourceRoleId,
-            displayRoleId);
+        ErrorOr<RoleColourOption> optionResult = RoleColourOption.Create(key, label, sourceRoleId, displayRoleId);
 
         if (optionResult.IsError)
             return optionResult.Errors;

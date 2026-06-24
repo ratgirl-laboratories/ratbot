@@ -2,11 +2,8 @@ using RatBot.Domain.Moderation;
 
 namespace RatBot.Application.Moderation;
 
-public sealed class ImageSpamSettingsService(
-    IImageSpamSettingsStore store,
-    ImageBurstSpamDetectorSettings detectorSettings)
+public sealed class ImageSpamSettingsService(IImageSpamSettingsStore store, ImageBurstSpamDetectorSettings detectorSettings)
 {
-
     private static ImageBurstSpamDetectorOptions ToOptions(ImageSpamSettings settings) =>
         new ImageBurstSpamDetectorOptions
         {
@@ -14,6 +11,7 @@ public sealed class ImageSpamSettingsService(
             DistinctChannelThreshold = settings.RequiredChannelCount,
             RequiredAttachmentCount = settings.RequiredAttachmentCount,
         };
+
     public async Task<ImageBurstSpamDetectorOptions> GetCurrentAsync(CancellationToken ct)
     {
         ImageSpamSettings? settings = await store.GetAsync(ct).ConfigureAwait(false);
@@ -31,7 +29,8 @@ public sealed class ImageSpamSettingsService(
         int? requiredChannelCount,
         int? requiredAttachmentCount,
         int? burstDurationSeconds,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         ImageSpamSettings settings = await store
             .UpsertAsync(requiredChannelCount, requiredAttachmentCount, burstDurationSeconds, ct)

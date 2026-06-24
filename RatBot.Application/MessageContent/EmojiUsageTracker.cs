@@ -6,15 +6,13 @@ using RatBot.Domain.Emoji;
 
 namespace RatBot.Application.MessageContent;
 
-public sealed class EmojiUsageTracker(
-    IEmojiRepository emojiRepository,
-    ITrackedEmojiCatalog trackedEmojiCatalog,
-    ILogger logger)
+public sealed class EmojiUsageTracker(IEmojiRepository emojiRepository, ITrackedEmojiCatalog trackedEmojiCatalog, ILogger logger)
 {
     private static readonly Regex EmojiRegex = new Regex(
         @"<a?:\w{2,32}:(?<id>\d{17,21})>",
         RegexOptions.Compiled | RegexOptions.CultureInvariant,
-        TimeSpan.FromMilliseconds(100));
+        TimeSpan.FromMilliseconds(100)
+    );
 
     private readonly ILogger _logger = logger.ForContext<EmojiUsageTracker>();
 
@@ -27,9 +25,7 @@ public sealed class EmojiUsageTracker(
             .Select(id => id.GetValueOrDefault());
 
     private static ulong? TryParseEmojiId(string id) =>
-        ulong.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out ulong emojiId)
-            ? emojiId
-            : null;
+        ulong.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out ulong emojiId) ? emojiId : null;
 
     public async Task RecordMessageBatchUsageAsync(IEnumerable<string> messageContents, CancellationToken ct = default)
     {
@@ -49,13 +45,9 @@ public sealed class EmojiUsageTracker(
 
         foreach ((ulong emojiId, int count) in usages)
         {
-            int updatedRowCount = await emojiRepository.EmojiUsageCounts
-                .Where(x => x.EmojiId == emojiId)
-                .ExecuteUpdateAsync(
-                    setters => setters.SetProperty(
-                        x => x.MessageUsageCount,
-                        x => x.MessageUsageCount + count),
-                    ct)
+            int updatedRowCount = await emojiRepository
+                .EmojiUsageCounts.Where(x => x.EmojiId == emojiId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.MessageUsageCount, x => x.MessageUsageCount + count), ct)
                 .ConfigureAwait(false);
 
             if (updatedRowCount != 0)
@@ -67,7 +59,8 @@ public sealed class EmojiUsageTracker(
                     EmojiId = emojiId,
                     ReactionUsageCount = 0,
                     MessageUsageCount = count,
-                });
+                }
+            );
 
             await emojiRepository.SaveChangesAsync(ct).ConfigureAwait(false);
         }
@@ -77,7 +70,5 @@ public sealed class EmojiUsageTracker(
     }
 
     private Task<int> PruneUntrackedEmojiAsync(IReadOnlyCollection<ulong> trackedEmojiIds, CancellationToken ct) =>
-        emojiRepository.EmojiUsageCounts
-            .Where(x => !trackedEmojiIds.Contains(x.EmojiId))
-            .ExecuteDeleteAsync(ct);
+        emojiRepository.EmojiUsageCounts.Where(x => !trackedEmojiIds.Contains(x.EmojiId)).ExecuteDeleteAsync(ct);
 }

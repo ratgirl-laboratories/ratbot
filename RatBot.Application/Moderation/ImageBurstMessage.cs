@@ -5,4 +5,5 @@ public sealed record ImageBurstMessage(
     ulong UserId,
     ulong ChannelId,
     DateTimeOffset Timestamp,
-    IReadOnlyList<ImageBurstAttachment> Attachments);
+    IReadOnlyList<ImageBurstAttachment> Attachments
+);

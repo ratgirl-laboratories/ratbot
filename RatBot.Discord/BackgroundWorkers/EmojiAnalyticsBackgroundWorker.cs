@@ -8,7 +8,8 @@ public sealed class EmojiAnalyticsBackgroundWorker(
     ReactionQueue reactionQueue,
     MessageContentQueue messageContentQueue,
     IServiceScopeFactory scopeFactory,
-    ILogger logger) : BackgroundService
+    ILogger logger
+) : BackgroundService
 {
     private const int BatchSize = 100;
     private readonly ILogger _logger = logger.ForContext<EmojiAnalyticsBackgroundWorker>();
@@ -43,7 +44,7 @@ public sealed class EmojiAnalyticsBackgroundWorker(
         return batch;
     }
 
-    protected async override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.Information("Emoji analytics background worker started.");
 
@@ -89,9 +90,7 @@ public sealed class EmojiAnalyticsBackgroundWorker(
         if (await completedTask.ConfigureAwait(false))
             return true;
 
-        Task<bool> otherTask = ReferenceEquals(completedTask, reactionWaitTask)
-            ? messageContentWaitTask
-            : reactionWaitTask;
+        Task<bool> otherTask = ReferenceEquals(completedTask, reactionWaitTask) ? messageContentWaitTask : reactionWaitTask;
 
         return await otherTask.ConfigureAwait(false);
     }
@@ -104,8 +103,7 @@ public sealed class EmojiAnalyticsBackgroundWorker(
 
             await using (scope.ConfigureAwait(false))
             {
-                ReactionUsageTracker reactionUsageTracker =
-                    scope.ServiceProvider.GetRequiredService<ReactionUsageTracker>();
+                ReactionUsageTracker reactionUsageTracker = scope.ServiceProvider.GetRequiredService<ReactionUsageTracker>();
 
                 await reactionUsageTracker.RecordBatchUsageAsync(emojiBatch, ct).ConfigureAwait(false);
 
@@ -126,14 +124,11 @@ public sealed class EmojiAnalyticsBackgroundWorker(
 
             await using (scope.ConfigureAwait(false))
             {
-                EmojiUsageTracker emojiUsageTracker =
-                    scope.ServiceProvider.GetRequiredService<EmojiUsageTracker>();
+                EmojiUsageTracker emojiUsageTracker = scope.ServiceProvider.GetRequiredService<EmojiUsageTracker>();
 
                 await emojiUsageTracker.RecordMessageBatchUsageAsync(messageContentBatch, ct).ConfigureAwait(false);
 
-                _logger.Debug(
-                    "Processed {Count} message content emoji usage events from channel.",
-                    messageContentBatch.Count);
+                _logger.Debug("Processed {Count} message content emoji usage events from channel.", messageContentBatch.Count);
             }
         }
         catch (Exception ex)

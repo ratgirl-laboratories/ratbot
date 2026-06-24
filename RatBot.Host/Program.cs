@@ -5,12 +5,13 @@ namespace RatBot.Host;
 
 public static class Program
 {
-    public async static Task Main(string[] args)
+    public static async Task Main(string[] args)
     {
         Env.TraversePath().Load();
         EnableSerilogSelfDiagnostics();
 
-        using IHost host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder(args)
+        using IHost host = Microsoft
+            .Extensions.Hosting.Host.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration((_, configurationBuilder) => configurationBuilder.AddEnvironmentVariables())
             .UseSerilog((ctx, _, loggerConfiguration) => ConfigureSerilog(ctx.Configuration, loggerConfiguration))
             .ConfigureServices((ctx, services) => services.AddHostServices(ctx.Configuration))
@@ -31,30 +32,13 @@ public static class Program
             .Enrich.FromLogContext()
             .Enrich.WithProperty("service_name", config["OTEL:Resource:ServiceName"] ?? "ratbot")
             .Enrich.WithProperty("service_instance_id", serviceInstanceId)
-            .Enrich.WithProperty(
-                "environment",
-                config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production")
+            .Enrich.WithProperty("environment", config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production")
             .WriteTo.Console(LogEventLevel.Debug)
-            .WriteTo.File(
-                "logs/verbose-.log",
-                LogEventLevel.Verbose,
-                rollingInterval: RollingInterval.Day)
-            .WriteTo.File(
-                "logs/debug-.log",
-                LogEventLevel.Debug,
-                rollingInterval: RollingInterval.Day)
-            .WriteTo.File(
-                "logs/info-.log",
-                LogEventLevel.Information,
-                rollingInterval: RollingInterval.Day)
-            .WriteTo.File(
-                "logs/warning-.log",
-                LogEventLevel.Warning,
-                rollingInterval: RollingInterval.Day)
-            .WriteTo.File(
-                "logs/error-.log",
-                LogEventLevel.Error,
-                rollingInterval: RollingInterval.Day);
+            .WriteTo.File("logs/verbose-.log", LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
+            .WriteTo.File("logs/debug-.log", LogEventLevel.Debug, rollingInterval: RollingInterval.Day)
+            .WriteTo.File("logs/info-.log", LogEventLevel.Information, rollingInterval: RollingInterval.Day)
+            .WriteTo.File("logs/warning-.log", LogEventLevel.Warning, rollingInterval: RollingInterval.Day)
+            .WriteTo.File("logs/error-.log", LogEventLevel.Error, rollingInterval: RollingInterval.Day);
 
         ConfigureOpenTelemetryLogs(config, loggerConfiguration);
     }
@@ -93,8 +77,7 @@ public static class Program
         });
     }
 
-    private static void EnableSerilogSelfDiagnostics() =>
-        SelfLog.Enable(message => Console.Error.WriteLine($"[SerilogSelfLog] {message}"));
+    private static void EnableSerilogSelfDiagnostics() => SelfLog.Enable(message => Console.Error.WriteLine($"[SerilogSelfLog] {message}"));
 
     private static void LogOpenTelemetryStartupConfiguration(IConfiguration config)
     {

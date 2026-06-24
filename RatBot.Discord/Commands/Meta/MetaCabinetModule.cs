@@ -4,15 +4,11 @@ namespace RatBot.Discord.Commands.Meta;
 
 [Group("meta-cabinet", "Cabinet meta commands.")]
 [DefaultMemberPermissions(GuildPermission.BanMembers)]
-public sealed class MetaCabinetModule(
-    MetaProposalService metaProposalService,
-    MetaProposalDiscordWorkflow workflow) : SlashCommandBase
+public sealed class MetaCabinetModule(MetaProposalService metaProposalService, MetaProposalDiscordWorkflow workflow) : SlashCommandBase
 {
     [SlashCommand("propose", "Create a Cabinet proposal poll.")]
     [RequireUserPermission(GuildPermission.BanMembers)]
-    public async Task ProposeAsync(
-        [Summary("hours", "Poll duration in hours.")]
-        uint hours = MetaCommandIds.DefaultPollHours)
+    public async Task ProposeAsync([Summary("hours", "Poll duration in hours.")] uint hours = MetaCommandIds.DefaultPollHours)
     {
         if (Context.Guild is null || Context.Channel is not IThreadChannel thread)
         {
@@ -34,8 +30,7 @@ public sealed class MetaCabinetModule(
             return;
         }
 
-        if (hours != MetaCommandIds.DefaultPollHours
-            && !MetaCommandPermissions.IsChairOrAdmin(settingsResult.Value, user))
+        if (hours != MetaCommandIds.DefaultPollHours && !MetaCommandPermissions.IsChairOrAdmin(settingsResult.Value, user))
         {
             await RespondAsync("Only administrators or the Cabinet Chair may override poll duration.", ephemeral: true);
             return;
@@ -191,11 +186,7 @@ public sealed class MetaCabinetModule(
             return;
         }
 
-        ErrorOr<MetaProposalState> vetoResult = await metaProposalService.VetoAsync(
-            thread.Id,
-            user.Id,
-            modal.Reason,
-            DateTimeOffset.UtcNow);
+        ErrorOr<MetaProposalState> vetoResult = await metaProposalService.VetoAsync(thread.Id, user.Id, modal.Reason, DateTimeOffset.UtcNow);
 
         if (vetoResult.IsError)
         {

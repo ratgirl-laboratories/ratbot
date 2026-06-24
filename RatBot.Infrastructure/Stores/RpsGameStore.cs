@@ -5,18 +5,13 @@ namespace RatBot.Infrastructure.Stores;
 
 public sealed class RpsGameStore : IRpsGameStore
 {
-    private readonly ConcurrentDictionary<string, RpsGameSession> _games =
-        new ConcurrentDictionary<string, RpsGameSession>(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, RpsGameSession> _games = new ConcurrentDictionary<string, RpsGameSession>(StringComparer.Ordinal);
 
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
     public void Create(RpsGameSession game) => _games[game.GameId] = game;
 
-    public async Task<ErrorOr<RpsPickSubmissionResult>> SubmitPickAsync(
-        string gameId,
-        ulong userId,
-        RpsPick pick,
-        DateTimeOffset utcNow)
+    public async Task<ErrorOr<RpsPickSubmissionResult>> SubmitPickAsync(string gameId, ulong userId, RpsPick pick, DateTimeOffset utcNow)
     {
         await _semaphore.WaitAsync();
 
@@ -37,9 +32,7 @@ public sealed class RpsGameStore : IRpsGameStore
             if (!isChallenger && !isOpponent)
                 return RpsErrors.UnauthorizedUser;
 
-            RpsGameSession updatedGame = isChallenger
-                ? game with { ChallengerPick = pick }
-                : game with { OpponentPick = pick };
+            RpsGameSession updatedGame = isChallenger ? game with { ChallengerPick = pick } : game with { OpponentPick = pick };
 
             _games[gameId] = updatedGame;
 
@@ -48,9 +41,7 @@ public sealed class RpsGameStore : IRpsGameStore
 
             _games.TryRemove(gameId, out _);
 
-            RpsGameOutcome outcome = RpsGameRules.DetermineOutcome(
-                updatedGame.ChallengerPick.Value,
-                updatedGame.OpponentPick.Value);
+            RpsGameOutcome outcome = RpsGameRules.DetermineOutcome(updatedGame.ChallengerPick.Value, updatedGame.OpponentPick.Value);
 
             return new RpsPickSubmissionResult(updatedGame, outcome);
         }

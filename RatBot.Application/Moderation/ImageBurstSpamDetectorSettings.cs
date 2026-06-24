@@ -6,9 +6,7 @@ public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions
     private ImageBurstSpamDetectorOptions _current = initialOptions;
 
     public ImageBurstSpamDetectorSettings()
-        : this(new ImageBurstSpamDetectorOptions())
-    {
-    }
+        : this(new ImageBurstSpamDetectorOptions()) { }
 
     public ImageBurstSpamDetectorOptions Current
     {
@@ -33,11 +31,7 @@ public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions
     {
         lock (_gate)
         {
-            _current = _current with
-            {
-                Window = window,
-                DistinctChannelThreshold = distinctChannelThreshold,
-            };
+            _current = _current with { Window = window, DistinctChannelThreshold = distinctChannelThreshold };
         }
     }
 

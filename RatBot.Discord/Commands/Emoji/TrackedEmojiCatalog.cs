@@ -4,10 +4,7 @@ using RatBot.Discord.Configuration;
 
 namespace RatBot.Discord.Commands.Emoji;
 
-public sealed class TrackedEmojiCatalog(
-    DiscordSocketClient discordClient,
-    IOptions<DiscordOptions> options)
-    : ITrackedEmojiCatalog
+public sealed class TrackedEmojiCatalog(DiscordSocketClient discordClient, IOptions<DiscordOptions> options) : ITrackedEmojiCatalog
 {
     public bool TryGetTrackedEmojiIds(out IReadOnlyCollection<ulong> emojiIds)
     {
@@ -19,9 +16,7 @@ public sealed class TrackedEmojiCatalog(
             return false;
         }
 
-        emojiIds = guild.Emotes
-            .Select(emote => emote.Id)
-            .ToArray();
+        emojiIds = guild.Emotes.Select(emote => emote.Id).ToArray();
 
         return true;
     }

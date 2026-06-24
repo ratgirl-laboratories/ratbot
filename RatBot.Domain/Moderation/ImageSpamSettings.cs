@@ -4,9 +4,7 @@ public sealed class ImageSpamSettings
 {
     public const int SingletonId = 1;
 
-    private ImageSpamSettings()
-    {
-    }
+    private ImageSpamSettings() { }
 
     private ImageSpamSettings(int id, int requiredChannelCount, int requiredAttachmentCount, int burstDurationSeconds)
     {
@@ -24,12 +22,7 @@ public sealed class ImageSpamSettings
 
     public int BurstDurationSeconds { get; private set; }
 
-    public static ImageSpamSettings CreateDefault() =>
-        new ImageSpamSettings(
-            SingletonId,
-            4,
-            2,
-            45);
+    public static ImageSpamSettings CreateDefault() => new ImageSpamSettings(SingletonId, 4, 2, 45);
 
     public void Update(int? requiredChannelCount, int? requiredAttachmentCount, int? burstDurationSeconds)
     {

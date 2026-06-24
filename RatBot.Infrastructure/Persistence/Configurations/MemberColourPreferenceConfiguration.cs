@@ -19,28 +19,22 @@ public sealed class MemberColourPreferenceConfiguration : IEntityTypeConfigurati
                     "CK_MemberColourPreferences_NoColour_SelectedOption_Null",
                     "(\"Kind\" <> 2) OR (\"SelectedOptionId\" IS NULL)"
                 );
-            });
+            }
+        );
 
         builder.HasKey(x => x.PreferenceId);
 
-        builder.Property(x => x.PreferenceId)
-            .HasConversion(id => id.Value, value => new MemberColourPreference.Id(value));
+        builder.Property(x => x.PreferenceId).HasConversion(id => id.Value, value => new MemberColourPreference.Id(value));
 
         builder.Property(x => x.UserId).IsRequired().HasConversion<long>().HasColumnType("bigint");
         builder.Property(x => x.Kind).IsRequired();
 
-        builder.Property(x => x.SelectedOptionId)
-            .HasConversion(
-                id => id.HasValue ? id.Value.Value : (Guid?)null,
-                value => value.HasValue ? new RoleColourOption.Id(value.Value) : null);
+        builder
+            .Property(x => x.SelectedOptionId)
+            .HasConversion(id => id.HasValue ? id.Value.Value : (Guid?)null, value => value.HasValue ? new RoleColourOption.Id(value.Value) : null);
 
         builder.HasIndex(x => x.UserId).IsUnique();
 
-        builder
-            .HasOne<RoleColourOption>()
-            .WithMany()
-            .HasForeignKey(x => x.SelectedOptionId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<RoleColourOption>().WithMany().HasForeignKey(x => x.SelectedOptionId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
     }
 }

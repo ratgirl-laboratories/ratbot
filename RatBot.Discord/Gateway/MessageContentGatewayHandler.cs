@@ -2,10 +2,7 @@ using RatBot.Application.MessageContent;
 
 namespace RatBot.Discord.Gateway;
 
-public sealed class MessageContentGatewayHandler(
-    DiscordSocketClient discordClient,
-    MessageContentQueue messageContentQueue,
-    ILogger logger)
+public sealed class MessageContentGatewayHandler(DiscordSocketClient discordClient, MessageContentQueue messageContentQueue, ILogger logger)
     : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<MessageContentGatewayHandler>();

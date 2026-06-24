@@ -50,8 +50,6 @@ public sealed class TextChannelService(IGuild guild) : IMessageChannelWriter
     {
         ITextChannel? channel = await guild.GetTextChannelAsync(channelId);
 
-        return channel is null
-            ? AdminSendErrors.ChannelNotFound
-            : ErrorOrFactory.From(channel);
+        return channel is null ? AdminSendErrors.ChannelNotFound : ErrorOrFactory.From(channel);
     }
 }

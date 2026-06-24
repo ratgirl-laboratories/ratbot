@@ -6,9 +6,5 @@ public interface IImageSpamSettingsStore
 {
     Task<ImageSpamSettings?> GetAsync(CancellationToken ct);
 
-    Task<ImageSpamSettings> UpsertAsync(
-        int? requiredChannelCount,
-        int? requiredAttachmentCount,
-        int? burstDurationSeconds,
-        CancellationToken ct);
+    Task<ImageSpamSettings> UpsertAsync(int? requiredChannelCount, int? requiredAttachmentCount, int? burstDurationSeconds, CancellationToken ct);
 }

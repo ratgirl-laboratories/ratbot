@@ -31,7 +31,8 @@ namespace RatBot.Infrastructure.Migrations
                     table.CheckConstraint("CK_RoleColourOptions_DifferentRoles", "\"SourceRoleId\" <> \"DisplayRoleId\"");
                     table.CheckConstraint("CK_RoleColourOptions_Key_NotBlank", "length(btrim(\"Key\")) > 0");
                     table.CheckConstraint("CK_RoleColourOptions_Label_NotBlank", "length(btrim(\"Label\")) > 0");
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "MemberColourPreferences",
@@ -45,54 +46,55 @@ namespace RatBot.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_MemberColourPreferences", x => x.PreferenceId);
-                    table.CheckConstraint("CK_MemberColourPreferences_ConfiguredOption_SelectedOption_Not~", "(\"Kind\" <> 1) OR (\"SelectedOptionId\" IS NOT NULL)");
-                    table.CheckConstraint("CK_MemberColourPreferences_NoColour_SelectedOption_Null", "(\"Kind\" <> 2) OR (\"SelectedOptionId\" IS NULL)");
+                    table.CheckConstraint(
+                        "CK_MemberColourPreferences_ConfiguredOption_SelectedOption_Not~",
+                        "(\"Kind\" <> 1) OR (\"SelectedOptionId\" IS NOT NULL)"
+                    );
+                    table.CheckConstraint(
+                        "CK_MemberColourPreferences_NoColour_SelectedOption_Null",
+                        "(\"Kind\" <> 2) OR (\"SelectedOptionId\" IS NULL)"
+                    );
                     table.ForeignKey(
                         name: "FK_MemberColourPreferences_RoleColourOptions_SelectedOptionId",
                         column: x => x.SelectedOptionId,
                         principalTable: "RoleColourOptions",
                         principalColumn: "OptionId",
-                        onDelete: ReferentialAction.Restrict);
-                });
+                        onDelete: ReferentialAction.Restrict
+                    );
+                }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_MemberColourPreferences_SelectedOptionId",
                 table: "MemberColourPreferences",
-                column: "SelectedOptionId");
+                column: "SelectedOptionId"
+            );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_MemberColourPreferences_UserId",
-                table: "MemberColourPreferences",
-                column: "UserId",
-                unique: true);
+            migrationBuilder.CreateIndex(name: "IX_MemberColourPreferences_UserId", table: "MemberColourPreferences", column: "UserId", unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoleColourOptions_DisplayRoleId",
                 table: "RoleColourOptions",
                 column: "DisplayRoleId",
-                unique: true);
+                unique: true
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoleColourOptions_NormalisedKey",
                 table: "RoleColourOptions",
                 column: "NormalisedKey",
-                unique: true);
+                unique: true
+            );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_RoleColourOptions_SourceRoleId",
-                table: "RoleColourOptions",
-                column: "SourceRoleId",
-                unique: true);
+            migrationBuilder.CreateIndex(name: "IX_RoleColourOptions_SourceRoleId", table: "RoleColourOptions", column: "SourceRoleId", unique: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "MemberColourPreferences");
+            migrationBuilder.DropTable(name: "MemberColourPreferences");
 
-            migrationBuilder.DropTable(
-                name: "RoleColourOptions");
+            migrationBuilder.DropTable(name: "RoleColourOptions");
         }
     }
 }

@@ -11,6 +11,7 @@ using RatBot.Discord.Forum;
 using RatBot.Discord.Gateway;
 using RatBot.Discord.Handlers;
 using RatBot.Discord.Hosting;
+using RatBot.Discord.SecretRole;
 
 namespace RatBot.Discord;
 
@@ -25,12 +26,11 @@ public static class DependencyInjection
                 .Bind(configuration.GetSection(DiscordOptions.SectionName))
                 .Validate(options => !string.IsNullOrWhiteSpace(options.Token), "Discord token is required.")
                 .Validate(options => options.GuildId != 0, "Discord guild id is required.")
-                .Validate(
-                    options => options.MessageCacheSize >= 1000,
-                    "Discord message cache size must be at least 1000.")
+                .Validate(options => options.MessageCacheSize >= 1000, "Discord message cache size must be at least 1000.")
                 .ValidateOnStart();
 
-            services.AddOptions<AdventureLeaderboardOptions>()
+            services
+                .AddOptions<AdventureLeaderboardOptions>()
                 .Bind(configuration.GetSection(AdventureLeaderboardOptions.SectionName))
                 .Validate(options => options.AdventurerRoleId != 0, "Adventure role id is required.")
                 .ValidateOnStart();
@@ -74,6 +74,9 @@ public static class DependencyInjection
             services.AddSingleton<MetaProposalPollResolver>();
             services.AddSingleton<MetaProposalGatewayHandler>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<MetaProposalGatewayHandler>());
+            services.AddSingleton<SecretRoleManager>();
+            services.AddSingleton<SecretRoleGatewayHandler>();
+            services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<SecretRoleGatewayHandler>());
             services.AddSingleton<GuildMemberCacheService>();
             services.AddSingleton<ITrackedEmojiCatalog, TrackedEmojiCatalog>();
             services.AddSingleton<AdventureLeaderboardClient>();
@@ -82,7 +85,6 @@ public static class DependencyInjection
             services.AddSingleton<AdventureLeaderboardManager>();
             services.AddSingleton<IQuorumCommandInputResolver, QuorumCommandInputResolver>();
             services.AddSingleton<IRoleColourReconciler, RoleColourReconciler>();
-
 
             // Role-colour sync queue and background worker
             services.AddSingleton<IRoleColourSyncQueue, RoleColourSyncQueue>();

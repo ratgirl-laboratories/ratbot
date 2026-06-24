@@ -10,9 +10,7 @@ namespace RatBot.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropCheckConstraint(
-                name: "CK_AdventureLeaderboardMessageState_SingletonId",
-                table: "AdventureLeaderboardMessageState");
+            migrationBuilder.DropCheckConstraint(name: "CK_AdventureLeaderboardMessageState_SingletonId", table: "AdventureLeaderboardMessageState");
         }
 
         /// <inheritdoc />
@@ -23,7 +21,8 @@ namespace RatBot.Infrastructure.Migrations
             migrationBuilder.AddCheckConstraint(
                 name: "CK_AdventureLeaderboardMessageState_SingletonId",
                 table: "AdventureLeaderboardMessageState",
-                sql: "\"Id\" = 1");
+                sql: "\"Id\" = 1"
+            );
         }
     }
 }

@@ -5,10 +5,7 @@ public sealed class GuildMemberCacheService(ILogger logger)
     private readonly ILogger _logger = logger.ForContext<GuildMemberCacheService>();
     private readonly SemaphoreSlim _warmupLock = new SemaphoreSlim(1, 1);
 
-    public async Task EnsureGuildMembersDownloadedAsync(
-        SocketGuild guild,
-        string reason,
-        CancellationToken ct = default)
+    public async Task EnsureGuildMembersDownloadedAsync(SocketGuild guild, string reason, CancellationToken ct = default)
     {
         if (guild.HasAllMembers)
         {
@@ -25,10 +22,7 @@ public sealed class GuildMemberCacheService(ILogger logger)
 
         if (!await _warmupLock.WaitAsync(0, ct))
         {
-            _logger.Debug(
-                "Guild member cache download already running. GuildId={GuildId}, Reason={Reason}",
-                guild.Id,
-                reason);
+            _logger.Debug("Guild member cache download already running. GuildId={GuildId}, Reason={Reason}", guild.Id, reason);
 
             return;
         }

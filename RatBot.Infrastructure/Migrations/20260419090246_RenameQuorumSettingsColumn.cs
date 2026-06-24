@@ -10,19 +10,13 @@ namespace RatBot.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameColumn(
-                name: "QuorumProportion",
-                table: "QuorumConfigs",
-                newName: "Proportion");
+            migrationBuilder.RenameColumn(name: "QuorumProportion", table: "QuorumConfigs", newName: "Proportion");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameColumn(
-                name: "Proportion",
-                table: "QuorumConfigs",
-                newName: "QuorumProportion");
+            migrationBuilder.RenameColumn(name: "Proportion", table: "QuorumConfigs", newName: "QuorumProportion");
         }
     }
 }

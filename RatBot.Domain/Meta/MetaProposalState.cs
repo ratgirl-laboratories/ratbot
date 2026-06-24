@@ -6,9 +6,7 @@ public sealed class MetaProposalState
     public const int MaxFailedPollAttempts = 3;
     public const int MaxPublicationRetryFailuresBeforePing = 10;
 
-    private MetaProposalState()
-    {
-    }
+    private MetaProposalState() { }
 
     public Guid Id { get; private set; }
     public ulong GuildId { get; private set; }
@@ -35,12 +33,9 @@ public sealed class MetaProposalState
     public DateTimeOffset? VetoedAtUtc { get; private set; }
     public string? VetoReason { get; private set; }
 
-    public bool IsTerminal =>
-        Status is MetaProposalStatus.Vetoed
-            or MetaProposalStatus.Closed;
+    public bool IsTerminal => Status is MetaProposalStatus.Vetoed or MetaProposalStatus.Closed;
 
-    public bool HasSubmittedProposal =>
-        Status is not MetaProposalStatus.SuggestionOpen and not MetaProposalStatus.PollActive;
+    public bool HasSubmittedProposal => Status is not MetaProposalStatus.SuggestionOpen and not MetaProposalStatus.PollActive;
 
     public bool HasProposalText =>
         ProposalAuthorUserId is not null
@@ -56,7 +51,8 @@ public sealed class MetaProposalState
         ulong suggestionThreadChannelId,
         ulong suggestionsForumChannelId,
         ulong originalThreadAuthorUserId,
-        DateTimeOffset trackedAtUtc)
+        DateTimeOffset trackedAtUtc
+    )
     {
         if (id == Guid.Empty)
             return Error.Validation("MetaProposal.IdRequired", "A proposal state id is required.");
@@ -86,14 +82,10 @@ public sealed class MetaProposalState
     }
 
     private static Error RequiredFieldMissing(string fieldName) =>
-        Error.Validation(
-            $"MetaProposal.{fieldName}Required",
-            $"Meta proposal {fieldName.ToLowerInvariant()} is required.");
+        Error.Validation($"MetaProposal.{fieldName}Required", $"Meta proposal {fieldName.ToLowerInvariant()} is required.");
 
     private static Error RequiredId(string fieldName) =>
-        Error.Validation(
-            $"MetaProposal.{fieldName}Required",
-            $"A valid {fieldName.ToLowerInvariant()} is required.");
+        Error.Validation($"MetaProposal.{fieldName}Required", $"A valid {fieldName.ToLowerInvariant()} is required.");
 
     public ErrorOr<Success> StartPoll(
         ulong proposalAuthorUserId,
@@ -103,7 +95,8 @@ public sealed class MetaProposalState
         string specification,
         ulong pollMessageId,
         DateTimeOffset pollExpiresAtUtc,
-        DateTimeOffset proposedAtUtc)
+        DateTimeOffset proposedAtUtc
+    )
     {
         if (Status is MetaProposalStatus.PollActive)
             return Error.Conflict("MetaProposal.PollAlreadyActive", "A proposal poll is already active.");
@@ -112,9 +105,7 @@ public sealed class MetaProposalState
             return Error.Conflict("MetaProposal.NotOpen", "This suggestion thread is no longer open for proposals.");
 
         if (FailedPollAttempts >= MaxFailedPollAttempts)
-            return Error.Conflict(
-                "MetaProposal.AttemptsExhausted",
-                "This suggestion thread has no proposal attempts left.");
+            return Error.Conflict("MetaProposal.AttemptsExhausted", "This suggestion thread has no proposal attempts left.");
 
         title = title.Trim();
         summary = summary.Trim();
@@ -128,9 +119,7 @@ public sealed class MetaProposalState
             return RequiredFieldMissing(nameof(ProposalTitle));
 
         if (title.Length > MaxTitleLength)
-            return Error.Validation(
-                "MetaProposal.TitleTooLong",
-                $"Proposal title must be at most {MaxTitleLength} characters.");
+            return Error.Validation("MetaProposal.TitleTooLong", $"Proposal title must be at most {MaxTitleLength} characters.");
 
         if (string.IsNullOrWhiteSpace(summary))
             return RequiredFieldMissing(nameof(Summary));
@@ -196,9 +185,7 @@ public sealed class MetaProposalState
 
         FailedPollAttempts++;
 
-        Status = FailedPollAttempts >= MaxFailedPollAttempts
-            ? MetaProposalStatus.Closed
-            : MetaProposalStatus.SuggestionOpen;
+        Status = FailedPollAttempts >= MaxFailedPollAttempts ? MetaProposalStatus.Closed : MetaProposalStatus.SuggestionOpen;
 
         return Result.Success;
     }

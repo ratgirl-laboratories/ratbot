@@ -1,8 +1,6 @@
 namespace RatBot.Application.Quorum;
 
-public sealed class QuorumSettingsWriter(
-    IQuorumSettingsRepository repository,
-    ILogger logger) : IQuorumSettingsWriter
+public sealed class QuorumSettingsWriter(IQuorumSettingsRepository repository, ILogger logger) : IQuorumSettingsWriter
 {
     private readonly ILogger _logger = logger.ForContext<QuorumSettingsWriter>();
 
@@ -10,7 +8,8 @@ public sealed class QuorumSettingsWriter(
         QuorumTarget target,
         IEnumerable<ulong> roleIds,
         double quorumProportion,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         _ = ct;
 
@@ -30,8 +29,7 @@ public sealed class QuorumSettingsWriter(
             if (existingResult.Errors.Any(error => error.Type != ErrorType.NotFound))
                 return existingResult.Errors;
 
-            ErrorOr<QuorumSettings> createResult =
-                QuorumSettings.Create(target, roleIds, validatedProportion);
+            ErrorOr<QuorumSettings> createResult = QuorumSettings.Create(target, roleIds, validatedProportion);
 
             if (createResult.IsError)
                 return createResult.Errors;
@@ -57,9 +55,7 @@ public sealed class QuorumSettingsWriter(
 
         _logger.Information(
             "Quorum settings {Action} for guild {GuildId}, target type {TargetType}, target {TargetId}.",
-            created
-                ? "created"
-                : "updated",
+            created ? "created" : "updated",
             target.GuildId,
             target.TargetType,
             target.TargetId
@@ -68,9 +64,7 @@ public sealed class QuorumSettingsWriter(
         return new QuorumSettingsUpsertResult(created, config);
     }
 
-    public async Task<ErrorOr<Deleted>> DeleteAsync(
-        QuorumTarget target,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<Deleted>> DeleteAsync(QuorumTarget target, CancellationToken ct = default)
     {
         _ = ct;
 

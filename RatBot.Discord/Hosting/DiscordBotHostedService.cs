@@ -123,19 +123,11 @@ public sealed class DiscordBotHostedService : IHostedService
             _ => LogEventLevel.Debug,
         };
 
-        string source = string.IsNullOrWhiteSpace(message.Source)
-            ? "Unknown"
-            : message.Source;
+        string source = string.IsNullOrWhiteSpace(message.Source) ? "Unknown" : message.Source;
 
         if (message.Exception is not null)
         {
-            _logger.Write(
-                level,
-                message.Exception,
-                "[{Category}] {Source}: {Message}",
-                category,
-                source,
-                message.Message);
+            _logger.Write(level, message.Exception, "[{Category}] {Source}: {Message}", category, source, message.Message);
 
             return;
         }

@@ -2,16 +2,14 @@ using RatBot.Application.Meta;
 
 namespace RatBot.Discord.BackgroundWorkers;
 
-public sealed class MetaProposalPollBackgroundWorker(
-    IServiceScopeFactory scopeFactory,
-    MetaProposalPollResolver pollResolver,
-    ILogger logger) : BackgroundService
+public sealed class MetaProposalPollBackgroundWorker(IServiceScopeFactory scopeFactory, MetaProposalPollResolver pollResolver, ILogger logger)
+    : BackgroundService
 {
     private const int BatchSize = 20;
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(1);
     private readonly ILogger _logger = logger.ForContext<MetaProposalPollBackgroundWorker>();
 
-    protected async override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.Information("Meta proposal poll background worker started.");
 
@@ -37,10 +35,7 @@ public sealed class MetaProposalPollBackgroundWorker(
         using IServiceScope scope = scopeFactory.CreateScope();
         MetaProposalService service = scope.ServiceProvider.GetRequiredService<MetaProposalService>();
 
-        IReadOnlyList<MetaProposalState> expiredPolls = await service.FindExpiredPollsAsync(
-            DateTimeOffset.UtcNow,
-            BatchSize,
-            ct);
+        IReadOnlyList<MetaProposalState> expiredPolls = await service.FindExpiredPollsAsync(DateTimeOffset.UtcNow, BatchSize, ct);
 
         foreach (MetaProposalState state in expiredPolls)
             await pollResolver.ResolveExpiredPollAsync(service, state, ct);

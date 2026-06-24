@@ -26,8 +26,7 @@ public sealed class DiscordInteractionHandler(
 
     private readonly DiscordOptions _options = options.Value;
 
-    private readonly string _serviceInstanceId =
-        configuration["OTEL:Resource:ServiceInstanceId"] ?? Environment.MachineName;
+    private readonly string _serviceInstanceId = configuration["OTEL:Resource:ServiceInstanceId"] ?? Environment.MachineName;
 
     private static string GetInteractionName(SocketInteraction interaction) =>
         interaction switch
@@ -59,8 +58,7 @@ public sealed class DiscordInteractionHandler(
         }
     }
 
-    private static IEnumerable<SocketSlashCommandDataOption> EnumerateSlashOptions(
-        IReadOnlyCollection<SocketSlashCommandDataOption> options)
+    private static IEnumerable<SocketSlashCommandDataOption> EnumerateSlashOptions(IReadOnlyCollection<SocketSlashCommandDataOption> options)
     {
         foreach (SocketSlashCommandDataOption option in options)
         {
@@ -92,17 +90,9 @@ public sealed class DiscordInteractionHandler(
             switch (option.Value)
             {
                 case SocketGuildUser guildUser:
-                    return new CommandUsageDetails(
-                        commandName,
-                        guildUser.Id,
-                        guildUser.Username,
-                        $"slash_option:{option.Name}");
+                    return new CommandUsageDetails(commandName, guildUser.Id, guildUser.Username, $"slash_option:{option.Name}");
                 case SocketUser socketUser:
-                    return new CommandUsageDetails(
-                        commandName,
-                        socketUser.Id,
-                        socketUser.Username,
-                        $"slash_option:{option.Name}");
+                    return new CommandUsageDetails(commandName, socketUser.Id, socketUser.Username, $"slash_option:{option.Name}");
                 case IUser user:
                     return new CommandUsageDetails(commandName, user.Id, user.Username, $"slash_option:{option.Name}");
                 case ulong userId:
@@ -123,11 +113,7 @@ public sealed class DiscordInteractionHandler(
     {
         IUser? invokee = messageCommand.Data.Message.Author;
 
-        return new CommandUsageDetails(
-            messageCommand.Data.Name,
-            invokee?.Id,
-            invokee?.Username,
-            "message_context_author");
+        return new CommandUsageDetails(messageCommand.Data.Name, invokee?.Id, invokee?.Username, "message_context_author");
     }
 
     private static IEnumerable<ModuleInfo> EnumerateModules(IEnumerable<ModuleInfo> modules)
@@ -141,10 +127,7 @@ public sealed class DiscordInteractionHandler(
         }
     }
 
-    private async static Task TryRespondToUnmetPreconditionAsync(
-        IInteractionContext context,
-        IResult result,
-        ILogger interactionLogger)
+    private static async Task TryRespondToUnmetPreconditionAsync(IInteractionContext context, IResult result, ILogger interactionLogger)
     {
         if (result.Error != InteractionCommandError.UnmetPrecondition)
             return;
@@ -152,9 +135,7 @@ public sealed class DiscordInteractionHandler(
         if (context.Interaction.HasResponded)
             return;
 
-        string reason = string.IsNullOrWhiteSpace(result.ErrorReason)
-            ? "Command precondition failed."
-            : result.ErrorReason;
+        string reason = string.IsNullOrWhiteSpace(result.ErrorReason) ? "Command precondition failed." : result.ErrorReason;
 
         try
         {
@@ -173,9 +154,7 @@ public sealed class DiscordInteractionHandler(
         }
         catch (HttpException ex) when (ex.DiscordCode == (DiscordErrorCode)40060)
         {
-            interactionLogger.Information(
-                ex,
-                "Interaction was already acknowledged while responding to unmet precondition.");
+            interactionLogger.Information(ex, "Interaction was already acknowledged while responding to unmet precondition.");
         }
         catch (Exception ex)
         {
@@ -183,10 +162,7 @@ public sealed class DiscordInteractionHandler(
         }
     }
 
-    private static void LogCommandUsage(
-        ILogger interactionLogger,
-        IInteractionContext context,
-        CommandUsageDetails usage) =>
+    private static void LogCommandUsage(ILogger interactionLogger, IInteractionContext context, CommandUsageDetails usage) =>
         interactionLogger
             .ForContext("method_context", $"{nameof(DiscordInteractionHandler)}.{nameof(LogCommandUsage)}")
             .ForContext("event_kind", "interaction.command_invoked")
@@ -204,9 +180,7 @@ public sealed class DiscordInteractionHandler(
         Assembly interactionsAssembly = typeof(HelloModule).Assembly;
         await interactionService.AddModulesAsync(interactionsAssembly, services);
 
-        _logger.Information(
-            "Registered {InteractionModuleCount} interaction modules.",
-            interactionService.Modules.Count);
+        _logger.Information("Registered {InteractionModuleCount} interaction modules.", interactionService.Modules.Count);
 
         LogRegisteredInteractionCommands();
 
@@ -237,8 +211,7 @@ public sealed class DiscordInteractionHandler(
 
     private async Task HandleInteractionAsync(SocketInteraction interaction)
     {
-        if (interaction.Type is not (InteractionType.ApplicationCommand or InteractionType.ModalSubmit
-            or InteractionType.MessageComponent))
+        if (interaction.Type is not (InteractionType.ApplicationCommand or InteractionType.ModalSubmit or InteractionType.MessageComponent))
             return;
 
         Stopwatch totalStopwatch = Stopwatch.StartNew();
@@ -255,8 +228,7 @@ public sealed class DiscordInteractionHandler(
             _interactionStopwatches[interaction.Id] = totalStopwatch;
             CommandUsageDetails usage = GetCommandUsageDetails(interaction);
 
-            interactionLogScope =
-                InteractionLogScope.Begin(CreateInteractionLogScopeDetails(interaction, context, usage));
+            interactionLogScope = InteractionLogScope.Begin(CreateInteractionLogScopeDetails(interaction, context, usage));
 
             interactionLogger = interactionLogger
                 .ForContext("user_id", context.User.Id)
@@ -297,9 +269,7 @@ public sealed class DiscordInteractionHandler(
 
             _interactionStopwatches.TryRemove(interaction.Id, out _);
 
-            string reason = string.IsNullOrWhiteSpace(result.ErrorReason)
-                ? "Command execution failed."
-                : result.ErrorReason;
+            string reason = string.IsNullOrWhiteSpace(result.ErrorReason) ? "Command execution failed." : result.ErrorReason;
 
             if (!interaction.HasResponded)
                 await interaction.RespondAsync($"Command failed: {reason}", ephemeral: true);
@@ -366,13 +336,9 @@ public sealed class DiscordInteractionHandler(
     {
         _interactionStopwatches.TryRemove(context.Interaction.Id, out Stopwatch? stopwatch);
 
-        double? totalMs = stopwatch is null
-            ? null
-            : Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2);
+        double? totalMs = stopwatch is null ? null : Math.Round(stopwatch.Elapsed.TotalMilliseconds, 2);
 
-        string commandName = context.Interaction is SocketInteraction socketInteraction
-            ? GetInteractionName(socketInteraction)
-            : command.Name;
+        string commandName = context.Interaction is SocketInteraction socketInteraction ? GetInteractionName(socketInteraction) : command.Name;
 
         ILogger interactionLogger = CreateInteractionDiagnosticsLogger(context)
             .ForContext("diag_component", "interaction_execution")
@@ -387,9 +353,7 @@ public sealed class DiscordInteractionHandler(
             .ForContext("guild_id", context.Guild?.Id)
             .ForContext("channel_id", context.Channel?.Id);
 
-        Exception? exception = result is ExecuteResult executeResult
-            ? executeResult.Exception
-            : null;
+        Exception? exception = result is ExecuteResult executeResult ? executeResult.Exception : null;
 
         if (result.IsSuccess)
         {
@@ -398,11 +362,7 @@ public sealed class DiscordInteractionHandler(
                 .ForContext("diag_outcome", "success")
                 .ForContext("event_kind", "interaction.execution_completed")
                 .ForContext("outcome", "success")
-                .Debug(
-                    "interaction_diag total_ms={TotalMs} has_responded={HasResponded}",
-                    totalMs,
-                    context.Interaction.HasResponded
-                );
+                .Debug("interaction_diag total_ms={TotalMs} has_responded={HasResponded}", totalMs, context.Interaction.HasResponded);
 
             return;
         }
@@ -561,7 +521,8 @@ public sealed class DiscordInteractionHandler(
     private InteractionLogScopeDetails CreateInteractionLogScopeDetails(
         SocketInteraction interaction,
         IInteractionContext context,
-        CommandUsageDetails usage) =>
+        CommandUsageDetails usage
+    ) =>
         new InteractionLogScopeDetails(
             _serviceInstanceId,
             Environment.ProcessId,
@@ -575,9 +536,5 @@ public sealed class DiscordInteractionHandler(
             interaction.Type == InteractionType.ApplicationCommand ? usage.CommandName : null
         );
 
-    private readonly record struct CommandUsageDetails(
-        string CommandName,
-        ulong? InvokeeUserId,
-        string? InvokeeUsername,
-        string? InvokeeSource);
+    private readonly record struct CommandUsageDetails(string CommandName, ulong? InvokeeUserId, string? InvokeeUsername, string? InvokeeSource);
 }

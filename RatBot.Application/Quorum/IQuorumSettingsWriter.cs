@@ -6,9 +6,8 @@ public interface IQuorumSettingsWriter
         QuorumTarget target,
         IEnumerable<ulong> roleIds,
         double quorumProportion,
-        CancellationToken ct = default);
+        CancellationToken ct = default
+    );
 
-    Task<ErrorOr<Deleted>> DeleteAsync(
-        QuorumTarget target,
-        CancellationToken ct = default);
+    Task<ErrorOr<Deleted>> DeleteAsync(QuorumTarget target, CancellationToken ct = default);
 }

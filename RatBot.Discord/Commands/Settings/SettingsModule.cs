@@ -27,12 +27,9 @@ public sealed class SettingsModule : SlashCommandBase
         [SlashCommand("add", "Register a source/display role colour mapping.")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task AddAsync(
-            [Summary("name", "Name used to identify this colour.")]
-            string name,
-            [Summary("source", "Source colour role users select.")]
-            IRole source,
-            [Summary("display", "Display colour role RatBot manages.")]
-            IRole display
+            [Summary("name", "Name used to identify this colour.")] string name,
+            [Summary("source", "Source colour role users select.")] IRole source,
+            [Summary("display", "Display colour role RatBot manages.")] IRole display
         )
         {
             if (Context.Guild is null)
@@ -75,11 +72,7 @@ public sealed class SettingsModule : SlashCommandBase
                     ComponentBuilder components =
                         status.Pending + status.InFlight == 0
                             ? new ComponentBuilder()
-                            : new ComponentBuilder().WithButton(
-                                LABEL_REFRESH,
-                                $"colour-sync-refresh:{Context.User.Id}",
-                                ButtonStyle.Primary
-                            );
+                            : new ComponentBuilder().WithButton(LABEL_REFRESH, $"colour-sync-refresh:{Context.User.Id}", ButtonStyle.Primary);
 
                     await FollowupAsync(message, ephemeral: true, components: components.Build());
                 },
@@ -90,12 +83,9 @@ public sealed class SettingsModule : SlashCommandBase
         [SlashCommand("upsert", "Create or update a source/display role colour mapping.")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task UpsertAsync(
-            [Summary("name", "Name used to identify this colour.")]
-            string name,
-            [Summary("source", "Source colour role users select.")]
-            IRole source,
-            [Summary("display", "Display colour role RatBot manages.")]
-            IRole display
+            [Summary("name", "Name used to identify this colour.")] string name,
+            [Summary("source", "Source colour role users select.")] IRole source,
+            [Summary("display", "Display colour role RatBot manages.")] IRole display
         )
         {
             if (Context.Guild is null)
@@ -126,8 +116,7 @@ public sealed class SettingsModule : SlashCommandBase
             await result.SwitchFirstAsync(
                 async upsert =>
                 {
-                    HashSet<ulong> affectedRoleIds = new HashSet<ulong>
-                        { upsert.Option.SourceRoleId, upsert.Option.DisplayRoleId };
+                    HashSet<ulong> affectedRoleIds = new HashSet<ulong> { upsert.Option.SourceRoleId, upsert.Option.DisplayRoleId };
 
                     if (upsert.PreviousDisplayRoleId is not null)
                         affectedRoleIds.Add(upsert.PreviousDisplayRoleId.Value);
@@ -137,9 +126,7 @@ public sealed class SettingsModule : SlashCommandBase
                     IRoleColourSyncQueue.Status status = syncQueue.GetStatus();
                     string eta = FormatEta(status);
 
-                    string action = upsert.Created
-                        ? "Registered"
-                        : "Updated";
+                    string action = upsert.Created ? "Registered" : "Updated";
 
                     string message =
                         $"{action} colour option `{upsert.Option.Key}` (‘{upsert.Option.Label}’): {source.Mention} -> {display.Mention}.\n"
@@ -148,11 +135,7 @@ public sealed class SettingsModule : SlashCommandBase
                     ComponentBuilder components =
                         status.Pending + status.InFlight == 0
                             ? new ComponentBuilder()
-                            : new ComponentBuilder().WithButton(
-                                LABEL_REFRESH,
-                                $"colour-sync-refresh:{Context.User.Id}",
-                                ButtonStyle.Primary
-                            );
+                            : new ComponentBuilder().WithButton(LABEL_REFRESH, $"colour-sync-refresh:{Context.User.Id}", ButtonStyle.Primary);
 
                     await FollowupAsync(message, ephemeral: true, components: components.Build());
                 },
@@ -193,11 +176,7 @@ public sealed class SettingsModule : SlashCommandBase
                     ComponentBuilder components =
                         status.Pending + status.InFlight == 0
                             ? new ComponentBuilder()
-                            : new ComponentBuilder().WithButton(
-                                LABEL_REFRESH,
-                                $"colour-sync-refresh:{Context.User.Id}",
-                                ButtonStyle.Primary
-                            );
+                            : new ComponentBuilder().WithButton(LABEL_REFRESH, $"colour-sync-refresh:{Context.User.Id}", ButtonStyle.Primary);
 
                     await FollowupAsync(
                         $"Deleted colour option `{option.Key}`. Queued {queued} member(s) for colour sync. Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.",
@@ -211,9 +190,7 @@ public sealed class SettingsModule : SlashCommandBase
 
         [SlashCommand("list", "List configured role colour options.")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task ListAsync(
-            [Summary("include-disabled", "Include disabled colour options.")]
-            bool includeDisabled = true)
+        public async Task ListAsync([Summary("include-disabled", "Include disabled colour options.")] bool includeDisabled = true)
         {
             if (Context.Guild is null)
             {
@@ -236,9 +213,7 @@ public sealed class SettingsModule : SlashCommandBase
             await RespondAsync(BuildListResponse(options), ephemeral: true);
         }
 
-        [SlashCommand(
-            "sync",
-            "Reconcile display colour roles for all members who currently have a source colour role.")]
+        [SlashCommand("sync", "Reconcile display colour roles for all members who currently have a source colour role.")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task SyncAsync()
         {
@@ -271,11 +246,7 @@ public sealed class SettingsModule : SlashCommandBase
             ComponentBuilder components =
                 status.Pending + status.InFlight == 0
                     ? new ComponentBuilder()
-                    : new ComponentBuilder().WithButton(
-                        LABEL_REFRESH,
-                        $"colour-sync-refresh:{Context.User.Id}",
-                        ButtonStyle.Primary
-                    );
+                    : new ComponentBuilder().WithButton(LABEL_REFRESH, $"colour-sync-refresh:{Context.User.Id}", ButtonStyle.Primary);
 
             await FollowupAsync(
                 $"Queued {queued} member(s). Current queue: pending={status.Pending}, in_flight={status.InFlight}, ETA={eta}.",
@@ -288,8 +259,7 @@ public sealed class SettingsModule : SlashCommandBase
         {
             IReadOnlyCollection<IGuildUser> users = await guild.GetUsersAsync();
 
-            ImmutableArray<IGuildUser> targetUsers =
-                users.Where(u => u.RoleIds.Contains(sourceRoleId)).ToImmutableArray();
+            ImmutableArray<IGuildUser> targetUsers = users.Where(u => u.RoleIds.Contains(sourceRoleId)).ToImmutableArray();
 
             return targetUsers.Count(user => syncQueue.Enqueue(guild.Id, user.Id));
         }
@@ -298,8 +268,7 @@ public sealed class SettingsModule : SlashCommandBase
         {
             IReadOnlyCollection<IGuildUser> users = await guild.GetUsersAsync();
 
-            ImmutableArray<IGuildUser> targetUsers =
-                users.Where(u => u.RoleIds.Any(sourceRoleIds.Contains)).ToImmutableArray();
+            ImmutableArray<IGuildUser> targetUsers = users.Where(u => u.RoleIds.Any(sourceRoleIds.Contains)).ToImmutableArray();
 
             return targetUsers.Count(user => syncQueue.Enqueue(guild.Id, user.Id));
         }
@@ -308,8 +277,7 @@ public sealed class SettingsModule : SlashCommandBase
         {
             IReadOnlyCollection<IGuildUser> users = await guild.GetUsersAsync();
 
-            ImmutableArray<IGuildUser> targetUsers =
-                users.Where(u => u.RoleIds.Any(roleIds.Contains)).ToImmutableArray();
+            ImmutableArray<IGuildUser> targetUsers = users.Where(u => u.RoleIds.Any(roleIds.Contains)).ToImmutableArray();
 
             return targetUsers.Count(user => syncQueue.Enqueue(guild.Id, user.Id));
         }
@@ -327,9 +295,7 @@ public sealed class SettingsModule : SlashCommandBase
             if (eta.TotalMinutes < 1)
                 return $"~{Math.Ceiling(eta.TotalSeconds)}s";
 
-            return eta.TotalHours < 1
-                ? $"~{Math.Floor(eta.TotalMinutes)}m {eta.Seconds:D2}s"
-                : $"~{Math.Floor(eta.TotalHours)}h {eta.Minutes:D2}m";
+            return eta.TotalHours < 1 ? $"~{Math.Floor(eta.TotalMinutes)}m {eta.Seconds:D2}s" : $"~{Math.Floor(eta.TotalHours)}h {eta.Minutes:D2}m";
         }
 
         private ErrorOr<Success> ValidateRoleColourRoles(ulong sourceRoleId, ulong displayRoleId)
@@ -355,12 +321,9 @@ public sealed class SettingsModule : SlashCommandBase
 
             foreach (RoleColourOption option in options)
             {
-                string state = option.IsEnabled
-                    ? "enabled"
-                    : "disabled";
+                string state = option.IsEnabled ? "enabled" : "disabled";
 
-                builder.AppendLine()
-                    .Append($"`{option.Key}`: <@&{option.SourceRoleId}> -> <@&{option.DisplayRoleId}> ({state})");
+                builder.AppendLine().Append($"`{option.Key}`: <@&{option.SourceRoleId}> -> <@&{option.DisplayRoleId}> ({state})");
             }
 
             return builder.ToString();
@@ -386,10 +349,7 @@ public sealed class SettingsModule : SlashCommandBase
 
             ComponentBuilder components = done
                 ? new ComponentBuilder()
-                : new ComponentBuilder().WithButton(
-                    LABEL_REFRESH,
-                    $"colour-sync-refresh:{ownerUserId}",
-                    ButtonStyle.Primary);
+                : new ComponentBuilder().WithButton(LABEL_REFRESH, $"colour-sync-refresh:{ownerUserId}", ButtonStyle.Primary);
 
             try
             {
@@ -410,8 +370,7 @@ public sealed class SettingsModule : SlashCommandBase
     }
 
     [Group("meta", "Meta configuration.")]
-    public sealed class MetaSettingsModule(MetaSuggestionSettingsService metaSuggestionSettingsService)
-        : SlashCommandBase
+    public sealed class MetaSettingsModule(MetaSuggestionSettingsService metaSuggestionSettingsService) : SlashCommandBase
     {
         [SlashCommand("suggestions", "Set the forum channel used for suggestion threads.")]
         [RequireUserPermission(GuildPermission.Administrator)]
@@ -423,12 +382,12 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            ErrorOr<Success> result =
-                await metaSuggestionSettingsService.UpsertSuggestionsForumChannelAsync(Context.Guild.Id, channel.Id);
+            ErrorOr<Success> result = await metaSuggestionSettingsService.UpsertSuggestionsForumChannelAsync(Context.Guild.Id, channel.Id);
 
             await result.SwitchFirstAsync(
                 async _ => await RespondAsync($"Meta suggestions forum set to {channel.Mention}.", ephemeral: true),
-                async error => await RespondAsync(error.Description, ephemeral: true));
+                async error => await RespondAsync(error.Description, ephemeral: true)
+            );
         }
 
         [SlashCommand("proposals", "Set the forum channel used for successful proposals.")]
@@ -441,12 +400,12 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            ErrorOr<Success> result =
-                await metaSuggestionSettingsService.UpsertProposalsForumChannelAsync(Context.Guild.Id, channel.Id);
+            ErrorOr<Success> result = await metaSuggestionSettingsService.UpsertProposalsForumChannelAsync(Context.Guild.Id, channel.Id);
 
             await result.SwitchFirstAsync(
                 async _ => await RespondAsync($"Meta proposals forum set to {channel.Mention}.", ephemeral: true),
-                async error => await RespondAsync(error.Description, ephemeral: true));
+                async error => await RespondAsync(error.Description, ephemeral: true)
+            );
         }
 
         [SlashCommand("cabinet", "Set the Cabinet role.")]
@@ -459,12 +418,12 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            ErrorOr<Success> result =
-                await metaSuggestionSettingsService.UpsertCabinetRoleAsync(Context.Guild.Id, role.Id);
+            ErrorOr<Success> result = await metaSuggestionSettingsService.UpsertCabinetRoleAsync(Context.Guild.Id, role.Id);
 
             await result.SwitchFirstAsync(
                 async _ => await RespondAsync($"Meta Cabinet role set to {role.Mention}.", ephemeral: true),
-                async error => await RespondAsync(error.Description, ephemeral: true));
+                async error => await RespondAsync(error.Description, ephemeral: true)
+            );
         }
 
         [SlashCommand("chair", "Set the Cabinet Chair role.")]
@@ -477,12 +436,12 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            ErrorOr<Success> result =
-                await metaSuggestionSettingsService.UpsertCabinetChairRoleAsync(Context.Guild.Id, role.Id);
+            ErrorOr<Success> result = await metaSuggestionSettingsService.UpsertCabinetChairRoleAsync(Context.Guild.Id, role.Id);
 
             await result.SwitchFirstAsync(
                 async _ => await RespondAsync($"Meta Cabinet Chair role set to {role.Mention}.", ephemeral: true),
-                async error => await RespondAsync(error.Description, ephemeral: true));
+                async error => await RespondAsync(error.Description, ephemeral: true)
+            );
         }
 
         [SlashCommand("committee", "Set the Committee role.")]
@@ -495,12 +454,12 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            ErrorOr<Success> result =
-                await metaSuggestionSettingsService.UpsertCommitteeRoleAsync(Context.Guild.Id, role.Id);
+            ErrorOr<Success> result = await metaSuggestionSettingsService.UpsertCommitteeRoleAsync(Context.Guild.Id, role.Id);
 
             await result.SwitchFirstAsync(
                 async _ => await RespondAsync($"Meta Committee role set to {role.Mention}.", ephemeral: true),
-                async error => await RespondAsync(error.Description, ephemeral: true));
+                async error => await RespondAsync(error.Description, ephemeral: true)
+            );
         }
     }
 
@@ -514,13 +473,9 @@ public sealed class SettingsModule : SlashCommandBase
     {
         [SlashCommand("set", "Create or update quorum settings for a channel or category.")]
         public async Task SetAsync(
-            [Summary("target", "The target channel or category.")]
-            [ChannelTypes(ChannelType.Text, ChannelType.Category)]
-            IChannel target,
-            [Summary("roles", "Comma-separated role mentions or role IDs.")]
-            string roles,
-            [Summary("proportion", "The quorum proportion, from 0 to 1.")]
-            double proportion
+            [Summary("target", "The target channel or category.")] [ChannelTypes(ChannelType.Text, ChannelType.Category)] IChannel target,
+            [Summary("roles", "Comma-separated role mentions or role IDs.")] string roles,
+            [Summary("proportion", "The quorum proportion, from 0 to 1.")] double proportion
         )
         {
             ErrorOr<QuorumSettingsUpsertResult> upsertResult = await (
@@ -539,20 +494,15 @@ public sealed class SettingsModule : SlashCommandBase
                         .Where(role => role is not null)
                         .ToImmutableArray();
 
-                    await RespondAsync(
-                        BuildSetResponse(target, savedRoles, result.Created, proportion),
-                        ephemeral: true);
+                    await RespondAsync(BuildSetResponse(target, savedRoles, result.Created, proportion), ephemeral: true);
                 },
-                async error => await RespondAsync(DescribeError(error), ephemeral: true));
+                async error => await RespondAsync(DescribeError(error), ephemeral: true)
+            );
         }
 
-        [SlashCommand(
-            "unset",
-            "Remove a quorum settings for a channel or category. The target ID must be a channel or category ID.")]
+        [SlashCommand("unset", "Remove a quorum settings for a channel or category. The target ID must be a channel or category ID.")]
         public async Task UnsetAsync(
-            [Summary("target", "The target channel or category.")]
-            [ChannelTypes(ChannelType.Text, ChannelType.Category)]
-            IChannel target
+            [Summary("target", "The target channel or category.")] [ChannelTypes(ChannelType.Text, ChannelType.Category)] IChannel target
         )
         {
             if (Context.Guild is null)
@@ -576,14 +526,13 @@ public sealed class SettingsModule : SlashCommandBase
 
             await deleteResult.SwitchFirstAsync(
                 async _ => await RespondAsync(BuildUnsetResponse(targetChannel), ephemeral: true),
-                async error => await RespondAsync(DescribeError(error), ephemeral: true));
+                async error => await RespondAsync(DescribeError(error), ephemeral: true)
+            );
         }
 
         [SlashCommand("view", "View the quorum settings for a channel or category.")]
         public async Task ViewAsync(
-            [Summary("target", "The target channel or category.")]
-            [ChannelTypes(ChannelType.Text, ChannelType.Category)]
-            IChannel target
+            [Summary("target", "The target channel or category.")] [ChannelTypes(ChannelType.Text, ChannelType.Category)] IChannel target
         )
         {
             ErrorOr<QuorumSettings> getResult = await (
@@ -602,18 +551,13 @@ public sealed class SettingsModule : SlashCommandBase
 
                     await RespondAsync(BuildViewResponse(target, resolvedRoles, settings.Proportion), ephemeral: true);
                 },
-                async error => await RespondAsync(DescribeError(error), ephemeral: true));
+                async error => await RespondAsync(DescribeError(error), ephemeral: true)
+            );
         }
 
-        private static string BuildSetResponse(
-            IChannel channel,
-            ImmutableArray<SocketRole> roles,
-            bool created,
-            double prop)
+        private static string BuildSetResponse(IChannel channel, ImmutableArray<SocketRole> roles, bool created, double prop)
         {
-            string action = created
-                ? "created"
-                : "updated";
+            string action = created ? "created" : "updated";
 
             string renderedRoles = string.Join(", ", roles.Select(role => role.Mention));
             string renderedProportion = FormatProportion(prop);
@@ -630,9 +574,7 @@ public sealed class SettingsModule : SlashCommandBase
 
         private static string BuildViewResponse(IChannel channel, ImmutableArray<SocketRole> roles, double prop)
         {
-            string renderedRoles = roles.Length == 0
-                ? "none"
-                : string.Join(", ", roles.Select(role => role.Mention));
+            string renderedRoles = roles.Length == 0 ? "none" : string.Join(", ", roles.Select(role => role.Mention));
 
             string renderedProportion = FormatProportion(prop);
 
@@ -650,8 +592,7 @@ public sealed class SettingsModule : SlashCommandBase
             channel switch
             {
                 SocketTextChannel textChannel => $"Quorum settings removed for channel {textChannel.Mention}.",
-                SocketCategoryChannel categoryChannel =>
-                    $"Quorum settings removed for category \"{categoryChannel.Name}\".",
+                SocketCategoryChannel categoryChannel => $"Quorum settings removed for category \"{categoryChannel.Name}\".",
                 _ => "Invalid channel type for quorum settings removal.",
             };
 
@@ -662,7 +603,6 @@ public sealed class SettingsModule : SlashCommandBase
                 _ => error.Description,
             };
 
-        private static string FormatProportion(double proportion) =>
-            $"{(proportion * 100).ToString("0.0", CultureInfo.InvariantCulture)}%";
+        private static string FormatProportion(double proportion) => $"{(proportion * 100).ToString("0.0", CultureInfo.InvariantCulture)}%";
     }
 }

@@ -11,44 +11,42 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
         if (!state.HasProposalText)
             return "Proposal text is missing.";
 
-        return string.Join(
-            "\n\n",
-            BuildFirstPost(state),
-            BuildSecondPost(state),
-            BuildThirdPost(state));
+        return string.Join("\n\n", BuildFirstPost(state), BuildSecondPost(state), BuildThirdPost(state));
     }
 
     private static string BuildFirstPost(MetaProposalState state) =>
         $"""
-         ## Author
-         <@{state.ProposalAuthorUserId!.Value}>
+            ## Author
+            <@{state.ProposalAuthorUserId!.Value}>
 
-         ## Date
-         <t:{state.ProposedAtUtc!.Value.ToUnixTimeSeconds()}:F>
+            ## Date
+            <t:{state.ProposedAtUtc!.Value.ToUnixTimeSeconds()}:F>
 
-         ## Summary
-         {state.Summary}
-         """;
+            ## Summary
+            {state.Summary}
+            """;
 
     private static string BuildSecondPost(MetaProposalState state) =>
         $"""
-         ## Motivation
-         {state.Motivation}
-         """;
+            ## Motivation
+            {state.Motivation}
+            """;
 
     private static string BuildThirdPost(MetaProposalState state) =>
         $"""
-         ## Specification
-         {state.Specification}
-         """;
+            ## Specification
+            {state.Specification}
+            """;
 
-    private async static Task SendCabinetPublicationFailureNoticeAsync(
+    private static async Task SendCabinetPublicationFailureNoticeAsync(
         MetaProposalState state,
         MetaSuggestionSettings settings,
-        IThreadChannel thread) =>
+        IThreadChannel thread
+    ) =>
         await thread.SendMessageAsync(
             $"<@&{settings.CabinetRoleId}> recovered proposal publication after {state.PublicationRetryFailures} failed retry attempts.",
-            allowedMentions: RoleMentionsOnly);
+            allowedMentions: RoleMentionsOnly
+        );
 
     public async Task SendProposalContentAsync(
         IThreadChannel suggestionThread,
@@ -56,15 +54,16 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
         string title,
         string summary,
         string motivation,
-        string specification)
+        string specification
+    )
     {
         ComponentBuilderV2 builder = new ComponentBuilderV2(
             new ContainerBuilder()
                 .WithAccentColor(Color.Teal)
                 .WithTextDisplay(new TextDisplayBuilder().WithContent($"# {title}"))
                 .WithTextDisplay(
-                    new TextDisplayBuilder().WithContent(
-                        $"**Author:** <@{authorId}>\n**Date:** <t:{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}:F>")),
+                    new TextDisplayBuilder().WithContent($"**Author:** <@{authorId}>\n**Date:** <t:{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}:F>")
+                ),
             new ContainerBuilder()
                 .WithAccentColor(Color.Teal)
                 .WithTextDisplay(new TextDisplayBuilder().WithContent("## Summary"))
@@ -79,16 +78,14 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
                 .WithTextDisplay(new TextDisplayBuilder().WithContent(specification))
         );
 
-        await suggestionThread.SendMessageAsync(
-            components: builder.Build(),
-            flags: MessageFlags.ComponentsV2,
-            allowedMentions: NoMentions);
+        await suggestionThread.SendMessageAsync(components: builder.Build(), flags: MessageFlags.ComponentsV2, allowedMentions: NoMentions);
     }
 
     public async Task<ErrorOr<IUserMessage>> CreateProposalPollAsync(
         IThreadChannel suggestionThread,
         uint durationHours,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         _ = ct;
 
@@ -105,10 +102,7 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
             LayoutType = PollLayout.Default,
         };
 
-        IUserMessage message = await suggestionThread.SendMessageAsync(
-            "Proposal poll",
-            allowedMentions: NoMentions,
-            poll: poll);
+        IUserMessage message = await suggestionThread.SendMessageAsync("Proposal poll", allowedMentions: NoMentions, poll: poll);
 
         return ErrorOrFactory.From(message);
     }
@@ -117,7 +111,8 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
         MetaProposalState state,
         MetaSuggestionSettings settings,
         bool pingCabinet,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         _ = ct;
 
@@ -127,14 +122,9 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
         IChannel? channel = client.GetChannel(settings.ProposalsForumChannelId);
 
         if (channel is not IForumChannel forumChannel)
-            return Error.NotFound(
-                "MetaProposal.ProposalsForumNotFound",
-                "The configured proposals forum was not found.");
+            return Error.NotFound("MetaProposal.ProposalsForumNotFound", "The configured proposals forum was not found.");
 
-        IThreadChannel thread = await forumChannel.CreatePostAsync(
-            state.ProposalTitle!,
-            text: BuildFirstPost(state),
-            allowedMentions: NoMentions);
+        IThreadChannel thread = await forumChannel.CreatePostAsync(state.ProposalTitle!, text: BuildFirstPost(state), allowedMentions: NoMentions);
 
         await thread.SendMessageAsync(BuildSecondPost(state), allowedMentions: NoMentions);
         await thread.SendMessageAsync(BuildThirdPost(state), allowedMentions: NoMentions);
@@ -146,9 +136,7 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
                 properties.Locked = false;
             });
 
-        await thread.SendMessageAsync(
-            $"<@&{settings.CabinetRoleId}> <@&{settings.CommitteeRoleId}>",
-            allowedMentions: RoleMentionsOnly);
+        await thread.SendMessageAsync($"<@&{settings.CabinetRoleId}> <@&{settings.CommitteeRoleId}>", allowedMentions: RoleMentionsOnly);
 
         if (pingCabinet)
             await SendCabinetPublicationFailureNoticeAsync(state, settings, thread);
@@ -160,7 +148,8 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
         MetaProposalState state,
         MetaSuggestionSettings settings,
         ulong? previousErrorMessageId = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         _ = ct;
 
@@ -169,8 +158,7 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
         if (channel is not IThreadChannel thread)
             return Error.NotFound("MetaProposal.SuggestionThreadNotFound", "The suggestion thread was not found.");
 
-        bool pingCabinet = state.PublicationRetryFailures + 1
-                           >= MetaProposalState.MaxPublicationRetryFailuresBeforePing;
+        bool pingCabinet = state.PublicationRetryFailures + 1 >= MetaProposalState.MaxPublicationRetryFailuresBeforePing;
 
         if (pingCabinet && previousErrorMessageId is { } previousMessageId)
             try
@@ -179,28 +167,16 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
             }
             catch (Exception ex)
             {
-                _logger.Debug(
-                    ex,
-                    "Could not delete previous meta publication error message {MessageId}.",
-                    previousMessageId);
+                _logger.Debug(ex, "Could not delete previous meta publication error message {MessageId}.", previousMessageId);
             }
 
-        string content = pingCabinet
-            ? $"<@&{settings.CabinetRoleId}> Proposal publication failed repeatedly."
-            : "Proposal publication failed.";
+        string content = pingCabinet ? $"<@&{settings.CabinetRoleId}> Proposal publication failed repeatedly." : "Proposal publication failed.";
 
-        AllowedMentions mentions = pingCabinet
-            ? RoleMentionsOnly
-            : NoMentions;
+        AllowedMentions mentions = pingCabinet ? RoleMentionsOnly : NoMentions;
 
-        MessageComponent components = new ComponentBuilder()
-            .WithButton("Attempt Resubmit", MetaCommandIds.ResubmitCustomId(state.Id))
-            .Build();
+        MessageComponent components = new ComponentBuilder().WithButton("Attempt Resubmit", MetaCommandIds.ResubmitCustomId(state.Id)).Build();
 
-        IUserMessage message = await thread.SendMessageAsync(
-            content,
-            allowedMentions: mentions,
-            components: components);
+        IUserMessage message = await thread.SendMessageAsync(content, allowedMentions: mentions, components: components);
 
         return message.Id;
     }
@@ -254,11 +230,12 @@ public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILog
 
         await thread.SendMessageAsync(
             $"""
-             Proposal vetoed.
+            Proposal vetoed.
 
-             {state.VetoReason}
-             """,
-            allowedMentions: NoMentions);
+            {state.VetoReason}
+            """,
+            allowedMentions: NoMentions
+        );
 
         await LockArchiveThreadAsync(thread.Id);
     }

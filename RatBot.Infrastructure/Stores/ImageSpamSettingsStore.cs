@@ -6,18 +6,17 @@ namespace RatBot.Infrastructure.Stores;
 public sealed class ImageSpamSettingsStore(BotDbContext dbContext) : IImageSpamSettingsStore
 {
     public Task<ImageSpamSettings?> GetAsync(CancellationToken ct) =>
-        dbContext.ImageSpamSettings
-            .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.Id == ImageSpamSettings.SingletonId, ct);
+        dbContext.ImageSpamSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == ImageSpamSettings.SingletonId, ct);
 
     public async Task<ImageSpamSettings> UpsertAsync(
         int? requiredChannelCount,
         int? requiredAttachmentCount,
         int? burstDurationSeconds,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
-        ImageSpamSettings? settings = await dbContext.ImageSpamSettings
-            .SingleOrDefaultAsync(x => x.Id == ImageSpamSettings.SingletonId, ct)
+        ImageSpamSettings? settings = await dbContext
+            .ImageSpamSettings.SingleOrDefaultAsync(x => x.Id == ImageSpamSettings.SingletonId, ct)
             .ConfigureAwait(false);
 
         if (settings is null)

@@ -7,7 +7,8 @@ public sealed class MetaProposalGatewayHandler(
     DiscordSocketClient discordClient,
     IServiceScopeFactory scopeFactory,
     MetaProposalPollResolver pollResolver,
-    ILogger logger) : IDiscordGatewayHandler
+    ILogger logger
+) : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<MetaProposalGatewayHandler>();
 
@@ -53,19 +54,12 @@ public sealed class MetaProposalGatewayHandler(
 
             if (ownerId == 0)
             {
-                _logger.Warning(
-                    "Ignoring meta suggestion thread {ThreadId} because owner id was unavailable.",
-                    thread.Id);
+                _logger.Warning("Ignoring meta suggestion thread {ThreadId} because owner id was unavailable.", thread.Id);
 
                 return;
             }
 
-            await service.TrackSuggestionThreadAsync(
-                thread.Guild.Id,
-                thread.Id,
-                settings.SuggestionsForumChannelId,
-                ownerId,
-                DateTimeOffset.UtcNow);
+            await service.TrackSuggestionThreadAsync(thread.Guild.Id, thread.Id, settings.SuggestionsForumChannelId, ownerId, DateTimeOffset.UtcNow);
         }
         catch (Exception ex)
         {
@@ -87,9 +81,7 @@ public sealed class MetaProposalGatewayHandler(
         }
     }
 
-    private async Task HandleMessageDeletedAsync(
-        Cacheable<IMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel)
+    private async Task HandleMessageDeletedAsync(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
     {
         _ = channel;
 
@@ -103,7 +95,8 @@ public sealed class MetaProposalGatewayHandler(
                 _logger.Information(
                     "Cleared deleted meta proposal poll message {PollMessageId} for state {StateId}.",
                     message.Id,
-                    clearResult.Value.Id);
+                    clearResult.Value.Id
+                );
         }
         catch (Exception ex)
         {
@@ -114,7 +107,8 @@ public sealed class MetaProposalGatewayHandler(
     private async Task HandleMessageUpdatedAsync(
         Cacheable<IMessage, ulong> cachedMessage,
         SocketMessage updatedMessage,
-        ISocketMessageChannel channel)
+        ISocketMessageChannel channel
+    )
     {
         _ = cachedMessage;
         _ = channel;
@@ -136,16 +130,13 @@ public sealed class MetaProposalGatewayHandler(
             if (stateResult.IsError || stateResult.Value.Status is not MetaProposalStatus.PollActive)
                 return;
 
-            await pollResolver.ResolveFinalizedPollAsync(
-                service,
-                stateResult.Value,
-                pollMessage,
-                CancellationToken.None);
+            await pollResolver.ResolveFinalizedPollAsync(service, stateResult.Value, pollMessage, CancellationToken.None);
 
             _logger.Information(
                 "Resolved manually finalized meta proposal poll {PollMessageId} for state {StateId}.",
                 pollMessage.Id,
-                stateResult.Value.Id);
+                stateResult.Value.Id
+            );
         }
         catch (Exception ex)
         {

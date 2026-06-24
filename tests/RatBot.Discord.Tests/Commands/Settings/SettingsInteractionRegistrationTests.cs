@@ -4,8 +4,8 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application.Moderation;
-using RatBot.Discord.Commands.Spam;
 using RatBot.Discord.Commands.Settings;
+using RatBot.Discord.Commands.Spam;
 using RatBot.Domain.Moderation;
 using Shouldly;
 
@@ -14,12 +14,10 @@ namespace RatBot.Discord.Tests.Commands.Settings;
 [TestFixture]
 public sealed class SettingsInteractionRegistrationTests
 {
-
     private static void AssertMetaCommand(string methodName, string commandName, Type parameterType)
     {
         MethodInfo method =
-            typeof(SettingsModule.MetaSettingsModule).GetMethod(methodName)
-            ?? throw new InvalidOperationException($"Expected {methodName} method.");
+            typeof(SettingsModule.MetaSettingsModule).GetMethod(methodName) ?? throw new InvalidOperationException($"Expected {methodName} method.");
 
         method.GetParameters().Single().ParameterType.ShouldBe(parameterType);
 
@@ -28,6 +26,7 @@ public sealed class SettingsInteractionRegistrationTests
 
         slashCommand.Name.ShouldBe(commandName);
     }
+
     [Test]
     public void ImageSpamConfigAsync_HasExpectedSlashCommandMetadata()
     {
@@ -38,8 +37,7 @@ public sealed class SettingsInteractionRegistrationTests
 
         // Act
         GroupAttribute group =
-            typeof(SpamModule).GetCustomAttribute<GroupAttribute>()
-            ?? throw new InvalidOperationException("Expected group attribute.");
+            typeof(SpamModule).GetCustomAttribute<GroupAttribute>() ?? throw new InvalidOperationException("Expected group attribute.");
 
         SlashCommandAttribute slashCommand =
             method.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
@@ -50,27 +48,13 @@ public sealed class SettingsInteractionRegistrationTests
         group.Name.ShouldBe("spam");
         slashCommand.Name.ShouldBe("image-spam-config");
 
-        parameters.Select(parameter => parameter.ParameterType).ShouldBe(
-        [
-            typeof(int?),
-            typeof(int?),
-            typeof(int?),
-        ]);
+        parameters.Select(parameter => parameter.ParameterType).ShouldBe([typeof(int?), typeof(int?), typeof(int?)]);
 
-        parameters.Select(parameter =>
-            parameter.GetCustomAttribute<SummaryAttribute>()?.Name).ShouldBe(
-        [
-            "number-of-channels",
-            "attachment-count",
-            "burst-duration",
-        ]);
+        parameters
+            .Select(parameter => parameter.GetCustomAttribute<SummaryAttribute>()?.Name)
+            .ShouldBe(["number-of-channels", "attachment-count", "burst-duration"]);
 
-        parameters.Select(parameter => parameter.HasDefaultValue && parameter.DefaultValue is null).ShouldBe(
-        [
-            true,
-            true,
-            true,
-        ]);
+        parameters.Select(parameter => parameter.HasDefaultValue && parameter.DefaultValue is null).ShouldBe([true, true, true]);
     }
 
     [Test]
@@ -91,12 +75,7 @@ public sealed class SettingsInteractionRegistrationTests
 
         // Assert
         command.Name.ShouldBe("image-spam-config");
-        command.Parameters.Select(parameter => parameter.Name).ShouldBe(
-        [
-            "number-of-channels",
-            "attachment-count",
-            "burst-duration",
-        ]);
+        command.Parameters.Select(parameter => parameter.Name).ShouldBe(["number-of-channels", "attachment-count", "burst-duration"]);
         command.Parameters.Select(parameter => parameter.Name.Length <= 32).ShouldBe([true, true, true]);
         command.Parameters.Select(parameter => parameter.IsRequired).ShouldBe([false, false, false]);
     }
@@ -119,30 +98,15 @@ public sealed class SettingsInteractionRegistrationTests
     [Test]
     public void MetaSettingsCommands_HaveExpectedParameters()
     {
-        AssertMetaCommand(
-            nameof(SettingsModule.MetaSettingsModule.SetSuggestionsForumChannelAsync),
-            "suggestions",
-            typeof(IForumChannel));
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetSuggestionsForumChannelAsync), "suggestions", typeof(IForumChannel));
 
-        AssertMetaCommand(
-            nameof(SettingsModule.MetaSettingsModule.SetProposalsForumChannelAsync),
-            "proposals",
-            typeof(IForumChannel));
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetProposalsForumChannelAsync), "proposals", typeof(IForumChannel));
 
-        AssertMetaCommand(
-            nameof(SettingsModule.MetaSettingsModule.SetCabinetRoleAsync),
-            "cabinet",
-            typeof(IRole));
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetCabinetRoleAsync), "cabinet", typeof(IRole));
 
-        AssertMetaCommand(
-            nameof(SettingsModule.MetaSettingsModule.SetCabinetChairRoleAsync),
-            "chair",
-            typeof(IRole));
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetCabinetChairRoleAsync), "chair", typeof(IRole));
 
-        AssertMetaCommand(
-            nameof(SettingsModule.MetaSettingsModule.SetCommitteeRoleAsync),
-            "committee",
-            typeof(IRole));
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetCommitteeRoleAsync), "committee", typeof(IRole));
     }
 
     private sealed class FakeImageSpamSettingsStore : IImageSpamSettingsStore
@@ -153,7 +117,7 @@ public sealed class SettingsInteractionRegistrationTests
             int? requiredChannelCount,
             int? requiredAttachmentCount,
             int? burstDurationSeconds,
-            CancellationToken ct) =>
-            Task.FromResult(ImageSpamSettings.CreateDefault());
+            CancellationToken ct
+        ) => Task.FromResult(ImageSpamSettings.CreateDefault());
     }
 }

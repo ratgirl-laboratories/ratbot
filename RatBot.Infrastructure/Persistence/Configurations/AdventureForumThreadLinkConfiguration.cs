@@ -10,10 +10,9 @@ public sealed class AdventureForumThreadLinkConfiguration : IEntityTypeConfigura
             "AdventureForumThreadLinks",
             table =>
             {
-                table.HasCheckConstraint(
-                    "CK_AdventureForumThreadLinks_ScorePartIndex",
-                    "\"ScorePartIndex\" >= 1 AND \"ScorePartIndex\" <= 20");
-            });
+                table.HasCheckConstraint("CK_AdventureForumThreadLinks_ScorePartIndex", "\"ScorePartIndex\" >= 1 AND \"ScorePartIndex\" <= 20");
+            }
+        );
 
         builder.HasKey(x => x.ScorePartIndex);
 

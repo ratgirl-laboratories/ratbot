@@ -4,19 +4,16 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class UpsertRoleColourOption
 {
-    public async static Task<ErrorOr<Result>> ExecuteAsync(
+    public static async Task<ErrorOr<Result>> ExecuteAsync(
         BotDbContext db,
         string key,
         string label,
         ulong sourceRoleId,
         ulong displayRoleId,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
-        ErrorOr<RoleColourOption> optionResult = RoleColourOption.Create(
-            key,
-            label,
-            sourceRoleId,
-            displayRoleId);
+        ErrorOr<RoleColourOption> optionResult = RoleColourOption.Create(key, label, sourceRoleId, displayRoleId);
 
         if (optionResult.IsError)
             return optionResult.Errors;
@@ -27,11 +24,10 @@ public static class UpsertRoleColourOption
         RoleColourOption? option = existing.SingleOrDefault(o => o.SourceRoleId == sourceRoleId);
 
         bool isKeyConflict = existing.Exists(o =>
-            string.Equals(o.NormalisedKey, candidate.NormalisedKey, StringComparison.Ordinal)
-            && o.OptionId != option?.OptionId);
+            string.Equals(o.NormalisedKey, candidate.NormalisedKey, StringComparison.Ordinal) && o.OptionId != option?.OptionId
+        );
 
-        bool isDisplayRoleConflict = existing.Exists(o => o.DisplayRoleId == displayRoleId
-                                                          && o.OptionId != option?.OptionId);
+        bool isDisplayRoleConflict = existing.Exists(o => o.DisplayRoleId == displayRoleId && o.OptionId != option?.OptionId);
 
         if (isKeyConflict)
             return Error.Conflict(description: $"Colour option `{candidate.Key}` is already registered.");

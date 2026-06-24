@@ -7,9 +7,7 @@ public sealed class AdminSendService
     private readonly Func<string, ErrorOr<string[]>> _splitMessage;
 
     public AdminSendService()
-        : this(message => MessageChunker.SplitMessageIntoChunks(message))
-    {
-    }
+        : this(message => MessageChunker.SplitMessageIntoChunks(message)) { }
 
     internal AdminSendService(Func<string, ErrorOr<string[]>> splitMessage)
     {
@@ -45,8 +43,6 @@ public sealed class AdminSendService
         int sentCount = sendResult.Value;
         ResolvedMessageChannel channel = channelResult.Value;
 
-        return sentCount == 1
-            ? $"Sent your message to {channel.Mention}."
-            : $"Sent your message to {channel.Mention} in {sentCount} parts.";
+        return sentCount == 1 ? $"Sent your message to {channel.Mention}." : $"Sent your message to {channel.Mention} in {sentCount} parts.";
     }
 }

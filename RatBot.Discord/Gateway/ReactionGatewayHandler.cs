@@ -2,11 +2,7 @@ using RatBot.Application.Reactions;
 
 namespace RatBot.Discord.Gateway;
 
-public sealed class ReactionGatewayHandler(
-    DiscordSocketClient discordClient,
-    ReactionQueue buffer,
-    ILogger logger)
-    : IDiscordGatewayHandler
+public sealed class ReactionGatewayHandler(DiscordSocketClient discordClient, ReactionQueue buffer, ILogger logger) : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<ReactionGatewayHandler>();
 
@@ -62,9 +58,7 @@ public sealed class ReactionGatewayHandler(
         return Task.CompletedTask;
     }
 
-    private Task HandleReactionsClearedAsync(
-        Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel)
+    private Task HandleReactionsClearedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
     {
         _ = message;
         _ = channel;
@@ -72,10 +66,7 @@ public sealed class ReactionGatewayHandler(
         return Task.CompletedTask;
     }
 
-    private Task HandleReactionsRemovedForEmoteAsync(
-        Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel,
-        IEmote emote)
+    private Task HandleReactionsRemovedForEmoteAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, IEmote emote)
     {
         _ = message;
         _ = channel;
@@ -85,9 +76,7 @@ public sealed class ReactionGatewayHandler(
 
     private void LogReactionEvent(string reactionEventType, IEmote emote)
     {
-        ulong? emojiId = emote is Emote customEmote
-            ? customEmote.Id
-            : null;
+        ulong? emojiId = emote is Emote customEmote ? customEmote.Id : null;
 
         _logger
             .ForContext("ReactionEventType", reactionEventType)

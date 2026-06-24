@@ -2,8 +2,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace RatBot.Infrastructure.Persistence.Configurations;
 
-public sealed class
-    AdventureLeaderboardMessageStateConfiguration : IEntityTypeConfiguration<AdventureLeaderboardMessageState>
+public sealed class AdventureLeaderboardMessageStateConfiguration : IEntityTypeConfiguration<AdventureLeaderboardMessageState>
 {
     public void Configure(EntityTypeBuilder<AdventureLeaderboardMessageState> builder)
     {

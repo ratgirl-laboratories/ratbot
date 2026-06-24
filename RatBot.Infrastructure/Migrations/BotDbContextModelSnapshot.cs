@@ -390,6 +390,25 @@ namespace RatBot.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RatBot.Domain.TemporaryPingRole.TemporaryPingRoleSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("GuildId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RoleId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TemporaryPingRoleSettings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TemporaryPingRoleSettings_SingletonId", "\"Id\" = 1");
+                        });
+                });
+
             modelBuilder.Entity("RatBot.Domain.Quorum.QuorumSettingsRole", b =>
                 {
                     b.HasOne("RatBot.Domain.Quorum.QuorumSettings", null)

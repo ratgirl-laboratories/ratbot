@@ -2,9 +2,7 @@ namespace RatBot.Domain.Adventure;
 
 public sealed class AdventureLeaderboardMessageState
 {
-    private AdventureLeaderboardMessageState()
-    {
-    }
+    private AdventureLeaderboardMessageState() { }
 
     public int Id { get; private set; }
 
@@ -24,7 +22,8 @@ public sealed class AdventureLeaderboardMessageState
         ulong channelId,
         ulong messageId,
         int year,
-        string lastRenderHash) =>
+        string lastRenderHash
+    ) =>
         new AdventureLeaderboardMessageState
         {
             Id = sequencePosition,

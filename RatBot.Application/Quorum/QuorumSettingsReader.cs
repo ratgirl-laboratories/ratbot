@@ -2,19 +2,13 @@ namespace RatBot.Application.Quorum;
 
 public sealed class QuorumSettingsReader(IQuorumSettingsRepository repository) : IQuorumSettingsReader
 {
-    public Task<ErrorOr<QuorumSettings>> GetAsync(
-        QuorumTarget target,
-        CancellationToken ct = default)
+    public Task<ErrorOr<QuorumSettings>> GetAsync(QuorumTarget target, CancellationToken ct = default)
     {
         _ = ct;
         return repository.GetAsync(target);
     }
 
-    public async Task<ErrorOr<QuorumSettings>> GetEffectiveAsync(
-        ulong guildId,
-        ulong channelId,
-        ulong? categoryId,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<QuorumSettings>> GetEffectiveAsync(ulong guildId, ulong channelId, ulong? categoryId, CancellationToken ct = default)
     {
         ErrorOr<QuorumTarget> channelTarget = QuorumTarget.Create(guildId, QuorumSettingsType.Channel, channelId);
 
@@ -29,13 +23,8 @@ public sealed class QuorumSettingsReader(IQuorumSettingsRepository repository) :
         if (categoryId is null)
             return channelConfig;
 
-        ErrorOr<QuorumTarget> categoryTarget = QuorumTarget.Create(
-            guildId,
-            QuorumSettingsType.Category,
-            categoryId.Value);
+        ErrorOr<QuorumTarget> categoryTarget = QuorumTarget.Create(guildId, QuorumSettingsType.Category, categoryId.Value);
 
-        return categoryTarget.IsError
-            ? categoryTarget.Errors
-            : await repository.GetAsync(categoryTarget.Value);
+        return categoryTarget.IsError ? categoryTarget.Errors : await repository.GetAsync(categoryTarget.Value);
     }
 }

@@ -4,10 +4,7 @@ using RatBot.Domain.Emoji;
 
 namespace RatBot.Application.Reactions;
 
-public sealed class ReactionUsageTracker(
-    IEmojiRepository emojiRepository,
-    ITrackedEmojiCatalog trackedEmojiCatalog,
-    ILogger logger)
+public sealed class ReactionUsageTracker(IEmojiRepository emojiRepository, ITrackedEmojiCatalog trackedEmojiCatalog, ILogger logger)
 {
     private readonly ILogger _logger = logger.ForContext<ReactionUsageTracker>();
 
@@ -28,13 +25,9 @@ public sealed class ReactionUsageTracker(
 
         foreach ((ulong emojiId, int count) in usages)
         {
-            int updatedRowCount = await emojiRepository.EmojiUsageCounts
-                .Where(x => x.EmojiId == emojiId)
-                .ExecuteUpdateAsync(
-                    setters => setters.SetProperty(
-                        x => x.ReactionUsageCount,
-                        x => x.ReactionUsageCount + count),
-                    ct)
+            int updatedRowCount = await emojiRepository
+                .EmojiUsageCounts.Where(x => x.EmojiId == emojiId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.ReactionUsageCount, x => x.ReactionUsageCount + count), ct)
                 .ConfigureAwait(false);
 
             if (updatedRowCount != 0)
@@ -46,7 +39,8 @@ public sealed class ReactionUsageTracker(
                     EmojiId = emojiId,
                     ReactionUsageCount = count,
                     MessageUsageCount = 0,
-                });
+                }
+            );
 
             await emojiRepository.SaveChangesAsync(ct).ConfigureAwait(false);
         }
@@ -60,15 +54,10 @@ public sealed class ReactionUsageTracker(
         int clampedLimit = Math.Clamp(limit, 1, 100);
         ErrorOr<EmojiUsagePage> pageResult = await GetUsagePageAsync(1, clampedLimit, ct).ConfigureAwait(false);
 
-        return pageResult.IsError
-            ? pageResult.Errors
-            : pageResult.Value.Items.ToList();
+        return pageResult.IsError ? pageResult.Errors : pageResult.Value.Items.ToList();
     }
 
-    public async Task<ErrorOr<EmojiUsagePage>> GetUsagePageAsync(
-        int page,
-        int pageSize = 25,
-        CancellationToken ct = default)
+    public async Task<ErrorOr<EmojiUsagePage>> GetUsagePageAsync(int page, int pageSize = 25, CancellationToken ct = default)
     {
         int clampedPageSize = Math.Clamp(pageSize, 1, 100);
 
@@ -77,9 +66,7 @@ public sealed class ReactionUsageTracker(
 
         await PruneUntrackedEmojiAsync(trackedEmojiIds, ct).ConfigureAwait(false);
 
-        IQueryable<EmojiUsageCount> query = emojiRepository.EmojiUsageCounts
-            .AsNoTracking()
-            .Where(x => trackedEmojiIds.Contains(x.EmojiId));
+        IQueryable<EmojiUsageCount> query = emojiRepository.EmojiUsageCounts.AsNoTracking().Where(x => trackedEmojiIds.Contains(x.EmojiId));
 
         int totalCount = await query.CountAsync(ct).ConfigureAwait(false);
 
@@ -89,8 +76,8 @@ public sealed class ReactionUsageTracker(
         int totalPages = (int)Math.Ceiling((double)totalCount / clampedPageSize);
         int clampedPage = Math.Clamp(page, 1, totalPages);
 
-        List<EmojiUsageCount> topUsage = await emojiRepository.EmojiUsageCounts
-            .AsNoTracking()
+        List<EmojiUsageCount> topUsage = await emojiRepository
+            .EmojiUsageCounts.AsNoTracking()
             .Where(x => trackedEmojiIds.Contains(x.EmojiId))
             .OrderByDescending(x => x.ReactionUsageCount + x.MessageUsageCount)
             .ThenBy(x => x.EmojiId)
@@ -103,7 +90,5 @@ public sealed class ReactionUsageTracker(
     }
 
     private Task<int> PruneUntrackedEmojiAsync(IReadOnlyCollection<ulong> trackedEmojiIds, CancellationToken ct) =>
-        emojiRepository.EmojiUsageCounts
-            .Where(x => !trackedEmojiIds.Contains(x.EmojiId))
-            .ExecuteDeleteAsync(ct);
+        emojiRepository.EmojiUsageCounts.Where(x => !trackedEmojiIds.Contains(x.EmojiId)).ExecuteDeleteAsync(ct);
 }

@@ -7,15 +7,12 @@ namespace RatBot.Infrastructure.RoleColours;
 /// </summary>
 public static class ListEligibleRoleColourOptions
 {
-    public static Task<IReadOnlyList<RoleColourOption>> ExecuteAsync(
-        BotDbContext db,
-        Query query,
-        CancellationToken ct)
+    public static Task<IReadOnlyList<RoleColourOption>> ExecuteAsync(BotDbContext db, Query query, CancellationToken ct)
     {
         IReadOnlyCollection<ulong> roleIds = query.CurrentMemberRoleIds;
 
-        IQueryable<RoleColourOption> q = db.RoleColourOptions
-            .AsNoTracking()
+        IQueryable<RoleColourOption> q = db
+            .RoleColourOptions.AsNoTracking()
             .Where(o => o.IsEnabled && roleIds.Contains(o.SourceRoleId))
             .OrderBy(o => o.Label)
             .ThenBy(o => o.NormalisedKey);
@@ -23,7 +20,5 @@ public static class ListEligibleRoleColourOptions
         return q.ToListAsync(ct).ContinueWith<IReadOnlyList<RoleColourOption>>(t => t.Result, ct);
     }
 
-    public sealed record Query(
-        IReadOnlyCollection<ulong> CurrentMemberRoleIds
-    );
+    public sealed record Query(IReadOnlyCollection<ulong> CurrentMemberRoleIds);
 }

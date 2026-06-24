@@ -14,7 +14,7 @@ public sealed class GuildMemberCacheBackgroundWorker(
     private readonly ILogger _logger = logger.ForContext<GuildMemberCacheBackgroundWorker>();
     private readonly DiscordOptions _options = options.Value;
 
-    protected async override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         TimeSpan interval = TimeSpan.FromMinutes(_options.MemberCacheRefreshIntervalMinutes);
 

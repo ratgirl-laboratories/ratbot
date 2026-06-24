@@ -3,9 +3,7 @@ namespace RatBot.Domain.RoleColours;
 public sealed class MemberColourPreference
 {
     // EF Core private ctor
-    private MemberColourPreference()
-    {
-    }
+    private MemberColourPreference() { }
 
     public Id PreferenceId { get; private set; } = Id.Empty;
 
@@ -17,9 +15,7 @@ public sealed class MemberColourPreference
 
     public bool IsNoColourSelected => Kind == MemberColourPreferenceKind.NoColour;
 
-    public static MemberColourPreference CreateForOption(
-        ulong userId,
-        RoleColourOption.Id selectedId) =>
+    public static MemberColourPreference CreateForOption(ulong userId, RoleColourOption.Id selectedId) =>
         new MemberColourPreference
         {
             PreferenceId = Id.NewId(),

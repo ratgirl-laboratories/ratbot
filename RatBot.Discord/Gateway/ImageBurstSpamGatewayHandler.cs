@@ -10,8 +10,8 @@ public sealed class ImageBurstSpamGatewayHandler(
     ImageBurstSpamDetectorSettings detectorSettings,
     IServiceScopeFactory scopeFactory,
     IOptions<DiscordOptions> options,
-    ILogger logger)
-    : IDiscordGatewayHandler
+    ILogger logger
+) : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<ImageBurstSpamGatewayHandler>();
     private readonly DiscordOptions _options = options.Value;
@@ -82,16 +82,9 @@ public sealed class ImageBurstSpamGatewayHandler(
         if (IsExempt(guildUser))
             return null;
 
-        ImageBurstAttachment[] attachments = userMessage.Attachments
-            .Select(x => new ImageBurstAttachment(x.Url))
-            .ToArray();
+        ImageBurstAttachment[] attachments = userMessage.Attachments.Select(x => new ImageBurstAttachment(x.Url)).ToArray();
 
-        return new ImageBurstMessage(
-            channel.Guild.Id,
-            guildUser.Id,
-            channel.Id,
-            userMessage.Timestamp,
-            attachments);
+        return new ImageBurstMessage(channel.Guild.Id, guildUser.Id, channel.Id, userMessage.Timestamp, attachments);
     }
 
     private bool IsExempt(SocketGuildUser user) =>
@@ -110,13 +103,8 @@ public sealed class ImageBurstSpamGatewayHandler(
             + $"{detection.ChannelIds.Count} channels with {currentSettings.RequiredAttachmentCount}+ attachments "
             + $"in {currentSettings.Window} seconds.";
 
-        await guild
-            .AddBanAsync(detection.UserId, _options.ImageBurstSpamHistoryPruneDays, reason)
-            .ConfigureAwait(false);
+        await guild.AddBanAsync(detection.UserId, _options.ImageBurstSpamHistoryPruneDays, reason).ConfigureAwait(false);
 
-        _logger.Warning(
-            "Banned user {UserId} for image-burst spam across {ChannelCount} channels.",
-            detection.UserId,
-            detection.ChannelIds.Count);
+        _logger.Warning("Banned user {UserId} for image-burst spam across {ChannelCount} channels.", detection.UserId, detection.ChannelIds.Count);
     }
 }

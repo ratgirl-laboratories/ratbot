@@ -8,16 +8,12 @@ namespace RatBot.Discord.Commands.Emoji;
 
 [Group("emoji", "Emoji analytics commands.")]
 [DefaultMemberPermissions(GuildPermission.SendMessages)]
-public sealed class EmojiModule(
-    ReactionUsageTracker reactionUsageTracker,
-    DiscordSocketClient discordClient,
-    IOptions<DiscordOptions> options)
+public sealed class EmojiModule(ReactionUsageTracker reactionUsageTracker, DiscordSocketClient discordClient, IOptions<DiscordOptions> options)
     : SlashCommandBase
 {
     private const string UsagePageCustomIdPrefix = "emoji-usage";
 
-    private static string BuildUsagePageCustomId(ulong ownerUserId, int page) =>
-        $"{UsagePageCustomIdPrefix}:page:{ownerUserId}:{page}";
+    private static string BuildUsagePageCustomId(ulong ownerUserId, int page) => $"{UsagePageCustomIdPrefix}:page:{ownerUserId}:{page}";
 
     [SlashCommand("usage", "Show top emojis by usage.")]
     public async Task UsageAsync() => await RespondWithUsagePageAsync(1).ConfigureAwait(false);
@@ -36,8 +32,7 @@ public sealed class EmojiModule(
 
     private async Task RespondWithUsagePageAsync(int page)
     {
-        ErrorOr<EmojiUsagePage> pageResult =
-            await reactionUsageTracker.GetUsagePageAsync(page).ConfigureAwait(false);
+        ErrorOr<EmojiUsagePage> pageResult = await reactionUsageTracker.GetUsagePageAsync(page).ConfigureAwait(false);
 
         if (pageResult.IsError)
         {
@@ -52,8 +47,7 @@ public sealed class EmojiModule(
 
     private async Task UpdateUsagePageAsync(int page)
     {
-        ErrorOr<EmojiUsagePage> pageResult =
-            await reactionUsageTracker.GetUsagePageAsync(page).ConfigureAwait(false);
+        ErrorOr<EmojiUsagePage> pageResult = await reactionUsageTracker.GetUsagePageAsync(page).ConfigureAwait(false);
 
         if (pageResult.IsError)
         {
@@ -75,24 +69,21 @@ public sealed class EmojiModule(
     private ComponentBuilderV2 BuildUsagePageComponents(EmojiUsagePage page, ulong ownerUserId) =>
         new ComponentBuilderV2(
             new ContainerBuilder()
-                .WithTextDisplay(
-                    new TextDisplayBuilder().WithContent($"## Emoji Usage Counts (Page {page.Page}/{page.TotalPages})")
-                )
+                .WithTextDisplay(new TextDisplayBuilder().WithContent($"## Emoji Usage Counts (Page {page.Page}/{page.TotalPages})"))
                 .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildUsagePageText(page.Items))),
-            new ActionRowBuilder()
-                .WithComponents(
-                [
-                    new ButtonBuilder()
-                        .WithStyle(ButtonStyle.Secondary)
-                        .WithLabel("Previous")
-                        .WithCustomId(BuildUsagePageCustomId(ownerUserId, page.Page - 1))
-                        .WithDisabled(page.Page <= 1),
-                    new ButtonBuilder()
-                        .WithStyle(ButtonStyle.Primary)
-                        .WithLabel("Next")
-                        .WithCustomId(BuildUsagePageCustomId(ownerUserId, page.Page + 1))
-                        .WithDisabled(page.Page >= page.TotalPages),
-                ]));
+            new ActionRowBuilder().WithComponents([
+                new ButtonBuilder()
+                    .WithStyle(ButtonStyle.Secondary)
+                    .WithLabel("Previous")
+                    .WithCustomId(BuildUsagePageCustomId(ownerUserId, page.Page - 1))
+                    .WithDisabled(page.Page <= 1),
+                new ButtonBuilder()
+                    .WithStyle(ButtonStyle.Primary)
+                    .WithLabel("Next")
+                    .WithCustomId(BuildUsagePageCustomId(ownerUserId, page.Page + 1))
+                    .WithDisabled(page.Page >= page.TotalPages),
+            ])
+        );
 
     private string BuildUsagePageText(IReadOnlyList<EmojiUsageCount> rows)
     {
@@ -109,8 +100,6 @@ public sealed class EmojiModule(
         SocketGuild? guild = discordClient.GetGuild(options.Value.GuildId);
         GuildEmote? guildEmote = guild?.Emotes.FirstOrDefault(x => x.Id == emojiId);
 
-        return guildEmote is not null
-            ? guildEmote.ToString()
-            : $"[custom:{emojiId}]";
+        return guildEmote is not null ? guildEmote.ToString() : $"[custom:{emojiId}]";
     }
 }

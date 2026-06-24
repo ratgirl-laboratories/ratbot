@@ -11,10 +11,11 @@ public static class AdventureLeaderboardFormatter
         AdventureEntrySnapshot snapshot,
         int year,
         ImmutableHashSet<ulong> guildMemberUserIds,
-        DateTimeOffset lastUpdated)
+        DateTimeOffset lastUpdated
+    )
     {
-        ImmutableArray<AdventureEntryRow> sortedRows = snapshot.Rows
-            .OrderByDescending(row => row.Score)
+        ImmutableArray<AdventureEntryRow> sortedRows = snapshot
+            .Rows.OrderByDescending(row => row.Score)
             .ThenBy(row => IsGuildMember(row, guildMemberUserIds) ? 0 : 1)
             .ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(row => row.ApiOrder)
@@ -27,10 +28,10 @@ public static class AdventureLeaderboardFormatter
 
     private static ImmutableArray<AdventureLeaderboardViewRow> FormatRows(
         ImmutableArray<AdventureEntryRow> sortedRows,
-        ImmutableHashSet<ulong> guildMemberUserIds)
+        ImmutableHashSet<ulong> guildMemberUserIds
+    )
     {
-        ImmutableArray<AdventureLeaderboardViewRow>.Builder rows =
-            ImmutableArray.CreateBuilder<AdventureLeaderboardViewRow>(sortedRows.Length);
+        ImmutableArray<AdventureLeaderboardViewRow>.Builder rows = ImmutableArray.CreateBuilder<AdventureLeaderboardViewRow>(sortedRows.Length);
 
         int? previousScore = null;
         int currentRank = 0;
@@ -72,9 +73,7 @@ public static class AdventureLeaderboardFormatter
 
     private static string FormatPlainDisplayName(string name)
     {
-        string safeName = string.IsNullOrWhiteSpace(name)
-            ? "unknown"
-            : name.Trim();
+        string safeName = string.IsNullOrWhiteSpace(name) ? "unknown" : name.Trim();
 
         if (safeName.Length > MaxDisplayNameLength)
             safeName = safeName[..MaxDisplayNameLength];
@@ -82,21 +81,14 @@ public static class AdventureLeaderboardFormatter
         return global::Discord.Format.Sanitize(safeName);
     }
 
-    private static AdventureLeaderboardViewRow FormatRow(
-        AdventureEntryRow row,
-        int rank,
-        ImmutableHashSet<ulong> guildMemberUserIds)
+    private static AdventureLeaderboardViewRow FormatRow(AdventureEntryRow row, int rank, ImmutableHashSet<ulong> guildMemberUserIds)
     {
-        string displayName = ulong.TryParse(row.UserId, out ulong userId) && guildMemberUserIds.Contains(userId)
-            ? MentionUtils.MentionUser(userId)
-            : FormatPlainDisplayName(row.Name);
+        string displayName =
+            ulong.TryParse(row.UserId, out ulong userId) && guildMemberUserIds.Contains(userId)
+                ? MentionUtils.MentionUser(userId)
+                : FormatPlainDisplayName(row.Name);
 
-        return new AdventureLeaderboardViewRow(
-            rank,
-            row.Score,
-            row.Progress.Count * 2,
-            BuildProgressBar(row.Progress),
-            displayName);
+        return new AdventureLeaderboardViewRow(rank, row.Score, row.Progress.Count * 2, BuildProgressBar(row.Progress), displayName);
     }
 
     private static bool IsGuildMember(AdventureEntryRow row, ImmutableHashSet<ulong> guildMemberUserIds) =>

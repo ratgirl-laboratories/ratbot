@@ -14,7 +14,8 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
     private static ulong? ResolveConfiguredTargetDcr(
         IReadOnlyCollection<ulong> currentRoles,
         MemberColourPreference? preference,
-        IReadOnlyCollection<RoleColourOption> enabledOptions)
+        IReadOnlyCollection<RoleColourOption> enabledOptions
+    )
     {
         if (preference is not { Kind: MemberColourPreferenceKind.ConfiguredOption, SelectedOptionId: not null })
             return null;
@@ -22,37 +23,26 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
         RoleColourOption.Id selectedId = preference.SelectedOptionId.Value;
         RoleColourOption? selected = enabledOptions.SingleOrDefault(o => o.OptionId.Equals(selectedId));
 
-        return selected is not null && currentRoles.Contains(selected.SourceRoleId)
-            ? selected.DisplayRoleId
-            : null;
+        return selected is not null && currentRoles.Contains(selected.SourceRoleId) ? selected.DisplayRoleId : null;
     }
 
     private static HashSet<ulong> GetDisplayRolesToRemove(HashSet<ulong> currentDcrs, ulong? targetDcr) =>
-        currentDcrs
-            .Where(roleId => roleId != targetDcr)
-            .ToHashSet();
+        currentDcrs.Where(roleId => roleId != targetDcr).ToHashSet();
 
     private static List<ulong> GetDisplayRolesToAdd(IReadOnlyCollection<ulong> currentRoles, ulong? targetDcr) =>
-        targetDcr.HasValue && !currentRoles.Contains(targetDcr.Value)
-            ? new List<ulong> { targetDcr.Value }
-            : new List<ulong>();
+        targetDcr.HasValue && !currentRoles.Contains(targetDcr.Value) ? new List<ulong> { targetDcr.Value } : new List<ulong>();
 
     public async Task ReconcileMemberAsync(IGuild guild, ulong userId, CancellationToken ct)
     {
         using IServiceScope scope = scopeFactory.CreateScope();
         BotDbContext db = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-        MemberColourPreference? prefTracked = await db.MemberColourPreferences
-            .SingleOrDefaultAsync(p => p.UserId == userId, ct);
+        MemberColourPreference? prefTracked = await db.MemberColourPreferences.SingleOrDefaultAsync(p => p.UserId == userId, ct);
 
         // Load all options; we use enabled ones for selection logic, but remove any DCRs from all configured options
-        List<RoleColourOption> allOptions = await db.RoleColourOptions
-            .AsNoTracking()
-            .ToListAsync(ct);
+        List<RoleColourOption> allOptions = await db.RoleColourOptions.AsNoTracking().ToListAsync(ct);
 
-        List<RoleColourOption> enabledOptions = allOptions
-            .Where(o => o.IsEnabled)
-            .ToList();
+        List<RoleColourOption> enabledOptions = allOptions.Where(o => o.IsEnabled).ToList();
 
         IGuildUser? member = await guild.GetUserAsync(userId);
 
@@ -65,18 +55,13 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
         IReadOnlyCollection<ulong> currentRoles = member.RoleIds;
 
         // If the user explicitly selected NoColour, do not apply fallback; remove all DCRs instead
-        ulong? targetDcr = prefTracked?.IsNoColourSelected == true
-            ? null
-            : ResolveTargetDcr(guild, userId, currentRoles, prefTracked, enabledOptions);
+        ulong? targetDcr =
+            prefTracked?.IsNoColourSelected == true ? null : ResolveTargetDcr(guild, userId, currentRoles, prefTracked, enabledOptions);
 
         // Remove any DCRs that belong to any configured option (enabled or disabled)
-        HashSet<ulong> dcrSet = allOptions
-            .Select(colourOption => colourOption.DisplayRoleId)
-            .ToHashSet();
+        HashSet<ulong> dcrSet = allOptions.Select(colourOption => colourOption.DisplayRoleId).ToHashSet();
 
-        HashSet<ulong> currentDcrs = currentRoles
-            .Where(dcrSet.Contains)
-            .ToHashSet();
+        HashSet<ulong> currentDcrs = currentRoles.Where(dcrSet.Contains).ToHashSet();
 
         HashSet<ulong> toRemove = GetDisplayRolesToRemove(currentDcrs, targetDcr);
         List<ulong> toAdd = GetDisplayRolesToAdd(currentRoles, targetDcr);
@@ -127,7 +112,8 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
                 "role_colour_reconcile failed guild_id={GuildId} user_id={UserId} target_dcr={TargetDcr}",
                 guild.Id,
                 userId,
-                targetDcr?.ToString() ?? NoneLogValue);
+                targetDcr?.ToString() ?? NoneLogValue
+            );
         }
     }
 
@@ -136,23 +122,20 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
         ulong userId,
         IReadOnlyCollection<ulong> currentRoles,
         MemberColourPreference? preference,
-        IReadOnlyCollection<RoleColourOption> enabledOptions) =>
-        ResolveConfiguredTargetDcr(currentRoles, preference, enabledOptions)
-        ?? ResolveFallbackTargetDcr(guild, userId, currentRoles, enabledOptions);
+        IReadOnlyCollection<RoleColourOption> enabledOptions
+    ) =>
+        ResolveConfiguredTargetDcr(currentRoles, preference, enabledOptions) ?? ResolveFallbackTargetDcr(guild, userId, currentRoles, enabledOptions);
 
     private ulong? ResolveFallbackTargetDcr(
         IGuild guild,
         ulong userId,
         IReadOnlyCollection<ulong> currentRoles,
-        IReadOnlyCollection<RoleColourOption> enabledOptions)
+        IReadOnlyCollection<RoleColourOption> enabledOptions
+    )
     {
         RoleColourOption? best = enabledOptions
             .Where(o => currentRoles.Contains(o.SourceRoleId))
-            .Select(o => new
-            {
-                Option = o,
-                Role = guild.GetRole(o.SourceRoleId),
-            })
+            .Select(o => new { Option = o, Role = guild.GetRole(o.SourceRoleId) })
             .OrderByDescending(x => x.Role?.Position ?? int.MinValue)
             .ThenBy(x => x.Option.Label, StringComparer.OrdinalIgnoreCase)
             .Select(x => x.Option)
@@ -160,10 +143,7 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
 
         if (best is null)
         {
-            logger.Debug(
-                "role_colour_reconcile fallback_transient_none guild_id={GuildId} user_id={UserId}",
-                guild.Id,
-                userId);
+            logger.Debug("role_colour_reconcile fallback_transient_none guild_id={GuildId} user_id={UserId}", guild.Id, userId);
 
             return null;
         }
@@ -173,7 +153,8 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
             guild.Id,
             userId,
             best.OptionId.Value,
-            best.DisplayRoleId);
+            best.DisplayRoleId
+        );
 
         return best.DisplayRoleId;
     }

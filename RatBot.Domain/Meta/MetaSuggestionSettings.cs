@@ -2,9 +2,7 @@ namespace RatBot.Domain.Meta;
 
 public sealed class MetaSuggestionSettings
 {
-    private MetaSuggestionSettings()
-    {
-    }
+    private MetaSuggestionSettings() { }
 
     public ulong GuildId { get; private set; }
     public ulong SuggestionsForumChannelId { get; private set; }
@@ -19,7 +17,8 @@ public sealed class MetaSuggestionSettings
         ulong proposalsForumChannelId = 0,
         ulong cabinetRoleId = 0,
         ulong cabinetChairRoleId = 0,
-        ulong committeeRoleId = 0) =>
+        ulong committeeRoleId = 0
+    ) =>
         new MetaSuggestionSettings
         {
             GuildId = guildId,
@@ -40,18 +39,16 @@ public sealed class MetaSuggestionSettings
     }
 
     private static Error Required(string fieldName) =>
-        Error.Validation(
-            $"MetaSuggestionSettings.{fieldName}Required",
-            $"Meta proposal setting {fieldName} must be configured.");
+        Error.Validation($"MetaSuggestionSettings.{fieldName}Required", $"Meta proposal setting {fieldName} must be configured.");
 
-    public ErrorOr<Success> SetSuggestionsForum(ulong channelId) =>
-        SetId(channelId, value => SuggestionsForumChannelId = value);
+    public ErrorOr<Success> SetSuggestionsForum(ulong channelId) => SetId(channelId, value => SuggestionsForumChannelId = value);
 
-    public ErrorOr<Success> SetProposalsForum(ulong channelId) =>
-        SetId(channelId, value => ProposalsForumChannelId = value);
+    public ErrorOr<Success> SetProposalsForum(ulong channelId) => SetId(channelId, value => ProposalsForumChannelId = value);
 
     public ErrorOr<Success> SetCabinetRole(ulong roleId) => SetId(roleId, value => CabinetRoleId = value);
+
     public ErrorOr<Success> SetCabinetChairRole(ulong roleId) => SetId(roleId, value => CabinetChairRoleId = value);
+
     public ErrorOr<Success> SetCommitteeRole(ulong roleId) => SetId(roleId, value => CommitteeRoleId = value);
 
     public ErrorOr<Success> EnsureProposalWorkflowConfigured()

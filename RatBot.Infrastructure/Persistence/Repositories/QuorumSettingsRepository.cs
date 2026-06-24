@@ -12,9 +12,8 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
             .Include(config => config.Roles)
             .AsNoTracking()
             .SingleOrDefaultAsync(config =>
-                config.GuildId == target.GuildId
-                && config.TargetType == target.TargetType
-                && config.TargetId == target.TargetId);
+                config.GuildId == target.GuildId && config.TargetType == target.TargetType && config.TargetId == target.TargetId
+            );
 
         if (config is null)
             return Error.NotFound(description: "Quorum settings not found");
@@ -27,9 +26,7 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
         bool exists = await dbContext
             .Set<QuorumSettings>()
             .AnyAsync(existing =>
-                existing.GuildId == config.GuildId
-                && existing.TargetType == config.TargetType
-                && existing.TargetId == config.TargetId
+                existing.GuildId == config.GuildId && existing.TargetType == config.TargetType && existing.TargetId == config.TargetId
             );
 
         if (!exists)
@@ -41,18 +38,13 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
             await dbContext
                 .Set<QuorumSettings>()
                 .Where(existing =>
-                    existing.GuildId == config.GuildId
-                    && existing.TargetType == config.TargetType
-                    && existing.TargetId == config.TargetId
+                    existing.GuildId == config.GuildId && existing.TargetType == config.TargetType && existing.TargetId == config.TargetId
                 )
                 .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.Proportion, config.Proportion));
 
             await dbContext
                 .Set<QuorumSettingsRole>()
-                .Where(role =>
-                    role.GuildId == config.GuildId
-                    && role.TargetType == config.TargetType
-                    && role.TargetId == config.TargetId)
+                .Where(role => role.GuildId == config.GuildId && role.TargetType == config.TargetType && role.TargetId == config.TargetId)
                 .ExecuteDeleteAsync();
 
             dbContext.AddRange(config.Roles);
@@ -67,9 +59,8 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
         QuorumSettings? entity = await dbContext
             .Set<QuorumSettings>()
             .SingleOrDefaultAsync(existing =>
-                existing.GuildId == target.GuildId
-                && existing.TargetType == target.TargetType
-                && existing.TargetId == target.TargetId);
+                existing.GuildId == target.GuildId && existing.TargetType == target.TargetType && existing.TargetId == target.TargetId
+            );
 
         if (entity is null)
             return Error.NotFound(description: "Quorum settings not found");

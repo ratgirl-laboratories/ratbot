@@ -26,9 +26,7 @@ public static class MessageChunker
             string window = message.Substring(index, chunkSize);
             int splitAt = window.LastIndexOf('\n');
 
-            int chunkLength = splitAt > 0
-                ? splitAt + 1
-                : chunkSize;
+            int chunkLength = splitAt > 0 ? splitAt + 1 : chunkSize;
 
             chunks.Enqueue(message.Substring(index, chunkLength));
             index += chunkLength;

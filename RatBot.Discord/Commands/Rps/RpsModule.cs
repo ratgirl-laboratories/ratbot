@@ -7,8 +7,7 @@ public sealed class RpsModule(RpsGameService rpsGameService) : SlashCommandBase
 {
     private const string CustomIdPrefix = "rps";
 
-    private static string GetCustomId(string gameId, RpsPick pick) =>
-        $"{CustomIdPrefix}:{gameId}:{pick.ToString().ToLowerInvariant()}";
+    private static string GetCustomId(string gameId, RpsPick pick) => $"{CustomIdPrefix}:{gameId}:{pick.ToString().ToLowerInvariant()}";
 
     private static bool TryParsePick(string value, out RpsPick pick)
     {
@@ -90,9 +89,7 @@ public sealed class RpsModule(RpsGameService rpsGameService) : SlashCommandBase
 
         if (!TryParsePick(pickRaw, out RpsPick pick))
         {
-            await RespondAsync(
-                "Invalid pick. Somehow. Like, you should really not be seeing this error.",
-                ephemeral: true);
+            await RespondAsync("Invalid pick. Somehow. Like, you should really not be seeing this error.", ephemeral: true);
 
             return;
         }

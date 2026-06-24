@@ -5,14 +5,14 @@ namespace RatBot.Discord.BackgroundWorkers;
 
 public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
 {
-    private readonly Channel<IRoleColourSyncQueue.WorkItem> _channel =
-        Channel.CreateBounded<IRoleColourSyncQueue.WorkItem>(
-            new BoundedChannelOptions(50_000)
-            {
-                SingleReader = false,
-                SingleWriter = false,
-                FullMode = BoundedChannelFullMode.DropOldest,
-            });
+    private readonly Channel<IRoleColourSyncQueue.WorkItem> _channel = Channel.CreateBounded<IRoleColourSyncQueue.WorkItem>(
+        new BoundedChannelOptions(50_000)
+        {
+            SingleReader = false,
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.DropOldest,
+        }
+    );
 
     private readonly ConcurrentQueue<DateTimeOffset> _completedTimestamps = new ConcurrentQueue<DateTimeOffset>();
 
@@ -81,11 +81,7 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
     {
         (double? perSec, TimeSpan? eta) = ComputeThroughputAndEta();
 
-        return new IRoleColourSyncQueue.Status(
-            Volatile.Read(ref _pending),
-            Volatile.Read(ref _inFlight),
-            perSec,
-            eta);
+        return new IRoleColourSyncQueue.Status(Volatile.Read(ref _pending), Volatile.Read(ref _inFlight), perSec, eta);
     }
 
     private (double? perSec, TimeSpan? eta) ComputeThroughputAndEta()
@@ -106,9 +102,7 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
         double rate = (points.Length - 1) / seconds; // items per second
         int remaining = Math.Max(0, Volatile.Read(ref _pending) + Volatile.Read(ref _inFlight));
 
-        TimeSpan eta = rate > 0
-            ? TimeSpan.FromSeconds(remaining / rate)
-            : TimeSpan.Zero;
+        TimeSpan eta = rate > 0 ? TimeSpan.FromSeconds(remaining / rate) : TimeSpan.Zero;
 
         return (rate, eta);
     }

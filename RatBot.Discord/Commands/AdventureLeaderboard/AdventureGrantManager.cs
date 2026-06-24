@@ -7,7 +7,8 @@ public static class AdventureGrantManager
     public static AdventureAccessGrants GenerateAdventureAccessGrants(
         AdventureEntrySnapshot snapshot,
         ImmutableDictionary<int, ulong> threadIdsByScorePart,
-        ImmutableHashSet<ulong> adventurerUserIds)
+        ImmutableHashSet<ulong> adventurerUserIds
+    )
     {
         ImmutableHashSet<AdventureAccessGrant>.Builder grants = ImmutableHashSet.CreateBuilder<AdventureAccessGrant>();
 

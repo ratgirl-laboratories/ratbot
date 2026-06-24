@@ -4,10 +4,7 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class DisableRoleColourOption
 {
-    public async static Task<ErrorOr<RoleColourOption>> ExecuteAsync(
-        BotDbContext db,
-        Command command,
-        CancellationToken ct)
+    public static async Task<ErrorOr<RoleColourOption>> ExecuteAsync(BotDbContext db, Command command, CancellationToken ct)
     {
         string key = command.Key.Trim();
 
@@ -16,9 +13,7 @@ public static class DisableRoleColourOption
 
         string normalized = key.ToUpperInvariant();
 
-        RoleColourOption? option = await db
-            .RoleColourOptions
-            .SingleOrDefaultAsync(o => o.NormalisedKey == normalized, ct);
+        RoleColourOption? option = await db.RoleColourOptions.SingleOrDefaultAsync(o => o.NormalisedKey == normalized, ct);
 
         if (option is null)
             return Error.NotFound(description: $"Colour option `{key}` is not registered.");

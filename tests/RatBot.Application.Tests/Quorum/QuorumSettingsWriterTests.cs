@@ -14,10 +14,7 @@ public sealed class QuorumSettingsWriterTests
     private QuorumSettingsWriter _writer = null!;
     private QuorumTarget _target;
 
-    private static QuorumSettings CreateSettings(
-        QuorumTarget target,
-        IEnumerable<ulong> roleIds,
-        double quorumProportion) =>
+    private static QuorumSettings CreateSettings(QuorumTarget target, IEnumerable<ulong> roleIds, double quorumProportion) =>
         QuorumSettings.Create(target, roleIds, Proportion.Create(quorumProportion).Value).Value;
 
     [SetUp]
@@ -36,9 +33,7 @@ public sealed class QuorumSettingsWriterTests
     public async Task UpsertAsync_WithValidInput_DeduplicatesRolesAndPersistsSettings()
     {
         // Arrange
-        _repository
-            .GetAsync(_target)
-            .Returns(Task.FromResult<ErrorOr<QuorumSettings>>(Error.NotFound(description: "not found")));
+        _repository.GetAsync(_target).Returns(Task.FromResult<ErrorOr<QuorumSettings>>(Error.NotFound(description: "not found")));
 
         _repository.UpsertAsync(Arg.Any<QuorumSettings>()).Returns(Task.FromResult<ErrorOr<Success>>(Result.Success));
 
@@ -67,9 +62,7 @@ public sealed class QuorumSettingsWriterTests
     public async Task UpsertAsync_WithEmptyRoles_ReturnsValidationErrorAndDoesNotWrite()
     {
         // Arrange
-        _repository
-            .GetAsync(_target)
-            .Returns(Task.FromResult<ErrorOr<QuorumSettings>>(Error.NotFound(description: "not found")));
+        _repository.GetAsync(_target).Returns(Task.FromResult<ErrorOr<QuorumSettings>>(Error.NotFound(description: "not found")));
 
         // Act
         ErrorOr<QuorumSettingsUpsertResult> result = await _writer.UpsertAsync(_target, [], 0.75);
@@ -148,12 +141,9 @@ public sealed class QuorumSettingsWriterTests
         // Arrange
         Error repositoryError = Error.Failure(description: "database unavailable");
 
-        _repository
-            .GetAsync(_target)
-            .Returns(Task.FromResult<ErrorOr<QuorumSettings>>(Error.NotFound(description: "not found")));
+        _repository.GetAsync(_target).Returns(Task.FromResult<ErrorOr<QuorumSettings>>(Error.NotFound(description: "not found")));
 
-        _repository.UpsertAsync(Arg.Any<QuorumSettings>())
-            .Returns(Task.FromResult<ErrorOr<Success>>(repositoryError));
+        _repository.UpsertAsync(Arg.Any<QuorumSettings>()).Returns(Task.FromResult<ErrorOr<Success>>(repositoryError));
 
         // Act
         ErrorOr<QuorumSettingsUpsertResult> result = await _writer.UpsertAsync(_target, [10], 0.75);

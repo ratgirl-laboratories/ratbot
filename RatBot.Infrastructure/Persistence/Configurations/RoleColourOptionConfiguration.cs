@@ -13,9 +13,7 @@ public sealed class RoleColourOptionConfiguration : IEntityTypeConfiguration<Rol
                 table.HasCheckConstraint("CK_RoleColourOptions_Key_NotBlank", "length(btrim(\"Key\")) > 0");
                 table.HasCheckConstraint("CK_RoleColourOptions_Label_NotBlank", "length(btrim(\"Label\")) > 0");
 
-                table.HasCheckConstraint(
-                    "CK_RoleColourOptions_DifferentRoles",
-                    "\"SourceRoleId\" <> \"DisplayRoleId\"");
+                table.HasCheckConstraint("CK_RoleColourOptions_DifferentRoles", "\"SourceRoleId\" <> \"DisplayRoleId\"");
             }
         );
 

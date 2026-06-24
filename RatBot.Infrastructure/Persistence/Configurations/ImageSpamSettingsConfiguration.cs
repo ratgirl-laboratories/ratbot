@@ -10,18 +10,13 @@ public sealed class ImageSpamSettingsConfiguration : IEntityTypeConfiguration<Im
             "ImageSpamSettings",
             table =>
             {
-                table.HasCheckConstraint(
-                    "CK_ImageSpamSettings_RequiredChannelCount_Positive",
-                    "\"RequiredChannelCount\" > 0");
+                table.HasCheckConstraint("CK_ImageSpamSettings_RequiredChannelCount_Positive", "\"RequiredChannelCount\" > 0");
 
-                table.HasCheckConstraint(
-                    "CK_ImageSpamSettings_RequiredAttachmentCount_Positive",
-                    "\"RequiredAttachmentCount\" > 0");
+                table.HasCheckConstraint("CK_ImageSpamSettings_RequiredAttachmentCount_Positive", "\"RequiredAttachmentCount\" > 0");
 
-                table.HasCheckConstraint(
-                    "CK_ImageSpamSettings_BurstDurationSeconds_Positive",
-                    "\"BurstDurationSeconds\" > 0");
-            });
+                table.HasCheckConstraint("CK_ImageSpamSettings_BurstDurationSeconds_Positive", "\"BurstDurationSeconds\" > 0");
+            }
+        );
 
         builder.HasKey(x => x.Id);
 

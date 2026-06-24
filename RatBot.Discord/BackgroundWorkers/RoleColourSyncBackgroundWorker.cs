@@ -7,8 +7,8 @@ public sealed class RoleColourSyncBackgroundWorker(
     IRoleColourSyncQueue queue,
     DiscordSocketClient discordClient,
     IRoleColourReconciler reconciler,
-    ILogger logger)
-    : BackgroundService
+    ILogger logger
+) : BackgroundService
 {
     private static readonly int DefaultConcurrency = Environment.ProcessorCount >> 1;
     private readonly ILogger _log = logger.ForContext<RoleColourSyncBackgroundWorker>();
@@ -46,10 +46,7 @@ public sealed class RoleColourSyncBackgroundWorker(
 
                 if (guild is null)
                 {
-                    _log.Debug(
-                        "role_colour_sync guild_missing guild_id={GuildId} user_id={UserId}",
-                        item.GuildId,
-                        item.UserId);
+                    _log.Debug("role_colour_sync guild_missing guild_id={GuildId} user_id={UserId}", item.GuildId, item.UserId);
 
                     continue;
                 }
@@ -58,11 +55,7 @@ public sealed class RoleColourSyncBackgroundWorker(
             }
             catch (Exception ex)
             {
-                _log.Error(
-                    ex,
-                    "role_colour_sync failed guild_id={GuildId} user_id={UserId}",
-                    item.GuildId,
-                    item.UserId);
+                _log.Error(ex, "role_colour_sync failed guild_id={GuildId} user_id={UserId}", item.GuildId, item.UserId);
                 // best-effort; continue
             }
             finally

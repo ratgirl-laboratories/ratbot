@@ -4,15 +4,10 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public static class ApplyRoleColourSelection
 {
-    public async static Task<Result> ExecuteAsync(
-        BotDbContext db,
-        Command command,
-        CancellationToken ct)
+    public static async Task<Result> ExecuteAsync(BotDbContext db, Command command, CancellationToken ct)
     {
         // Load the selected option
-        RoleColourOption? option = await db.RoleColourOptions
-            .AsNoTracking()
-            .SingleOrDefaultAsync(o => o.OptionId == command.SelectedOptionId, ct);
+        RoleColourOption? option = await db.RoleColourOptions.AsNoTracking().SingleOrDefaultAsync(o => o.OptionId == command.SelectedOptionId, ct);
 
         if (option is null)
             return Result.Fail("That colour is no longer available to you.");
@@ -24,8 +19,7 @@ public static class ApplyRoleColourSelection
             return Result.Fail("That colour is no longer available to you.");
 
         // Upsert preference
-        MemberColourPreference? pref = await db.MemberColourPreferences
-            .SingleOrDefaultAsync(p => p.UserId == command.UserId, ct);
+        MemberColourPreference? pref = await db.MemberColourPreferences.SingleOrDefaultAsync(p => p.UserId == command.UserId, ct);
 
         if (pref is null)
         {
@@ -41,15 +35,12 @@ public static class ApplyRoleColourSelection
         return Result.Ok();
     }
 
-    public sealed record Command(
-        ulong UserId,
-        RoleColourOption.Id SelectedOptionId,
-        IReadOnlyCollection<ulong> CurrentMemberRoleIds
-    );
+    public sealed record Command(ulong UserId, RoleColourOption.Id SelectedOptionId, IReadOnlyCollection<ulong> CurrentMemberRoleIds);
 
     public sealed record Result(bool Success, string? ErrorDescription)
     {
         public static Result Ok() => new Result(true, null);
+
         public static Result Fail(string description) => new Result(false, description);
     }
 }

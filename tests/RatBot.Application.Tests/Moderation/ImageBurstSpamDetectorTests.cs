@@ -16,19 +16,17 @@ public sealed class ImageBurstSpamDetectorTests
                 DistinctChannelThreshold = 4,
                 RequiredAttachmentCount = 2,
                 HandlingLockDuration = TimeSpan.FromMinutes(5),
-            });
+            }
+        );
 
-    private static ImageBurstMessage CreateMessage(
-        ulong guildId = 1,
-        ulong userId = 2,
-        ulong channelId = 10,
-        DateTimeOffset? timestamp = null) =>
+    private static ImageBurstMessage CreateMessage(ulong guildId = 1, ulong userId = 2, ulong channelId = 10, DateTimeOffset? timestamp = null) =>
         new ImageBurstMessage(
             guildId,
             userId,
             channelId,
             timestamp ?? BaseTimestamp,
-            [new ImageBurstAttachment("https://cdn.example/a.png"), new ImageBurstAttachment("https://cdn.example/b.png")]);
+            [new ImageBurstAttachment("https://cdn.example/a.png"), new ImageBurstAttachment("https://cdn.example/b.png")]
+        );
 
     [Test]
     public void Observe_WithFourDistinctChannelsInsideWindow_ReturnsDetection()
@@ -81,13 +79,15 @@ public sealed class ImageBurstSpamDetectorTests
                 DistinctChannelThreshold = 3,
                 RequiredAttachmentCount = 2,
                 HandlingLockDuration = TimeSpan.FromMinutes(5),
-            });
+            }
+        );
 
         // Act
         detector.Observe(CreateMessage(channelId: 908076393198419988, timestamp: BaseTimestamp)).ShouldBeNull();
         detector.Observe(CreateMessage(channelId: 903481102591750184, timestamp: BaseTimestamp.AddMilliseconds(2161))).ShouldBeNull();
-        ImageBurstDetection? detection =
-            detector.Observe(CreateMessage(channelId: 486841085210132490, timestamp: BaseTimestamp.AddMilliseconds(4362)));
+        ImageBurstDetection? detection = detector.Observe(
+            CreateMessage(channelId: 486841085210132490, timestamp: BaseTimestamp.AddMilliseconds(4362))
+        );
 
         // Assert
         detection.ShouldNotBeNull();

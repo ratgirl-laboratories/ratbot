@@ -19,14 +19,16 @@ namespace RatBot.Infrastructure.Migrations
                        length("EmojiId") = 19
                        AND "EmojiId" > '9223372036854775807'
                    );
-                """);
+                """
+            );
 
             migrationBuilder.Sql(
                 """
                 ALTER TABLE "EmojiUsageCounts"
                 ALTER COLUMN "EmojiId" TYPE bigint
                 USING "EmojiId"::bigint;
-                """);
+                """
+            );
         }
 
         /// <inheritdoc />
@@ -37,7 +39,8 @@ namespace RatBot.Infrastructure.Migrations
                 ALTER TABLE "EmojiUsageCounts"
                 ALTER COLUMN "EmojiId" TYPE character varying(128)
                 USING "EmojiId"::text;
-                """);
+                """
+            );
         }
     }
 }

@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using RatBot.Infrastructure.Data;
+using RatBot.Infrastructure.Persistence.Quorum;
 using Testcontainers.PostgreSql;
 
 namespace RatBot.Infrastructure.Tests.Integration;
@@ -12,7 +13,9 @@ public sealed class PostgresDatabaseFixture
 {
     private static PostgreSqlContainer _container = null!;
 
-    private static string ConnectionString => _container.GetConnectionString();
+    internal static string ConnectionString => _container.GetConnectionString();
+
+    public static QuorumConfigurationStore CreateQuorumConfigurationStore() => new QuorumConfigurationStore(ConnectionString);
 
     public static BotDbContext CreateDbContext()
     {
@@ -31,6 +34,7 @@ public sealed class PostgresDatabaseFixture
 
         await using (db.ConfigureAwait(false))
         {
+            await db.Database.ExecuteSqlRawAsync("DELETE FROM quorum_configurations").ConfigureAwait(false);
             await db.QuorumSettingsRoles.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.QuorumSettings.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.MetaProposalStates.ExecuteDeleteAsync().ConfigureAwait(false);

@@ -3,10 +3,12 @@ using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application.Common;
 using RatBot.Application.Common.Interfaces;
 using RatBot.Application.Moderation;
+using RatBot.Application.Modules.Quorum;
 using RatBot.Application.Quorum;
 using RatBot.Application.Rps;
 using RatBot.Application.SecretRole;
 using RatBot.Infrastructure.Data;
+using RatBot.Infrastructure.Persistence.Quorum;
 using RatBot.Infrastructure.Persistence.Repositories;
 using RatBot.Infrastructure.SecretRole;
 using RatBot.Infrastructure.Stores;
@@ -33,6 +35,7 @@ public static class DependencyInjection
 
             services.AddScoped<IAutobannedUserRepository, AutobannedUserRepository>();
             services.AddScoped<IImageSpamSettingsStore, ImageSpamSettingsStore>();
+            services.AddScoped<IQuorumConfigurationStore>(_ => new QuorumConfigurationStore(connectionString));
             services.AddScoped<IQuorumSettingsRepository, QuorumSettingsRepository>();
             services.AddScoped<IEmojiRepository>(sp => sp.GetRequiredService<BotDbContext>());
             services.AddScoped<ISecretRoleRepository, SecretRoleRepository>();

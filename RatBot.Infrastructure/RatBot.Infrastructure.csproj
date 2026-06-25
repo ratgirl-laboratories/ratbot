@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
+        <PackageReference Include="Dapper" />
         <PackageReference Include="DotNetEnv" />
         <PackageReference Include="ErrorOr" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" />
@@ -12,6 +13,7 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
         <PackageReference Include="Microsoft.Extensions.Configuration" />
         <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+        <PackageReference Include="Npgsql" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
         <PackageReference Include="Riok.Mapperly" />
         <PackageReference Include="Serilog" />

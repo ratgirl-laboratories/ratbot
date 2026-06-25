@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Threading.Channels;
 
 namespace RatBot.Discord.BackgroundWorkers;
@@ -14,6 +15,7 @@ public interface IRoleColourSyncQueue
 
     Status GetStatus();
 
+    [StructLayout(LayoutKind.Auto)]
     public readonly record struct WorkItem(ulong GuildId, ulong UserId);
 
     public sealed record Status(int Pending, int InFlight, double? PerSecond, TimeSpan? Eta);

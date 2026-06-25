@@ -1,5 +1,8 @@
+using System.Runtime.InteropServices;
+
 namespace RatBot.Domain.Quorum;
 
+[StructLayout(LayoutKind.Auto)]
 public readonly record struct QuorumTarget
 {
     private QuorumTarget(ulong guildId, QuorumSettingsType targetType, ulong targetId)

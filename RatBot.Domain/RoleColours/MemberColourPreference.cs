@@ -36,7 +36,7 @@ public sealed class MemberColourPreference
     public void SelectOption(RoleColourOption.Id id)
     {
         if (id.Equals(RoleColourOption.Id.Empty))
-            throw new ArgumentException("Selected option id must be a real id.");
+            throw new ArgumentException("Selected option id must be a real id.", nameof(id));
 
         Kind = MemberColourPreferenceKind.ConfiguredOption;
         SelectedOptionId = id;

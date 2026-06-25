@@ -1,17 +1,17 @@
 using System.Collections.Concurrent;
-using Microsoft.EntityFrameworkCore;
+using RatBot.Application.RoleColours;
 using RatBot.Discord.Handlers;
-using RatBot.Infrastructure.Data;
-using RatBot.Infrastructure.RoleColours;
 
 namespace RatBot.Discord.Commands.Colour;
 
 [Group("colour", "Pick or remove your display colour.")]
-public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconciler) : InteractionModuleBase<IInteractionContext>
+public sealed class ColourModule(IRoleColourRepository roleColours, IRoleColourReconciler reconciler) : InteractionModuleBase<IInteractionContext>
 {
     private const string SwapPrefix = "colour-swap";
 
-    private static readonly ConcurrentDictionary<string, Session> Sessions = new ConcurrentDictionary<string, Session>();
+    private static readonly ConcurrentDictionary<string, Session> Sessions = new ConcurrentDictionary<string, Session>(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     [SlashCommand("swap", "Swap to another available display colour.")]
     public async Task SwapAsync()
@@ -25,20 +25,16 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         IGuildUser invoker = (IGuildUser)Context.User;
         IReadOnlyCollection<ulong> roleIds = invoker.RoleIds;
 
-        IReadOnlyList<RoleColourOption> eligible = await ListEligibleRoleColourOptions.ExecuteAsync(
-            db,
-            new ListEligibleRoleColourOptions.Query(roleIds),
-            CancellationToken.None
-        );
+        RoleColourOption[] eligible = await ListEligibleOptionsAsync(roleIds, CancellationToken.None);
 
         Log.Debug(
             "colour_swap start guild_id={GuildId} user_id={UserId} eligible_count={Eligible}",
             Context.Guild.Id,
             Context.User.Id,
-            eligible.Count
+            eligible.Length
         );
 
-        switch (eligible.Count)
+        switch (eligible.Length)
         {
             case 0:
                 await RespondAsync("You do not currently have any colour roles that can be selected.", ephemeral: true);
@@ -79,17 +75,7 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         Log.Debug("colour_remove start guild_id={GuildId} user_id={UserId}", Context.Guild.Id, Context.User.Id);
         await DeferAsync(true);
 
-        SetNoColourPreference.Result res = await SetNoColourPreference.ExecuteAsync(
-            db,
-            new SetNoColourPreference.Command(Context.User.Id),
-            CancellationToken.None
-        );
-
-        if (!res.Success)
-        {
-            await FollowupAsync(res.ErrorDescription ?? "Failed to update preference.", ephemeral: true);
-            return;
-        }
+        await roleColours.SetPreferenceAsync(Context.User.Id, null, CancellationToken.None);
 
         Log.Debug("colour_remove reconcile guild_id={GuildId} user_id={UserId}", Context.Guild.Id, Context.User.Id);
         await reconciler.ReconcileMemberAsync(Context.Guild, Context.User.Id, CancellationToken.None);
@@ -135,11 +121,7 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         IGuildUser invoker = (IGuildUser)Context.User;
         IReadOnlyCollection<ulong> roleIds = invoker.RoleIds;
 
-        IReadOnlyList<RoleColourOption> eligible = await ListEligibleRoleColourOptions.ExecuteAsync(
-            db,
-            new ListEligibleRoleColourOptions.Query(roleIds),
-            CancellationToken.None
-        );
+        RoleColourOption[] eligible = await ListEligibleOptionsAsync(roleIds, CancellationToken.None);
 
         string applyId = $"{SwapPrefix}:apply:{ownerUserId}:{nonce}";
         string selectId = $"{SwapPrefix}:select:{ownerUserId}:{nonce}";
@@ -195,18 +177,16 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         IGuildUser invoker = (IGuildUser)Context.User;
         IReadOnlyCollection<ulong> roleIds = invoker.RoleIds;
 
-        ApplyRoleColourSelection.Result res = await ApplyRoleColourSelection.ExecuteAsync(
-            db,
-            new ApplyRoleColourSelection.Command(Context.User.Id, session.Selected.Value, roleIds),
-            CancellationToken.None
-        );
+        RoleColourOption? selectedOption = await FindEligibleOptionAsync(session.Selected.Value, roleIds, CancellationToken.None);
 
-        if (!res.Success)
+        if (selectedOption is null)
         {
             await DisableComponentsAsync();
             await RespondAsync("That colour is no longer available to you.", ephemeral: true);
             return;
         }
+
+        await roleColours.SetPreferenceAsync(Context.User.Id, selectedOption.OptionId, CancellationToken.None);
 
         Log.Debug(
             "colour_swap apply_ok guild_id={GuildId} user_id={UserId} option_id={OptionId}",
@@ -218,21 +198,21 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         await reconciler.ReconcileMemberAsync(Context.Guild, Context.User.Id, CancellationToken.None);
         Log.Debug("colour_swap reconciled guild_id={GuildId} user_id={UserId}", Context.Guild.Id, Context.User.Id);
 
-        // Try to get the label to show success; reload option
-        RoleColourOption? option = await db.RoleColourOptions.SingleOrDefaultAsync(o => o.OptionId == session.Selected.Value);
+        await RespondWithAppliedColourAsync(selectedOption.Label);
 
-        string label = option?.Label ?? "your chosen colour";
+        Sessions.TryRemove(nonce, out _);
+    }
 
-        if (Context.Interaction is SocketMessageComponent smc2)
-            await smc2.UpdateAsync(m =>
+    private async Task RespondWithAppliedColourAsync(string label)
+    {
+        if (Context.Interaction is SocketMessageComponent component)
+            await component.UpdateAsync(message =>
             {
-                m.Content = $"You are now wearing {label}.";
-                m.Components = new ComponentBuilder().Build();
+                message.Content = $"You are now wearing {label}.";
+                message.Components = new ComponentBuilder().Build();
             });
         else
             await RespondAsync($"You are now wearing {label}.", ephemeral: true);
-
-        Sessions.TryRemove(nonce, out _);
     }
 
     private async Task UpdateOrRespondExpiredAsync()
@@ -257,6 +237,22 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
             // Don't care
         }
     }
+
+    private async Task<RoleColourOption[]> ListEligibleOptionsAsync(IReadOnlyCollection<ulong> currentRoleIds, CancellationToken ct) =>
+        (await roleColours.GetOptionsAsync(ct))
+            .Where(option => option.IsEnabled && currentRoleIds.Contains(option.SourceRoleId))
+            .OrderBy(option => option.Label, StringComparer.Ordinal)
+            .ThenBy(option => option.NormalisedKey, StringComparer.Ordinal)
+            .ToArray();
+
+    private async Task<RoleColourOption?> FindEligibleOptionAsync(
+        RoleColourOption.Id optionId,
+        IReadOnlyCollection<ulong> currentRoleIds,
+        CancellationToken ct
+    ) =>
+        (await roleColours.GetOptionsAsync(ct)).SingleOrDefault(option =>
+            option.OptionId == optionId && option.IsEnabled && currentRoleIds.Contains(option.SourceRoleId)
+        );
 
     private sealed record Session(ulong OwnerUserId, RoleColourOption.Id? Selected, DateTimeOffset ExpiresAtUtc)
     {

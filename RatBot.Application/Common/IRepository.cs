@@ -9,7 +9,6 @@ public interface IRepository<TAggregate>
     /// <summary>
     ///     Attempts to find an entity of type <typeparamref name="TAggregate" /> by the specified identifier.
     /// </summary>
-    /// <typeparam name="TAggregate">The type of the aggregate entity to find.</typeparam>
     /// <param name="id">The unique identifier of the entity to locate.</param>
     /// <returns>
     ///     A task that represents the asynchronous operation. The task result contains
@@ -21,7 +20,6 @@ public interface IRepository<TAggregate>
     /// <summary>
     ///     Adds an aggregate entity of type <typeparamref name="TAggregate" /> to the repository.
     /// </summary>
-    /// <typeparam name="TAggregate">The type of the aggregate entity to be added.</typeparam>
     /// <param name="aggregate">The aggregate entity instance to add.</param>
     void Add(TAggregate aggregate);
 

@@ -6,14 +6,21 @@ public sealed class RpsGameService(IRpsGameStore store, ILogger logger)
 
     private readonly ILogger _logger = logger.ForContext<RpsGameService>();
 
-    public ErrorOr<RpsGameSession> CreateGameAsync(ulong challengerId, ulong opponentId)
+    public ErrorOr<RpsGameSession> CreateGame(ulong challengerId, ulong opponentId)
     {
         if (challengerId == opponentId)
             return RpsErrors.SameUser;
 
-        DateTime createdAt = DateTime.UtcNow;
+        DateTimeOffset createdAt = DateTimeOffset.UtcNow;
 
-        RpsGameSession game = new RpsGameSession(Guid.CreateVersion7().ToString("N"), challengerId, opponentId, createdAt.Add(GameTtl), null, null);
+        RpsGameSession game = new RpsGameSession(
+            Guid.CreateVersion7().ToString("N"),
+            challengerId,
+            opponentId,
+            ExpiresAt: createdAt.Add(GameTtl),
+            ChallengerPick: null,
+            OpponentPick: null
+        );
 
         store.Create(game);
 
@@ -28,5 +35,5 @@ public sealed class RpsGameService(IRpsGameStore store, ILogger logger)
     }
 
     public Task<ErrorOr<RpsPickSubmissionResult>> SubmitPickAsync(string gameId, ulong userId, RpsPick pick) =>
-        store.SubmitPickAsync(gameId, userId, pick, DateTime.UtcNow);
+        store.SubmitPickAsync(gameId, userId, pick, DateTimeOffset.UtcNow);
 }

@@ -60,7 +60,7 @@ public sealed class RpsModule(RpsGameService rpsGameService) : SlashCommandBase
             return;
         }
 
-        ErrorOr<RpsGameSession> gameResult = rpsGameService.CreateGameAsync(Context.User.Id, opponent.Id);
+        ErrorOr<RpsGameSession> gameResult = rpsGameService.CreateGame(Context.User.Id, opponent.Id);
 
         if (gameResult.IsError)
         {

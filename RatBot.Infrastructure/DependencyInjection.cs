@@ -4,10 +4,12 @@ using RatBot.Application.Common;
 using RatBot.Application.Common.Interfaces;
 using RatBot.Application.Moderation;
 using RatBot.Application.Quorum;
+using RatBot.Application.RoleColours;
 using RatBot.Application.Rps;
 using RatBot.Application.SecretRole;
 using RatBot.Infrastructure.Data;
 using RatBot.Infrastructure.Persistence.Repositories;
+using RatBot.Infrastructure.RoleColours;
 using RatBot.Infrastructure.SecretRole;
 using RatBot.Infrastructure.Stores;
 
@@ -36,6 +38,7 @@ public static class DependencyInjection
             services.AddScoped<IQuorumSettingsRepository, QuorumSettingsRepository>();
             services.AddScoped<IEmojiRepository>(sp => sp.GetRequiredService<BotDbContext>());
             services.AddScoped<ISecretRoleRepository, SecretRoleRepository>();
+            services.AddScoped<IRoleColourRepository, RoleColourRepository>();
         }
     }
 }

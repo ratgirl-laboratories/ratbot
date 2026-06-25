@@ -8,7 +8,6 @@ namespace RatBot.Discord.Commands.AdventureLeaderboard;
 public sealed partial class AdventureLeaderboardManager(
     DiscordSocketClient discordClient,
     AdventureLeaderboardClient client,
-    AdventureLeaderboardComponentBuilder componentBuilder,
     AdventureAccessController accessController,
     IDbContextFactory<BotDbContext> dbContextFactory,
     IOptions<AdventureLeaderboardOptions> options,

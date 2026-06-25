@@ -10,6 +10,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="TemporaryPingRole\" />
+        <Folder Include="TemporaryPingRole\" />
     </ItemGroup>
 </Project>

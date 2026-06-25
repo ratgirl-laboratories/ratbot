@@ -1,12 +1,10 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 using RatBot.Application.Common.Extensions;
 using RatBot.Application.Meta;
+using RatBot.Application.RoleColours;
 using RatBot.Discord.BackgroundWorkers;
-using RatBot.Infrastructure.Data;
-using RatBot.Infrastructure.RoleColours;
 
 namespace RatBot.Discord.Commands.Settings;
 
@@ -22,7 +20,7 @@ public sealed class SettingsModule : SlashCommandBase
 
     [Group("colour", "Role colour configuration.")]
     [DefaultMemberPermissions(GuildPermission.Administrator)]
-    public sealed class ColourSettingsModule(BotDbContext dbContext, IRoleColourSyncQueue syncQueue) : SlashCommandBase
+    public sealed class ColourSettingsModule(IRoleColourRepository roleColours, IRoleColourSyncQueue syncQueue) : SlashCommandBase
     {
         [SlashCommand("add", "Register a source/display role colour mapping.")]
         [RequireUserPermission(GuildPermission.Administrator)]
@@ -48,14 +46,7 @@ public sealed class SettingsModule : SlashCommandBase
 
             await DeferAsync(true);
 
-            ErrorOr<RoleColourOption> result = await RegisterRoleColourOption.ExecuteAsync(
-                dbContext,
-                name,
-                name,
-                source.Id,
-                display.Id,
-                CancellationToken.None
-            );
+            ErrorOr<RoleColourOption> result = await roleColours.AddOptionAsync(name, name, source.Id, display.Id, CancellationToken.None);
 
             await result.SwitchFirstAsync(
                 async option =>
@@ -104,14 +95,7 @@ public sealed class SettingsModule : SlashCommandBase
 
             await DeferAsync(true);
 
-            ErrorOr<UpsertRoleColourOption.Result> result = await UpsertRoleColourOption.ExecuteAsync(
-                dbContext,
-                name,
-                name,
-                source.Id,
-                display.Id,
-                CancellationToken.None
-            );
+            ErrorOr<RoleColourOptionChange> result = await roleColours.UpsertOptionAsync(name, name, source.Id, display.Id, CancellationToken.None);
 
             await result.SwitchFirstAsync(
                 async upsert =>
@@ -155,11 +139,7 @@ public sealed class SettingsModule : SlashCommandBase
 
             await DeferAsync(true);
 
-            ErrorOr<RoleColourOption> result = await DeleteRoleColourOption.ExecuteAsync(
-                dbContext,
-                new DeleteRoleColourOption.Command(name),
-                CancellationToken.None
-            );
+            ErrorOr<RoleColourOption> result = await roleColours.DeleteOptionAsync(name, CancellationToken.None);
 
             await result.SwitchFirstAsync(
                 async option =>
@@ -198,13 +178,12 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            IReadOnlyList<RoleColourOption> options = await ListRoleColourOptions.ExecuteAsync(
-                dbContext,
-                new ListRoleColourOptions.Query(includeDisabled),
-                CancellationToken.None
-            );
+            RoleColourOption[] options = (await roleColours.GetOptionsAsync(CancellationToken.None))
+                .Where(option => includeDisabled || option.IsEnabled)
+                .OrderBy(option => option.Key, StringComparer.Ordinal)
+                .ToArray();
 
-            if (options.Count == 0)
+            if (options.Length == 0)
             {
                 await RespondAsync("No colour options are configured.", ephemeral: true);
                 return;
@@ -226,12 +205,9 @@ public sealed class SettingsModule : SlashCommandBase
             await DeferAsync(true);
 
             // Load enabled options and gather SCR set
-            List<RoleColourOption> enabled = await dbContext
-                .RoleColourOptions.AsNoTracking()
-                .Where(o => o.IsEnabled)
-                .ToListAsync(CancellationToken.None);
+            RoleColourOption[] enabled = (await roleColours.GetOptionsAsync(CancellationToken.None)).Where(option => option.IsEnabled).ToArray();
 
-            if (enabled.Count == 0)
+            if (enabled.Length == 0)
             {
                 await FollowupAsync("No enabled colour options are configured.", ephemeral: true);
                 return;

@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application.Administration;
+using RatBot.Application.Features.Quorum;
 using RatBot.Application.MessageContent;
 using RatBot.Application.Meta;
 using RatBot.Application.Moderation;
-using RatBot.Application.Modules.Quorum;
 using RatBot.Application.Quorum;
 using RatBot.Application.Reactions;
 using RatBot.Application.Rps;

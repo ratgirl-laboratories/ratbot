@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace RatBot.Domain.Modules.Quorum;
+namespace RatBot.Domain.Features.Quorum;
 
 public sealed record QuorumVoterRoleSet
 {

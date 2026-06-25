@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using RatBot.Infrastructure.Data;
-using RatBot.Infrastructure.Persistence.Quorum;
+using RatBot.Infrastructure.Features.Quorum.Persistence;
 using Testcontainers.PostgreSql;
 
 namespace RatBot.Infrastructure.Tests.Integration;

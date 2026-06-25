@@ -1,4 +1,4 @@
-namespace RatBot.Application.Modules.Quorum;
+namespace RatBot.Application.Features.Quorum;
 
 public static class QuorumErrors
 {

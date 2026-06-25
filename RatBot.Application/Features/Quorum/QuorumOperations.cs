@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using RatBot.Domain.Modules.Quorum;
-using QuorumCalculator = RatBot.Domain.Modules.Quorum.QuorumCalculator;
+using RatBot.Domain.Features.Quorum;
+using QuorumCalculator = RatBot.Domain.Features.Quorum.QuorumCalculator;
 
-namespace RatBot.Application.Modules.Quorum;
+namespace RatBot.Application.Features.Quorum;
 
 public sealed class QuorumOperations(IQuorumConfigurationStore configurations, IQuorumMemberSource members)
 {
@@ -53,14 +53,4 @@ public sealed class QuorumOperations(IQuorumConfigurationStore configurations, I
 
         return QuorumCalculator.Calculate(eligibleVoterCount.Value, configuration.Proportion);
     }
-}
-
-public abstract record QuorumRoleUpdate(QuorumScope Scope, ulong RoleId)
-{
-    public sealed record Add(QuorumScope Scope, ulong RoleId) : QuorumRoleUpdate(Scope, RoleId);
-
-    public sealed record Remove(QuorumScope Scope, ulong RoleId) : QuorumRoleUpdate(Scope, RoleId);
-
-    public static QuorumRoleUpdate FromOption(QuorumScope scope, ulong roleId, bool shouldAdd) =>
-        shouldAdd ? new Add(scope, roleId) : new Remove(scope, roleId);
 }

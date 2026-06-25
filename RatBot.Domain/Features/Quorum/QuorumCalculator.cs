@@ -1,4 +1,4 @@
-namespace RatBot.Domain.Modules.Quorum;
+namespace RatBot.Domain.Features.Quorum;
 
 public static class QuorumCalculator
 {

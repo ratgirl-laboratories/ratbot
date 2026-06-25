@@ -1,8 +1,8 @@
 using Dapper;
 using Npgsql;
-using RatBot.Application.Modules.Quorum;
-using RatBot.Domain.Modules.Quorum;
-using RatBot.Infrastructure.Persistence.Quorum;
+using RatBot.Application.Features.Quorum;
+using RatBot.Domain.Features.Quorum;
+using RatBot.Infrastructure.Features.Quorum.Persistence;
 
 namespace RatBot.Infrastructure.Tests.Integration;
 
@@ -74,11 +74,7 @@ public sealed class QuorumConfigurationStoreTests
         QuorumProportion updatedProportion = QuorumProportion.Create(0.8m).Value;
         QuorumConfiguration configuration = (await _store.RegisterAsync(scope, initialProportion, CancellationToken.None)).Value.Configuration;
 
-        QuorumConfiguration updated = configuration
-            .WithProportion(updatedProportion)
-            .AddRole(10)
-            .AddRole(10)
-            .AddRole(20);
+        QuorumConfiguration updated = configuration.WithProportion(updatedProportion).AddRole(10).AddRole(10).AddRole(20);
 
         ErrorOr<QuorumConfiguration> saveResult = await _store.SaveAsync(updated, CancellationToken.None);
         ErrorOr<QuorumConfiguration> getResult = await _store.GetAsync(scope, CancellationToken.None);
@@ -152,5 +148,5 @@ public sealed class QuorumConfigurationStoreTests
         roleColumns.ShouldBe(["quorum_configuration_id", "role_id"]);
     }
 
-    private static QuorumScope TextScope() => new QuorumScope.TextChannel(123, 456);
+    private static QuorumScope.TextChannel TextScope() => new QuorumScope.TextChannel(123, 456);
 }

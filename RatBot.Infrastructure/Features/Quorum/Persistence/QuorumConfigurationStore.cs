@@ -1,9 +1,9 @@
 using Dapper;
 using Npgsql;
-using RatBot.Application.Modules.Quorum;
-using RatBot.Domain.Modules.Quorum;
+using RatBot.Application.Features.Quorum;
+using RatBot.Domain.Features.Quorum;
 
-namespace RatBot.Infrastructure.Persistence.Quorum;
+namespace RatBot.Infrastructure.Features.Quorum.Persistence;
 
 public sealed class QuorumConfigurationStore(string connectionString) : IQuorumConfigurationStore
 {

@@ -1,0 +1,13 @@
+using RatBot.Domain.Features.Quorum;
+
+namespace RatBot.Application.Features.Quorum;
+
+public abstract record QuorumRoleUpdate(QuorumScope Scope, ulong RoleId)
+{
+    public sealed record Add(QuorumScope Scope, ulong RoleId) : QuorumRoleUpdate(Scope, RoleId);
+
+    public sealed record Remove(QuorumScope Scope, ulong RoleId) : QuorumRoleUpdate(Scope, RoleId);
+
+    public static QuorumRoleUpdate FromOption(QuorumScope scope, ulong roleId, bool shouldAdd) =>
+        shouldAdd ? new Add(scope, roleId) : new Remove(scope, roleId);
+}

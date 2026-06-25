@@ -117,9 +117,14 @@ public sealed class AdminInteractionRegistrationTests
         await interactionService.AddModuleAsync<AdminModule>(services);
 
         // Assert
-        ModuleInfo adminModule = interactionService.Modules.Single(module => module.SlashGroupName == "admin");
+        ModuleInfo adminModule = interactionService.Modules.Single(module =>
+            string.Equals(module.SlashGroupName, "admin", StringComparison.OrdinalIgnoreCase)
+        );
 
-        adminModule.SlashCommands.Single(command => command.Name == "send").ShouldNotBeNull();
-        adminModule.ModalCommands.Single(command => command.Name == "admin-send:*:*").ShouldNotBeNull();
+        adminModule.SlashCommands.Single(command => string.Equals(command.Name, "send", StringComparison.OrdinalIgnoreCase)).ShouldNotBeNull();
+
+        adminModule
+            .ModalCommands.Single(command => string.Equals(command.Name, "admin-send:*:*", StringComparison.OrdinalIgnoreCase))
+            .ShouldNotBeNull();
     }
 }

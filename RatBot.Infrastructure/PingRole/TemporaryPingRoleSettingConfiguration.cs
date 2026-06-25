@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RatBot.Domain.SecretRole;
 
-namespace RatBot.Infrastructure.SecretRole;
+namespace RatBot.Infrastructure.PingRole;
 
 public sealed class TemporaryPingRoleSettingConfiguration : IEntityTypeConfiguration<SecretRoleSetting>
 {

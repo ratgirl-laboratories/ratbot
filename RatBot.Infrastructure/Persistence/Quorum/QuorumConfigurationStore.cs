@@ -74,7 +74,7 @@ public sealed class QuorumConfigurationStore(string connectionString) : IQuorumC
                 .QuerySingleAsync<QuorumPersistenceMapping.Data>(
                     new CommandDefinition(
                         $"""
-                        UPDATE quorum_configurations
+                        UPDATE public.quorum_configurations
                         SET channel_kind = @ChannelKind, proportion = @Proportion
                         WHERE guild_id = @GuildId AND channel_id = @ChannelId
                         RETURNING {ConfigurationColumns}

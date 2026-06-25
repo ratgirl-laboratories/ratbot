@@ -8,4 +8,10 @@ public static class QuorumErrors
         Error.Validation(description: "This channel has a quorum configuration, but no voter roles have been configured.");
 
     public static Error NoEligibleVoters => Error.Validation(description: "No eligible voters were found for this quorum configuration.");
+
+    public static Error ConfiguredRoleNotFound(ulong roleId) =>
+        Error.Validation(description: $"Configured quorum role `{roleId}` could not be found.");
+
+    public static Error MemberDataUnavailable =>
+        Error.Failure(description: "Member data is currently unavailable, so quorum could not be calculated.");
 }

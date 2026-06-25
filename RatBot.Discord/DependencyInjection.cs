@@ -1,12 +1,14 @@
 using Microsoft.Extensions.Options;
 using RatBot.Application.Common.Forums;
 using RatBot.Application.Common.Interfaces;
+using RatBot.Application.Features.Quorum;
 using RatBot.Discord.BackgroundWorkers;
 using RatBot.Discord.Commands.AdventureLeaderboard;
 using RatBot.Discord.Commands.Emoji;
 using RatBot.Discord.Commands.Meta;
 using RatBot.Discord.Commands.Settings;
 using RatBot.Discord.Configuration;
+using RatBot.Discord.Features.Quorum;
 using RatBot.Discord.Forum;
 using RatBot.Discord.Gateway;
 using RatBot.Discord.Handlers;
@@ -95,6 +97,11 @@ public static class DependencyInjection
             services.AddHostedService<RoleColourSyncBackgroundWorker>();
             services.AddHostedService<MetaProposalPollBackgroundWorker>();
             services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardManager>());
+
+            // Quorum Module
+            services.AddSingleton<DiscordQuorumMemberIndex>();
+            services.AddSingleton<IQuorumMemberSource, DiscordQuorumMemberSource>();
+            services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<DiscordQuorumMemberIndex>());
 
             services.AddSingleton<IForumThreadClient, ForumThreadClient>();
             services.AddSingleton<MetaProposalDiscordWorkflow>();

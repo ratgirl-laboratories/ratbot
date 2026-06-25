@@ -16,7 +16,7 @@ The module is limited to quorum configuration, quorum inspection, and quorum cal
 
 ## User-Facing API
 
-### `/config quorum register <channel> <proportion>`
+### `/quorum-admin register <channel> <proportion>`
 
 Registers a text channel or forum channel as requiring quorum.
 
@@ -33,7 +33,7 @@ If the channel already has a quorum configuration, the command MUST update its q
 
 A quorum configuration with no voter roles MUST be treated as incomplete.
 
-### `/config quorum role <channel> <role> <should_add>`
+### `/quorum-admin role <channel> <role> <should_add>`
 
 Adds or removes a voter role from a channel's quorum configuration.
 
@@ -55,7 +55,7 @@ Adding an already-configured role SHOULD be treated as a successful no-op.
 
 Removing a role that is not configured SHOULD be treated as a successful no-op.
 
-### `/config quorum remove <channel>`
+### `/quorum-admin remove <channel>`
 
 Removes a channel's quorum configuration.
 
@@ -119,7 +119,9 @@ Permission failures MUST produce an ephemeral error.
 
 ## Persistence
 
-A quorum configuration MUST persist the guild ID, channel ID, channel kind, quorum proportion, and configured voter role IDs.
+A quorum configuration MUST have a stable ratbot-owned domain ID.
+
+A quorum configuration MUST persist its domain ID, guild ID, channel ID, channel scope, quorum proportion, and configured voter role IDs.
 
 The module MUST persist at most one quorum configuration per guild channel.
 

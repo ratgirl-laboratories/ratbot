@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using RatBot.Application.RoleColours;
 using RatBot.Infrastructure.Data;
 
@@ -5,14 +6,24 @@ namespace RatBot.Infrastructure.RoleColours;
 
 public sealed class RoleColourRepository(BotDbContext db) : IRoleColourRepository
 {
-    public async Task<RoleColourOption[]> GetOptionsAsync(CancellationToken ct) => await db.RoleColourOptions.AsNoTracking().ToArrayAsync(ct);
+    public async Task<ImmutableArray<RoleColourOption>> GetOptionsAsync(CancellationToken ct) =>
+        (await db.RoleColourOptions.AsNoTracking().ToArrayAsync(ct).ConfigureAwait(false)).ToImmutableArray();
 
-    public Task<MemberColourPreference?> GetPreferenceAsync(ulong userId, CancellationToken ct) =>
-        db.MemberColourPreferences.AsNoTracking().SingleOrDefaultAsync(preference => preference.UserId == userId, ct);
+    public async Task<MemberColourPreference> GetPreferenceAsync(ulong userId, CancellationToken ct)
+    {
+        MemberColourPreference? preference = await db
+            .MemberColourPreferences.AsNoTracking()
+            .SingleOrDefaultAsync(preference => preference.UserId == userId, ct)
+            .ConfigureAwait(false);
+
+        return preference ?? MemberColourPreference.CreateUnspecified(userId);
+    }
 
     public async Task SetPreferenceAsync(ulong userId, RoleColourOption.Id? optionId, CancellationToken ct)
     {
-        MemberColourPreference? preference = await db.MemberColourPreferences.SingleOrDefaultAsync(preference => preference.UserId == userId, ct);
+        MemberColourPreference? preference = await db
+            .MemberColourPreferences.SingleOrDefaultAsync(preference => preference.UserId == userId, ct)
+            .ConfigureAwait(false);
 
         if (preference is null)
         {
@@ -20,7 +31,7 @@ public sealed class RoleColourRepository(BotDbContext db) : IRoleColourRepositor
                 ? MemberColourPreference.CreateNoColour(userId)
                 : MemberColourPreference.CreateForOption(userId, optionId.Value);
 
-            await db.MemberColourPreferences.AddAsync(preference, ct);
+            await db.MemberColourPreferences.AddAsync(preference, ct).ConfigureAwait(false);
         }
         else if (optionId is null)
         {
@@ -31,7 +42,7 @@ public sealed class RoleColourRepository(BotDbContext db) : IRoleColourRepositor
             preference.SelectOption(optionId.Value);
         }
 
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
     public async Task<ErrorOr<RoleColourOption>> AddOptionAsync(
@@ -48,7 +59,7 @@ public sealed class RoleColourRepository(BotDbContext db) : IRoleColourRepositor
             return optionResult.Errors;
 
         RoleColourOption option = optionResult.Value;
-        RoleColourOption[] existing = await GetOptionsAsync(ct);
+        ImmutableArray<RoleColourOption> existing = await GetOptionsAsync(ct);
 
         if (existing.Any(existingOption => string.Equals(existingOption.NormalisedKey, option.NormalisedKey, StringComparison.Ordinal)))
             return Error.Conflict(description: $"Colour option `{option.Key}` is already registered.");
@@ -98,7 +109,7 @@ public sealed class RoleColourRepository(BotDbContext db) : IRoleColourRepositor
             await db.RoleColourOptions.AddAsync(candidate, ct);
             await db.SaveChangesAsync(ct);
 
-            return new RoleColourOptionChange(candidate, true, null);
+            return new RoleColourOptionChange(candidate, Created: true, PreviousDisplayRoleId: null);
         }
 
         ulong previousDisplayRoleId = option.DisplayRoleId;
@@ -109,7 +120,7 @@ public sealed class RoleColourRepository(BotDbContext db) : IRoleColourRepositor
 
         await db.SaveChangesAsync(ct);
 
-        return new RoleColourOptionChange(option, false, previousDisplayRoleId);
+        return new RoleColourOptionChange(option, Created: false, previousDisplayRoleId);
     }
 
     public async Task<ErrorOr<RoleColourOption>> DeleteOptionAsync(string key, CancellationToken ct)

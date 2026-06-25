@@ -31,6 +31,8 @@ public sealed class PostgresDatabaseFixture
 
         await using (db.ConfigureAwait(false))
         {
+            await db.MemberColourPreferences.ExecuteDeleteAsync().ConfigureAwait(false);
+            await db.RoleColourOptions.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.QuorumSettingsRoles.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.QuorumSettings.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.MetaProposalStates.ExecuteDeleteAsync().ConfigureAwait(false);

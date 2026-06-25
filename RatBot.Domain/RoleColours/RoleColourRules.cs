@@ -6,18 +6,17 @@ public static class RoleColourRules
 {
     public static RoleColourPlan CreatePlan(
         IReadOnlyCollection<RoleColourOption> options,
-        MemberColourPreference? preference,
+        MemberColourPreference preference,
         IReadOnlyCollection<ulong> currentRoleIds,
         IReadOnlyDictionary<ulong, int> sourceRolePositions
     )
     {
         RoleColourOption[] enabledOptions = options.Where(option => option.IsEnabled).ToArray();
 
-        ulong? targetDisplayRoleId =
-            preference?.IsNoColourSelected == true
-                ? null
-                : ResolveConfiguredTarget(preference, enabledOptions, currentRoleIds)
-                    ?? ResolveFallbackTarget(enabledOptions, currentRoleIds, sourceRolePositions);
+        ulong? targetDisplayRoleId = preference.IsNoColourSelected
+            ? null
+            : ResolveConfiguredTarget(preference, enabledOptions, currentRoleIds)
+                ?? ResolveFallbackTarget(enabledOptions, currentRoleIds, sourceRolePositions);
 
         HashSet<ulong> managedDisplayRoleIds = options.Select(option => option.DisplayRoleId).ToHashSet();
 
@@ -32,7 +31,7 @@ public static class RoleColourRules
     }
 
     private static ulong? ResolveConfiguredTarget(
-        MemberColourPreference? preference,
+        MemberColourPreference preference,
         IReadOnlyCollection<RoleColourOption> enabledOptions,
         IReadOnlyCollection<ulong> currentRoleIds
     )

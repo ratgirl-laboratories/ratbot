@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using RatBot.Application.RoleColours;
 
 namespace RatBot.Discord.Handlers;
@@ -19,10 +20,10 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
         using IServiceScope scope = scopeFactory.CreateScope();
         IRoleColourRepository roleColours = scope.ServiceProvider.GetRequiredService<IRoleColourRepository>();
 
-        RoleColourOption[] options = await roleColours.GetOptionsAsync(ct);
-        MemberColourPreference? preference = await roleColours.GetPreferenceAsync(userId, ct);
-        IReadOnlyCollection<ulong> currentRoleIds = member.RoleIds;
-        IReadOnlyDictionary<ulong, int> sourceRolePositions = CollectRolePositions(guild, currentRoleIds);
+        ImmutableArray<RoleColourOption> options = await roleColours.GetOptionsAsync(ct);
+        MemberColourPreference preference = await roleColours.GetPreferenceAsync(userId, ct);
+        ImmutableHashSet<ulong> currentRoleIds = member.RoleIds.ToImmutableHashSet();
+        ImmutableDictionary<ulong, int> sourceRolePositions = CollectRolePositions(guild, currentRoleIds);
         RoleColourPlan plan = RoleColourRules.CreatePlan(options, preference, currentRoleIds, sourceRolePositions);
 
         if (plan.IsNoOp)
@@ -40,10 +41,10 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
         await ApplyPlanAsync(guild, member, plan, ct);
     }
 
-    private static IReadOnlyDictionary<ulong, int> CollectRolePositions(IGuild guild, IReadOnlyCollection<ulong> roleIds)
+    private static ImmutableDictionary<ulong, int> CollectRolePositions(IGuild guild, IReadOnlyCollection<ulong> roleIds)
     {
         // Collect Discord positions so the domain rule can break fallback ties without Discord types.
-        Dictionary<ulong, int> positions = new Dictionary<ulong, int>();
+        ImmutableDictionary<ulong, int>.Builder positions = ImmutableDictionary.CreateBuilder<ulong, int>();
 
         foreach (ulong roleId in roleIds)
         {
@@ -53,7 +54,7 @@ public sealed class RoleColourReconciler(IServiceScopeFactory scopeFactory, ILog
                 positions[roleId] = role.Position;
         }
 
-        return positions;
+        return positions.ToImmutable();
     }
 
     private async Task ApplyPlanAsync(IGuild guild, IGuildUser member, RoleColourPlan plan, CancellationToken ct)

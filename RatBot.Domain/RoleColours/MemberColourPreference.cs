@@ -15,6 +15,14 @@ public sealed class MemberColourPreference
 
     public bool IsNoColourSelected => Kind == MemberColourPreferenceKind.NoColour;
 
+    public static MemberColourPreference CreateUnspecified(ulong userId) =>
+        new MemberColourPreference
+        {
+            UserId = userId,
+            Kind = MemberColourPreferenceKind.Unspecified,
+            SelectedOptionId = null,
+        };
+
     public static MemberColourPreference CreateForOption(ulong userId, RoleColourOption.Id selectedId) =>
         new MemberColourPreference
         {

@@ -1,10 +1,12 @@
+using System.Collections.Immutable;
+
 namespace RatBot.Application.RoleColours;
 
 public interface IRoleColourRepository
 {
-    Task<RoleColourOption[]> GetOptionsAsync(CancellationToken ct);
+    Task<ImmutableArray<RoleColourOption>> GetOptionsAsync(CancellationToken ct);
 
-    Task<MemberColourPreference?> GetPreferenceAsync(ulong userId, CancellationToken ct);
+    Task<MemberColourPreference> GetPreferenceAsync(ulong userId, CancellationToken ct);
 
     Task SetPreferenceAsync(ulong userId, RoleColourOption.Id? optionId, CancellationToken ct);
 

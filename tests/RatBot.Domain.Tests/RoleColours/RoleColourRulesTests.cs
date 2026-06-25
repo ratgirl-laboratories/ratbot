@@ -1,3 +1,4 @@
+using ErrorOr;
 using RatBot.Domain.RoleColours;
 using Shouldly;
 
@@ -44,8 +45,9 @@ public sealed class RoleColourRulesTests
     {
         RoleColourOption red = CreateOption("red", "Red", 10, 20);
         RoleColourOption blue = CreateOption("blue", "Blue", 11, 21);
+        MemberColourPreference preference = MemberColourPreference.CreateUnspecified(100);
 
-        RoleColourPlan plan = RoleColourRules.CreatePlan([red, blue], null, [10, 11], new Dictionary<ulong, int> { [10] = 5, [11] = 10 });
+        RoleColourPlan plan = RoleColourRules.CreatePlan([red, blue], preference, [10, 11], new Dictionary<ulong, int> { [10] = 5, [11] = 10 });
 
         plan.TargetDisplayRoleId.ShouldBe(21UL);
         plan.RoleIdsToAdd.ShouldBe([21UL]);
@@ -56,8 +58,9 @@ public sealed class RoleColourRulesTests
     {
         RoleColourOption red = CreateOption("red", "Zulu", 10, 20);
         RoleColourOption blue = CreateOption("blue", "Alpha", 11, 21);
+        MemberColourPreference preference = MemberColourPreference.CreateUnspecified(100);
 
-        RoleColourPlan plan = RoleColourRules.CreatePlan([red, blue], null, [10, 11], new Dictionary<ulong, int> { [10] = 5, [11] = 5 });
+        RoleColourPlan plan = RoleColourRules.CreatePlan([red, blue], preference, [10, 11], new Dictionary<ulong, int> { [10] = 5, [11] = 5 });
 
         plan.TargetDisplayRoleId.ShouldBe(21UL);
     }
@@ -94,6 +97,10 @@ public sealed class RoleColourRulesTests
         plan.IsNoOp.ShouldBeTrue();
     }
 
-    private static RoleColourOption CreateOption(string key, string label, ulong sourceRoleId, ulong displayRoleId) =>
-        RoleColourOption.Create(key, label, sourceRoleId, displayRoleId).Value;
+    private static RoleColourOption CreateOption(string key, string label, ulong sourceRoleId, ulong displayRoleId)
+    {
+        ErrorOr<RoleColourOption> result = RoleColourOption.Create(key, label, sourceRoleId, displayRoleId);
+        result.IsError.ShouldBeFalse();
+        return result.Value;
+    }
 }

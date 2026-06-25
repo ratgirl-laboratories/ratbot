@@ -3,6 +3,7 @@ using RatBot.Application.Administration;
 using RatBot.Application.MessageContent;
 using RatBot.Application.Meta;
 using RatBot.Application.Moderation;
+using RatBot.Application.Modules.Quorum;
 using RatBot.Application.Quorum;
 using RatBot.Application.Reactions;
 using RatBot.Application.Rps;
@@ -27,6 +28,7 @@ public static class DependencyInjection
             services.AddScoped<MetaProposalService>();
             services.AddScoped<MetaSuggestionSettingsService>();
             services.AddScoped<IModerationService, ModerationService>();
+            services.AddScoped<QuorumOperations>();
             services.AddScoped<IQuorumSettingsReader, QuorumSettingsReader>();
             services.AddScoped<IQuorumSettingsWriter, QuorumSettingsWriter>();
             services.AddScoped<RpsGameService>();

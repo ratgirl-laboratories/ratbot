@@ -139,7 +139,7 @@ public sealed class QuorumInteractionTests
         await fixture.Quorum.InspectAsync(channel);
 
         string expected = $"Channel: <#{ChannelId}>\nProportion: 62.5%\nVoter roles: <@&{RoleId}>\nComplete: yes";
-        await fixture.Interaction.Received(1).RespondAsync(expected, ephemeral: true);
+        await fixture.Interaction.Received(1).RespondAsync(expected);
     }
 
     [Test]
@@ -171,7 +171,7 @@ public sealed class QuorumInteractionTests
     }
 
     [Test]
-    public async Task CalculateAsync_ShowsEligibleCountProportionAndRequiredQuorumEphemerally()
+    public async Task CalculateAsync_ShowsEligibleCountProportionAndRequiredQuorum()
     {
         QuorumInteractionFixture fixture = new QuorumInteractionFixture();
         ITextChannel channel = QuorumInteractionFixture.CreateTextChannel();
@@ -182,7 +182,7 @@ public sealed class QuorumInteractionTests
         fixture.ClearResponses();
         await fixture.Quorum.CalculateAsync(channel);
 
-        await fixture.Interaction.Received(1).RespondAsync("Eligible voters: 7\nProportion: 60%\nRequired quorum: 5", ephemeral: true);
+        await fixture.Interaction.Received(1).RespondAsync("Eligible voters: 7\nProportion: 60%\nRequired quorum: 5");
     }
 
     private sealed class QuorumInteractionFixture

@@ -12,21 +12,15 @@
     - Publishes tags:
         - immutable: `sha-<full_commit_sha>`
         - branch: `master`
-        - moving aliases for staging candidates: `latest-staging`, `staging`
-    - Auto deploys `production` and `staging` with the same immutable `sha-<full_commit_sha>` image
+    - Auto deploys `production` with the same immutable `sha-<full_commit_sha>` image
     - Manual dispatch supports:
         - `shared`
         - `production`
-        - `staging`
     - Uses explicit Compose project names:
         - `ratbot-shared`
         - `ratbot-production`
-        - `ratbot-staging`
     - Prevents overlap with per-target concurrency groups
-    - Runs automatic production and staging deploy jobs independently, so one failed target does not cancel the other
-
-- `.github/workflows/sonarqube.yml`
-    - Runs SonarQube analysis for pushes to `master` and pull requests
+    - Runs automatic production deploy jobs independently, so one failed target does not cancel the other
 
 ## PR Merge Protection
 
@@ -53,7 +47,7 @@ Recommended names:
 - Secret: `VPS_USER` (optional)
     - Defaults to `deploy` when empty
 
-You can store these at repository scope, or per GitHub Environment (`shared`, `staging`, `production`) for stronger
+You can store these at repository scope, or per GitHub Environment (`shared`, `production`) for stronger
 isolation/approval controls.
 
 If the GitHub `production` environment has required reviewers, automatic production deployment from `master` will pause
@@ -64,7 +58,6 @@ until that protection rule is changed or approved.
 - Directories must already exist on the VPS:
     - `/opt/ratbot/shared`
     - `/opt/ratbot/production`
-    - `/opt/ratbot/staging`
 - The deploy helper syncs non-secret compose/config assets from the repository to the VPS before running Docker Compose.
 - The workflow still does not create or upload real `.env` files.
 - Each stack directory must therefore already contain a valid server-side `.env` file before deployment can succeed.
@@ -95,22 +88,20 @@ Use **Actions -> Deploy RatBot to VPS -> Run workflow**:
 - `target=shared`: deploy shared stack only
 - `target=production`: deploy production bot stack
     - Requires `image_tag`
-- `target=staging`: deploy staging bot stack
-    - Defaults to `latest-staging` when `image_tag` is omitted
-- `image_tag` for production/staging:
-    - Tag only: `sha-<commit_sha>` or `latest-staging`
+- `image_tag` for production:
+    - Tag only: `sha-<commit_sha>`
     - Or full image ref: `ghcr.io/<owner>/<repo>:sha-<commit_sha>`
 
 Automatic production flow:
 
 - Let `CI Tests` pass on a `master` push
-- The deploy workflow builds and publishes the immutable `sha-<commit_sha>` image
-- The deploy workflow applies that exact image to both production and staging
+- The deployment workflow builds and publishes the immutable `sha-<commit_sha>` image
+- The deployment workflow applies that exact image to production
 
-For bot stacks, the deploy helper also writes the deployed `RATBOT_IMAGE` back to the server-side `.env` so later manual
+For bot stacks, the deployment helper also writes the deployed `RATBOT_IMAGE` back to the server-side `.env` so later manual
 `docker compose` runs do not drift to an older moving tag.
 
-The deploy helper writes simple rollback state on the VPS per stack:
+The deployment helper writes a simple rollback state on the VPS per stack:
 
 - `.deploy-state/current-image.txt`
 - `.deploy-state/previous-image.txt`

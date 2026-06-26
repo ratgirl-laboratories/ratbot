@@ -13,9 +13,8 @@ on:
         options:
           - shared
           - production
-          - staging
       image_tag:
-        description: "Image tag or full image ref. Required for production. Optional for staging."
+        description: "Image tag or full image ref. Required for production."
         required: false
         type: string
 
@@ -48,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          image_repo="ghcr.io/${GITHUB_REPOSITORY,,}"
+          image_repo="ghcr.io/${GITHUB_REPOSITORY_VALUE,,}"
 
           build_image="false"
           deploy="false"
@@ -58,9 +57,7 @@ jobs:
           reason=""
 
           if [[ "$EVENT_NAME" == "push" ]]; then
-            if [[ "$GITHUB_REPOSITORY_VALUE" != "$GITHUB_REPOSITORY" ]]; then
-              reason="Ignoring push from different repository."
-            elif [[ "$GITHUB_REF_NAME" == "master" ]]; then
+            if [[ "$GITHUB_REF_NAME" == "master" ]]; then
               build_image="true"
               deploy="true"
               source_sha="$GITHUB_SHA_VALUE"
@@ -72,16 +69,9 @@ jobs:
                   project: "ratbot-production",
                   remote_dir: "/opt/ratbot/production",
                   image_ref: $image_ref
-                },
-                {
-                  target: "staging",
-                  environment_name: "staging",
-                  project: "ratbot-staging",
-                  remote_dir: "/opt/ratbot/staging",
-                  image_ref: $image_ref
                 }
               ]')"
-              reason="Build image and auto deploy production and staging after pushes to master."
+              reason="Build image and auto deploy production after pushes to master."
             else
               reason="Branch is not mapped to auto deployment."
             fi
@@ -124,26 +114,6 @@ jobs:
                   ]')"
                   reason="Manual production deployment."
                 fi
-                ;;
-              staging)
-                deploy="true"
-
-                tag="${INPUT_IMAGE_TAG:-latest-staging}"
-                if [[ "$tag" == *"/"* ]]; then
-                  image_ref="$tag"
-                else
-                  image_ref="${image_repo}:${tag}"
-                fi
-                targets="$(jq -cn --arg image_ref "$image_ref" '[
-                  {
-                    target: "staging",
-                    environment_name: "staging",
-                    project: "ratbot-staging",
-                    remote_dir: "/opt/ratbot/staging",
-                    image_ref: $image_ref
-                  }
-                ]')"
-                reason="Manual staging deployment."
                 ;;
               *)
                 reason="Invalid manual target."
@@ -204,8 +174,6 @@ jobs:
             echo "tags<<EOF"
             echo "${IMAGE_REPO}:sha-${SOURCE_SHA}"
             echo "${IMAGE_REPO}:master"
-            echo "${IMAGE_REPO}:latest-staging"
-            echo "${IMAGE_REPO}:staging"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -231,11 +199,13 @@ jobs:
 
       - name: Summarize image
         shell: bash
+        env:
+          IMAGE_REF: ${{ needs.prepare.outputs.image_ref }}
         run: |
           {
             echo "### Image"
-            echo "- Published image: \`${{ needs.prepare.outputs.image_ref }}\`"
-            echo "- Moving tags: \`master\`, \`latest-staging\`, \`staging\`"
+            echo "- Published image: \`${IMAGE_REF}\`"
+            echo "- Moving tag: \`master\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:

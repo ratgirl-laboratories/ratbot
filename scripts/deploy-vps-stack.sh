@@ -9,7 +9,7 @@ image_ref=""
 usage() {
   cat <<'EOF'
 Usage:
-  deploy-vps-stack.sh --stack <shared|production|staging> --project <name> --remote-dir <path> [--image-ref <ref>]
+  deploy-vps-stack.sh --stack <shared|production> --project <name> --remote-dir <path> [--image-ref <ref>]
 
 Behavior:
   - Syncs non-secret compose/config assets from the repository to the VPS
@@ -72,17 +72,12 @@ if [[ -z "$stack" || -z "$project" || -z "$remote_dir" ]]; then
   exit 1
 fi
 
-if [[ "$stack" != "shared" && "$stack" != "production" && "$stack" != "staging" ]]; then
+if [[ "$stack" != "shared" && "$stack" != "production" ]]; then
   echo "Invalid --stack value: $stack" >&2
   exit 1
 fi
 
 case "$stack" in
-  shared)
-    local_compose="$repo_root/docker-compose.yml"
-    local_env_example="$repo_root/env/shared.env.example"
-    local_sync_dir="$repo_root/docker"
-    ;;
   production)
     local_compose="$repo_root/docker-compose.production.yml"
     local_env_example="$repo_root/env/production.env.example"

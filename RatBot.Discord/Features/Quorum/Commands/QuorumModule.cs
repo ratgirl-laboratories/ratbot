@@ -27,7 +27,7 @@ public sealed class QuorumModule(QuorumOperations operations) : InteractionModul
         ErrorOr<QuorumConfiguration> result = await operations.InspectAsync(scopeResult.Value, CancellationToken.None);
 
         await result.SwitchFirstAsync(
-            async configuration => await RespondAsync(QuorumCommandResponses.Inspection(configuration), ephemeral: true),
+            async configuration => await RespondAsync(QuorumCommandResponses.Inspection(configuration)),
             async error => await RespondAsync(error.Description, ephemeral: true)
         );
     }

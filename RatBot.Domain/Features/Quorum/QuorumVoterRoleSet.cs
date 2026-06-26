@@ -7,9 +7,9 @@ public sealed record QuorumVoterRoleSet
         RoleIds = roleIds.ToImmutableHashSet();
     }
 
-    public ImmutableHashSet<ulong> RoleIds { get; }
-
     public bool IsEmpty => RoleIds.IsEmpty;
+
+    public ImmutableHashSet<ulong> RoleIds { get; }
 
     public QuorumVoterRoleSet Add(ulong roleId) => new QuorumVoterRoleSet(RoleIds.Add(roleId));
 

@@ -1,3 +1,4 @@
+#pragma warning disable MA0048
 namespace RatBot.Domain.Features.Quorum;
 
 public sealed record QuorumConfiguration
@@ -11,11 +12,14 @@ public sealed record QuorumConfiguration
     }
 
     public QuorumConfigurationId Id { get; }
-    public QuorumScope Scope { get; }
-    public QuorumProportion Proportion { get; init; }
-    public QuorumVoterRoleSet VoterRoles { get; init; }
 
     public bool IsComplete => !VoterRoles.IsEmpty;
+
+    public QuorumProportion Proportion { get; private init; }
+
+    public QuorumScope Scope { get; }
+
+    public QuorumVoterRoleSet VoterRoles { get; private init; }
 
     public static QuorumConfiguration Create(QuorumScope scope, QuorumProportion proportion) =>
         new QuorumConfiguration(QuorumConfigurationId.New(), scope, proportion, new QuorumVoterRoleSet([]));
@@ -27,9 +31,26 @@ public sealed record QuorumConfiguration
         QuorumVoterRoleSet voterRoles
     ) => new QuorumConfiguration(id, scope, proportion, voterRoles);
 
-    public QuorumConfiguration WithProportion(QuorumProportion proportion) => this with { Proportion = proportion };
-
     public QuorumConfiguration AddRole(ulong roleId) => this with { VoterRoles = VoterRoles.Add(roleId) };
 
     public QuorumConfiguration RemoveRole(ulong roleId) => this with { VoterRoles = VoterRoles.Remove(roleId) };
+
+    public QuorumConfiguration WithProportion(QuorumProportion proportion) => this with { Proportion = proportion };
+}
+
+public readonly record struct QuorumConfigurationId(Guid Value)
+{
+    public static QuorumConfigurationId New() => new QuorumConfigurationId(Guid.CreateVersion7());
+}
+
+public readonly record struct QuorumProportion
+{
+    private QuorumProportion(decimal value) => Value = value;
+
+    public decimal Value { get; }
+
+    public static ErrorOr<QuorumProportion> Create(decimal value) =>
+        value is > 0 and <= 1
+            ? new QuorumProportion(value)
+            : Error.Validation(description: "Quorum proportion must be greater than 0 and at most 1.");
 }

@@ -1,5 +1,4 @@
 using RatBot.Application.Moderation;
-using RatBot.Infrastructure.Data;
 
 namespace RatBot.Infrastructure.Stores;
 

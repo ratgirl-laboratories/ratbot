@@ -1,5 +1,3 @@
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-
 namespace RatBot.Infrastructure.Persistence.Configurations;
 
 public class AutobannedUserConfiguration : IEntityTypeConfiguration<AutobannedUser>

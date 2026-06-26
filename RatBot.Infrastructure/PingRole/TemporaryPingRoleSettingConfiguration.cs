@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RatBot.Domain.SecretRole;
 
 namespace RatBot.Infrastructure.PingRole;

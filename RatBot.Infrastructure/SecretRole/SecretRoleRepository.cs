@@ -1,6 +1,5 @@
 using RatBot.Application.SecretRole;
 using RatBot.Domain.SecretRole;
-using RatBot.Infrastructure.Data;
 
 namespace RatBot.Infrastructure.SecretRole;
 

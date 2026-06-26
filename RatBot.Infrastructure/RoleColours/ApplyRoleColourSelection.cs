@@ -1,5 +1,3 @@
-using RatBot.Infrastructure.Data;
-
 namespace RatBot.Infrastructure.RoleColours;
 
 public static class ApplyRoleColourSelection

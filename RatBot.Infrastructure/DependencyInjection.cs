@@ -7,7 +7,6 @@ using RatBot.Application.Moderation;
 using RatBot.Application.Quorum;
 using RatBot.Application.Rps;
 using RatBot.Application.SecretRole;
-using RatBot.Infrastructure.Data;
 using RatBot.Infrastructure.Features.Quorum.Persistence;
 using RatBot.Infrastructure.Persistence.Repositories;
 using RatBot.Infrastructure.SecretRole;

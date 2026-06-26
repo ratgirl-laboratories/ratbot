@@ -1,5 +1,4 @@
 using RatBot.Application.Quorum;
-using RatBot.Infrastructure.Data;
 
 namespace RatBot.Infrastructure.Persistence.Repositories;
 

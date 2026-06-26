@@ -6,7 +6,6 @@ using RatBot.Discord.BackgroundWorkers;
 using RatBot.Discord.Commands.AdventureLeaderboard;
 using RatBot.Discord.Commands.Emoji;
 using RatBot.Discord.Commands.Meta;
-using RatBot.Discord.Commands.Settings;
 using RatBot.Discord.Configuration;
 using RatBot.Discord.Features.Quorum;
 using RatBot.Discord.Forum;
@@ -85,7 +84,6 @@ public static class DependencyInjection
             services.AddSingleton<AdventureLeaderboardComponentBuilder>();
             services.AddSingleton<AdventureAccessController>();
             services.AddSingleton<AdventureLeaderboardManager>();
-            services.AddSingleton<IQuorumCommandInputResolver, QuorumCommandInputResolver>();
             services.AddSingleton<IRoleColourReconciler, RoleColourReconciler>();
 
             // Role-colour sync queue and background worker

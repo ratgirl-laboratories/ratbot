@@ -167,10 +167,9 @@ public sealed class DiscordQuorumMemberIndex(DiscordSocketClient client, ILogger
     {
         lock (_lock)
         {
-            if (!_guilds.TryGetValue(guildId, out GuildIndex? guild))
-                return roleIds;
-
-            return roleIds.Where(roleId => !guild.WarmedRoleIds.Contains(roleId)).ToImmutableHashSet();
+            return !_guilds.TryGetValue(guildId, out GuildIndex? guild)
+                ? roleIds
+                : roleIds.Where(roleId => !guild.WarmedRoleIds.Contains(roleId)).ToImmutableHashSet();
         }
     }
 

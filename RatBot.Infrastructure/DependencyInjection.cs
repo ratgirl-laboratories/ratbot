@@ -5,7 +5,6 @@ using RatBot.Application.Common.Interfaces;
 using RatBot.Application.Features.Quorum;
 using RatBot.Application.Moderation;
 using RatBot.Application.Quorum;
-using RatBot.Application.Rps;
 using RatBot.Application.SecretRole;
 using RatBot.Infrastructure.Features.Quorum.Persistence;
 using RatBot.Infrastructure.Persistence.Repositories;
@@ -24,8 +23,6 @@ public static class DependencyInjection
 
             services.AddDbContext<BotDbContext>(options => options.UseNpgsql(connectionString));
             services.AddDbContextFactory<BotDbContext>(options => options.UseNpgsql(connectionString));
-
-            services.AddSingleton<IRpsGameStore, RpsGameStore>();
 
             // Repositories and unit of work
             services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<BotDbContext>());

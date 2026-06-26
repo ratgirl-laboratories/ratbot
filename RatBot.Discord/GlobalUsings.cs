@@ -12,5 +12,4 @@ global using RatBot.Discord.Commands;
 global using RatBot.Domain.Adventure;
 global using RatBot.Domain.Meta;
 global using RatBot.Domain.RoleColours;
-global using RatBot.Domain.Rps;
 global using Serilog;

@@ -6,7 +6,6 @@ using RatBot.Application.Meta;
 using RatBot.Application.Moderation;
 using RatBot.Application.Quorum;
 using RatBot.Application.Reactions;
-using RatBot.Application.Rps;
 
 namespace RatBot.Application;
 
@@ -31,7 +30,6 @@ public static class DependencyInjection
             services.AddScoped<QuorumOperations>();
             services.AddScoped<IQuorumSettingsReader, QuorumSettingsReader>();
             services.AddScoped<IQuorumSettingsWriter, QuorumSettingsWriter>();
-            services.AddScoped<RpsGameService>();
         }
     }
 }

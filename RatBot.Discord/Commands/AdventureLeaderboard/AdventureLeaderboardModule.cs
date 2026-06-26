@@ -25,7 +25,7 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manag
             return;
         }
 
-        await DeferAsync(true).ConfigureAwait(false);
+        await DeferAsync(ephemeral: true).ConfigureAwait(false);
 
         try
         {
@@ -45,7 +45,7 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manag
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task ExcludeAsync([Summary("user", "User to exclude from the adventure leaderboard.")] IUser user)
     {
-        await DeferAsync(true).ConfigureAwait(false);
+        await DeferAsync(ephemeral: true).ConfigureAwait(false);
 
         bool added = await manager.ExcludeUserAsync(user.Id, CancellationToken.None).ConfigureAwait(false);
         string displayName = Format.Sanitize(user.Username);
@@ -86,7 +86,7 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manag
             return;
         }
 
-        await DeferAsync(true).ConfigureAwait(false);
+        await DeferAsync(ephemeral: true).ConfigureAwait(false);
 
         ImmutableArray<AdventureThreadLinkage> plans = AdventureScorePart
             .All.Select(scorePart => new AdventureThreadLinkage(scorePart.Index, scorePart.ThreadName))

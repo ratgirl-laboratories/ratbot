@@ -1,10 +1,9 @@
 using System.Collections.Immutable;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using RatBot.Application.Common.Extensions;
-using RatBot.Application.Meta;
 using RatBot.Discord.BackgroundWorkers;
 using RatBot.Infrastructure.Data;
+using RatBot.Infrastructure.Features.Meta;
 using RatBot.Infrastructure.RoleColours;
 
 namespace RatBot.Discord.Commands.Settings;
@@ -45,7 +44,7 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(true);
+            await DeferAsync(ephemeral: true);
 
             ErrorOr<RoleColourOption> result = await RegisterRoleColourOption.ExecuteAsync(
                 dbContext,
@@ -101,7 +100,7 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(true);
+            await DeferAsync(ephemeral: true);
 
             ErrorOr<UpsertRoleColourOption.Result> result = await UpsertRoleColourOption.ExecuteAsync(
                 dbContext,
@@ -152,7 +151,7 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(true);
+            await DeferAsync(ephemeral: true);
 
             ErrorOr<RoleColourOption> result = await DeleteRoleColourOption.ExecuteAsync(
                 dbContext,
@@ -222,7 +221,7 @@ public sealed class SettingsModule : SlashCommandBase
                 return;
             }
 
-            await DeferAsync(true);
+            await DeferAsync(ephemeral: true);
 
             // Load enabled options and gather SCR set
             List<RoleColourOption> enabled = await dbContext

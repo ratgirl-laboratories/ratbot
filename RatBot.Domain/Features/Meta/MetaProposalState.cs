@@ -1,4 +1,4 @@
-namespace RatBot.Domain.Meta;
+namespace RatBot.Domain.Features.Meta;
 
 public sealed class MetaProposalState
 {

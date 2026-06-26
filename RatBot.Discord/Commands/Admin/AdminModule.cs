@@ -52,7 +52,7 @@ public sealed class AdminModule(AdminSendService adminSendService) : Interaction
 
     private async Task<ErrorOr<string>> ProcessAdminSendAsync(ulong channelId, string message)
     {
-        await DeferAsync(true);
+        await DeferAsync(ephemeral: true);
 
         return await adminSendService.SendAsync(new TextChannelService(Context.Guild), channelId, message);
     }

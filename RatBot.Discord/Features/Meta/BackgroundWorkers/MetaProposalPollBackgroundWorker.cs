@@ -1,6 +1,6 @@
-using RatBot.Application.Meta;
+using RatBot.Infrastructure.Features.Meta;
 
-namespace RatBot.Discord.BackgroundWorkers;
+namespace RatBot.Discord.Features.Meta.BackgroundWorkers;
 
 public sealed class MetaProposalPollBackgroundWorker(IServiceScopeFactory scopeFactory, MetaProposalPollResolver pollResolver, ILogger logger)
     : BackgroundService

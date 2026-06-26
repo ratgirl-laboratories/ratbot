@@ -1,7 +1,8 @@
-using RatBot.Application.Meta;
-using RatBot.Discord.BackgroundWorkers;
+using RatBot.Discord.Features.Meta.BackgroundWorkers;
+using RatBot.Discord.Gateway;
+using RatBot.Infrastructure.Features.Meta;
 
-namespace RatBot.Discord.Gateway;
+namespace RatBot.Discord.Features.Meta.Gateway;
 
 public sealed class MetaProposalGatewayHandler(
     DiscordSocketClient discordClient,

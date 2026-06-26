@@ -55,7 +55,7 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         string applyId = $"{SwapPrefix}:apply:{Context.User.Id}:{nonce}";
         DateTimeOffset expires = DateTimeOffset.UtcNow.AddMinutes(5);
 
-        Sessions[nonce] = new Session(Context.User.Id, null, expires);
+        Sessions[nonce] = new Session(Context.User.Id, Selected: null, expires);
 
         SelectMenuBuilder menu = new SelectMenuBuilder().WithCustomId(selectId).WithPlaceholder("Choose a colour…");
 
@@ -77,7 +77,7 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         }
 
         Log.Debug("colour_remove start guild_id={GuildId} user_id={UserId}", Context.Guild.Id, Context.User.Id);
-        await DeferAsync(true);
+        await DeferAsync(ephemeral: true);
 
         SetNoColourPreference.Result res = await SetNoColourPreference.ExecuteAsync(
             db,

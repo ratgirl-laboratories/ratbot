@@ -86,7 +86,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.ToTable("EmojiUsageCounts", (string)null);
                 });
 
-            modelBuilder.Entity("RatBot.Domain.Meta.MetaProposalState", b =>
+            modelBuilder.Entity("RatBot.Domain.Features.Meta.MetaProposalState", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -185,7 +185,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.ToTable("MetaProposalStates", (string)null);
                 });
 
-            modelBuilder.Entity("RatBot.Domain.Meta.MetaSuggestionSettings", b =>
+            modelBuilder.Entity("RatBot.Domain.Features.Meta.MetaSuggestionSettings", b =>
                 {
                     b.Property<long>("GuildId")
                         .HasColumnType("bigint");

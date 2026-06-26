@@ -1,4 +1,6 @@
-namespace RatBot.Discord.Commands.Meta;
+using RatBot.Discord.Features.Meta.Commands;
+
+namespace RatBot.Discord.Features.Meta;
 
 public sealed class MetaProposalDiscordWorkflow(DiscordSocketClient client, ILogger logger)
 {

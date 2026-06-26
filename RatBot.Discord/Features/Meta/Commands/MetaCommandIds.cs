@@ -1,4 +1,4 @@
-namespace RatBot.Discord.Commands.Meta;
+namespace RatBot.Discord.Features.Meta.Commands;
 
 internal static class MetaCommandIds
 {

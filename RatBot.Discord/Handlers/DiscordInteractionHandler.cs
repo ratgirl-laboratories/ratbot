@@ -75,7 +75,7 @@ public sealed class DiscordInteractionHandler(
             SocketSlashCommand slashCommand => GetSlashUsageDetails(slashCommand),
             SocketUserCommand userCommand => GetUserContextUsageDetails(userCommand),
             SocketMessageCommand messageCommand => GetMessageContextUsageDetails(messageCommand),
-            _ => new CommandUsageDetails(GetInteractionName(interaction), null, null, null),
+            _ => new CommandUsageDetails(GetInteractionName(interaction), InvokeeUserId: null, InvokeeUsername: null, InvokeeSource: null),
         };
 
     private static CommandUsageDetails GetSlashUsageDetails(SocketSlashCommand slashCommand)
@@ -96,11 +96,11 @@ public sealed class DiscordInteractionHandler(
                 case IUser user:
                     return new CommandUsageDetails(commandName, user.Id, user.Username, $"slash_option:{option.Name}");
                 case ulong userId:
-                    return new CommandUsageDetails(commandName, userId, null, $"slash_option:{option.Name}");
+                    return new CommandUsageDetails(commandName, userId, InvokeeUsername: null, $"slash_option:{option.Name}");
             }
         }
 
-        return new CommandUsageDetails(commandName, null, null, null);
+        return new CommandUsageDetails(commandName, InvokeeUserId: null, InvokeeUsername: null, InvokeeSource: null);
     }
 
     private static CommandUsageDetails GetUserContextUsageDetails(SocketUserCommand userCommand)
@@ -536,5 +536,5 @@ public sealed class DiscordInteractionHandler(
             interaction.Type == InteractionType.ApplicationCommand ? usage.CommandName : null
         );
 
-    private readonly record struct CommandUsageDetails(string CommandName, ulong? InvokeeUserId, string? InvokeeUsername, string? InvokeeSource);
+    internal readonly record struct CommandUsageDetails(string CommandName, ulong? InvokeeUserId, string? InvokeeUsername, string? InvokeeSource);
 }

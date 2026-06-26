@@ -1,6 +1,7 @@
-using RatBot.Application.Meta;
+#pragma warning disable MA0048
+using RatBot.Infrastructure.Features.Meta;
 
-namespace RatBot.Discord.Commands.Meta;
+namespace RatBot.Discord.Features.Meta.Commands;
 
 [Group("meta", "Meta proposal commands.")]
 public sealed class MetaModule(MetaProposalService metaProposalService, MetaProposalDiscordWorkflow workflow) : SlashCommandBase
@@ -27,9 +28,7 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
             return;
         }
 
-        IGuildUser? user = Context.User as IGuildUser;
-
-        if (user is null || !MetaCommandPermissions.IsAuthorOrAdmin(stateResult.Value, user))
+        if (Context.User is not IGuildUser user || !MetaCommandPermissions.IsAuthorOrAdmin(stateResult.Value, user))
         {
             await RespondAsync("Only the thread author may propose here.", ephemeral: true);
             return;
@@ -55,7 +54,7 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
             return;
         }
 
-        await DeferAsync(true);
+        await DeferAsync(ephemeral: true);
 
         ErrorOr<MetaSuggestionSettings> settingsResult = await metaProposalService.GetSettingsAsync(Context.Guild.Id);
 
@@ -73,9 +72,7 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
             return;
         }
 
-        IGuildUser? user = Context.User as IGuildUser;
-
-        if (user is null || !CanSubmitProposalModal(stateResult.Value, settingsResult.Value, user, hours))
+        if (Context.User is not IGuildUser user || !CanSubmitProposalModal(stateResult.Value, settingsResult.Value, user, hours))
         {
             await FollowupAsync("You are not allowed to propose here.", ephemeral: true);
             return;
@@ -139,7 +136,7 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
             return;
         }
 
-        await DeferAsync(true);
+        await DeferAsync(ephemeral: true);
 
         ErrorOr<MetaProposalState> retryStart = await metaProposalService.MarkPublicationRetryStartedAsync(stateId, DateTimeOffset.UtcNow);
 
@@ -179,3 +176,40 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
         await FollowupAsync(publishResult.FirstError.Description, ephemeral: true);
     }
 }
+
+public record MetaProposalModal : IModal
+{
+    [InputLabel("Title")]
+    [ModalTextInput("title", maxLength: MetaProposalState.MaxTitleLength, placeholder: "The title of the proposal thread")]
+    public required string ProposalTitle { get; [UsedImplicitly] init; }
+
+    [InputLabel("Summary")]
+    [ModalTextInput(
+        "summary",
+        TextInputStyle.Paragraph,
+        maxLength: 1500,
+        placeholder: "Please provide a brief, high-level overview of your proposal. (1500 characters)"
+    )]
+    public required string Summary { get; [UsedImplicitly] init; }
+
+    [InputLabel("Motivation")]
+    [ModalTextInput(
+        "motivation",
+        TextInputStyle.Paragraph,
+        maxLength: 1950,
+        placeholder: "Please provide a detailed explanation of what your proposal seeks to address. (1950 characters)"
+    )]
+    public required string Motivation { get; [UsedImplicitly] init; }
+
+    [InputLabel("Specification")]
+    [ModalTextInput(
+        "specification",
+        TextInputStyle.Paragraph,
+        maxLength: 1950,
+        placeholder: "Please provide a concrete description of the proposed change or policy. (1950 characters)"
+    )]
+    public required string Specification { get; [UsedImplicitly] init; }
+
+    string IModal.Title => "Make a proposal";
+}
+

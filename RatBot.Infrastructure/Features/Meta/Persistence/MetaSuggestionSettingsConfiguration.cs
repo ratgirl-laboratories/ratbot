@@ -1,4 +1,4 @@
-namespace RatBot.Infrastructure.Persistence.Configurations;
+namespace RatBot.Infrastructure.Features.Meta.Persistence;
 
 public sealed class MetaSuggestionSettingsConfiguration : IEntityTypeConfiguration<MetaSuggestionSettings>
 {

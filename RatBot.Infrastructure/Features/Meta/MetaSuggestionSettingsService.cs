@@ -1,18 +1,17 @@
-using RatBot.Application.Common;
+using Serilog;
 
-namespace RatBot.Application.Meta;
+namespace RatBot.Infrastructure.Features.Meta;
 
-public sealed class MetaSuggestionSettingsService(IUnitOfWork uow, ILogger logger)
+public sealed class MetaSuggestionSettingsService(BotDbContext db, ILogger logger)
 {
+    private readonly BotDbContext _db = db;
     private readonly ILogger _logger = logger.ForContext<MetaSuggestionSettingsService>();
 
     public async Task<ErrorOr<MetaSuggestionSettings>> GetAsync(ulong guildId, CancellationToken ct = default)
     {
-        _ = ct;
-        IRepository<MetaSuggestionSettings> settings = uow.GetRepository<MetaSuggestionSettings>();
-        ErrorOr<MetaSuggestionSettings> setting = await settings.TryFindAsync((long)guildId);
+        MetaSuggestionSettings? setting = await _db.MetaSuggestionSettings.AsNoTracking().SingleOrDefaultAsync(x => x.GuildId == guildId, ct);
 
-        return setting.IsError ? MetaProposalErrors.SettingsNotConfigured : setting.Value;
+        return setting is null ? MetaProposalErrors.SettingsNotConfigured : setting;
     }
 
     public Task<ErrorOr<Success>> UpsertSuggestionsForumChannelAsync(ulong guildId, ulong forumChannelId, CancellationToken ct = default) =>
@@ -32,27 +31,19 @@ public sealed class MetaSuggestionSettingsService(IUnitOfWork uow, ILogger logge
 
     private async Task<ErrorOr<Success>> UpsertAsync(ulong guildId, Func<MetaSuggestionSettings, ErrorOr<Success>> update, CancellationToken ct)
     {
-        IRepository<MetaSuggestionSettings> repo = uow.GetRepository<MetaSuggestionSettings>();
-        ErrorOr<MetaSuggestionSettings> existing = await repo.TryFindAsync((long)guildId);
+        MetaSuggestionSettings? existing = await _db.MetaSuggestionSettings.SingleOrDefaultAsync(x => x.GuildId == guildId, ct);
 
-        MetaSuggestionSettings settings;
+        MetaSuggestionSettings settings = existing ?? MetaSuggestionSettings.Create(guildId);
 
-        if (existing.IsError)
-        {
-            settings = MetaSuggestionSettings.Create(guildId);
-            repo.Add(settings);
-        }
-        else
-        {
-            settings = existing.Value;
-        }
+        if (existing is null)
+            _db.MetaSuggestionSettings.Add(settings);
 
         ErrorOr<Success> result = update(settings);
 
         if (result.IsError)
             return result.Errors;
 
-        await uow.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct);
 
         _logger.Information("Meta proposal settings updated for guild {GuildId}.", guildId);
 

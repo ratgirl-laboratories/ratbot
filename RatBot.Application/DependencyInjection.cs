@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application.Administration;
 using RatBot.Application.Features.Quorum;
 using RatBot.Application.MessageContent;
-using RatBot.Application.Meta;
 using RatBot.Application.Moderation;
 using RatBot.Application.Quorum;
 using RatBot.Application.Reactions;
@@ -24,8 +23,6 @@ public static class DependencyInjection
             services.AddScoped<AdminSendService>();
             services.AddScoped<ReactionUsageTracker>();
             services.AddScoped<EmojiUsageTracker>();
-            services.AddScoped<MetaProposalService>();
-            services.AddScoped<MetaSuggestionSettingsService>();
             services.AddScoped<IModerationService, ModerationService>();
             services.AddScoped<QuorumOperations>();
             services.AddScoped<IQuorumSettingsReader, QuorumSettingsReader>();

@@ -1,6 +1,7 @@
-using RatBot.Application.Meta;
+#pragma warning disable MA0048
+using RatBot.Infrastructure.Features.Meta;
 
-namespace RatBot.Discord.Commands.Meta;
+namespace RatBot.Discord.Features.Meta.Commands;
 
 [Group("meta-cabinet", "Cabinet meta commands.")]
 [DefaultMemberPermissions(GuildPermission.BanMembers)]
@@ -72,9 +73,7 @@ public sealed class MetaCabinetModule(MetaProposalService metaProposalService, M
             return;
         }
 
-        IGuildUser? user = Context.User as IGuildUser;
-
-        if (user is null || !MetaCommandPermissions.IsOwnerOrChair(settingsResult.Value, user))
+        if (Context.User is not IGuildUser user || !MetaCommandPermissions.IsOwnerOrChair(settingsResult.Value, user))
         {
             await RespondAsync("Only the guild owner, Cabinet Chair, or administrators may veto.", ephemeral: true);
             return;
@@ -144,7 +143,7 @@ public sealed class MetaCabinetModule(MetaProposalService metaProposalService, M
 
         try
         {
-            await pollMessage.EndPollAsync(null);
+            await pollMessage.EndPollAsync(options: null);
             await FollowupAsync("Poll ended immediately.", ephemeral: true);
         }
         catch (Exception)
@@ -168,7 +167,7 @@ public sealed class MetaCabinetModule(MetaProposalService metaProposalService, M
             return;
         }
 
-        await DeferAsync(true);
+        await DeferAsync(ephemeral: true);
 
         ErrorOr<MetaSuggestionSettings> settingsResult = await metaProposalService.GetSettingsAsync(Context.Guild.Id);
 
@@ -178,9 +177,7 @@ public sealed class MetaCabinetModule(MetaProposalService metaProposalService, M
             return;
         }
 
-        IGuildUser? user = Context.User as IGuildUser;
-
-        if (user is null || !MetaCommandPermissions.IsOwnerOrChair(settingsResult.Value, user))
+        if (Context.User is not IGuildUser user || !MetaCommandPermissions.IsOwnerOrChair(settingsResult.Value, user))
         {
             await FollowupAsync("Only the guild owner, Cabinet Chair, or administrators may veto.", ephemeral: true);
             return;
@@ -197,4 +194,13 @@ public sealed class MetaCabinetModule(MetaProposalService metaProposalService, M
         await workflow.PostVetoAsync(vetoResult.Value);
         await FollowupAsync("Veto recorded.", ephemeral: true);
     }
+}
+
+public record MetaVetoModal : IModal
+{
+    [InputLabel("Reason")]
+    [ModalTextInput("reason", TextInputStyle.Paragraph, maxLength: 1950, placeholder: "Reason for veto")]
+    public required string Reason { get; [UsedImplicitly] init; }
+
+    string IModal.Title => "Veto proposal";
 }

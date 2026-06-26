@@ -1,7 +1,6 @@
-using RatBot.Application.Meta;
-using RatBot.Discord.Commands.Meta;
+using RatBot.Infrastructure.Features.Meta;
 
-namespace RatBot.Discord.BackgroundWorkers;
+namespace RatBot.Discord.Features.Meta.BackgroundWorkers;
 
 public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflow, ILogger logger)
 {
@@ -36,11 +35,11 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
             return;
         }
 
-        await ResolvePollMessageAsync(service, state, pollMessage, true, ct);
+        await ResolvePollMessageAsync(service, state, pollMessage, requestFinalization: true, ct);
     }
 
     public Task ResolveFinalizedPollAsync(MetaProposalService service, MetaProposalState state, IUserMessage pollMessage, CancellationToken ct) =>
-        ResolvePollMessageAsync(service, state, pollMessage, false, ct);
+        ResolvePollMessageAsync(service, state, pollMessage, requestFinalization: false, ct);
 
     private async Task ResolvePollMessageAsync(
         MetaProposalService service,
@@ -55,7 +54,7 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
         if (pollValue is null)
         {
             if (requestFinalization)
-                await CompletePollAsync(service, state, false, ct);
+                await CompletePollAsync(service, state, submitWon: false, ct);
 
             return;
         }
@@ -69,13 +68,13 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
 
             if (state.PollFinalizationRetries >= MaxFinalizationRetries)
             {
-                await CompletePollAsync(service, state, false, ct);
+                await CompletePollAsync(service, state, submitWon: false, ct);
                 return;
             }
 
             try
             {
-                await pollMessage.EndPollAsync(null);
+                await pollMessage.EndPollAsync(options: null);
             }
             catch (Exception ex)
             {
@@ -111,7 +110,7 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
         if (settingsResult.IsError)
             return;
 
-        ErrorOr<ulong> publishResult = await workflow.PublishProposalAsync(updated, settingsResult.Value, false, ct);
+        ErrorOr<ulong> publishResult = await workflow.PublishProposalAsync(updated, settingsResult.Value, pingCabinet: false, ct);
 
         if (!publishResult.IsError)
         {

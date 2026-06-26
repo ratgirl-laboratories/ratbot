@@ -1,7 +1,6 @@
 using ErrorOr;
 using NSubstitute;
 using RatBot.Application.Administration;
-using RatBot.Application.Common;
 using Shouldly;
 
 namespace RatBot.Application.Tests.Administration;

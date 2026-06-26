@@ -1,0 +1,29 @@
+{
+    "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
+    "tasks": [
+        {
+            "name": "sa1201ier",
+            "group": "pre-commit",
+            "command": "dotnet",
+            "args": ["sa1201ier", "${staged}"],
+            "include": ["**/*.cs"],
+            "output": "always"
+        },
+        {
+            "name": "csharpier",
+            "group": "pre-commit",
+            "command": "dotnet",
+            "args": ["csharpier", "format", "${staged}"],
+            "include": ["**/*.cs"],
+            "output": "always"
+        },
+        {
+            "name": "dotnet-test",
+            "group": "pre-push",
+            "command": "dotnet",
+            "args": ["test", "RatBot.slnx", "--configuration", "Release"],
+            "include": ["**/*.cs", "**/*.csproj", "**/*.props", "**/*.targets", "RatBot.slnx"],
+            "output": "always"
+        }
+    ]
+}

@@ -29,6 +29,13 @@
         "sa1201ier"
       ],
       "rollForward": true
+    },
+    "husky": {
+      "version": "0.9.1",
+      "commands": [
+        "husky"
+      ],
+      "rollForward": false
     }
   }
 }

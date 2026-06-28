@@ -121,5 +121,6 @@ env/*.env
 # Docker MySQL data
 docker/mysql-data/
 
-# .NET tool restore lock file
-.config/
+
+# Python gubbins
+.venv/

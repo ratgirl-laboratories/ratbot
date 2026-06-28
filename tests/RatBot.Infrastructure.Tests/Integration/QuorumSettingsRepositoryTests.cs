@@ -10,6 +10,34 @@ public sealed class QuorumSettingsRepositoryTests
     private BotDbContext _db = null!;
     private QuorumSettingsRepository _repository = null!;
 
+    [Test]
+    public async Task DeleteAsync_ShouldRemoveConfiguration()
+    {
+        QuorumTarget target = QuorumTarget.Create(1, QuorumSettingsType.Channel, 123).Value;
+        Proportion proportion = Proportion.Create(0.5).Value;
+        QuorumSettings settings = QuorumSettings.Create(target, [10UL], proportion).Value;
+
+        await _repository.UpsertAsync(settings);
+
+        ErrorOr<Deleted> deleteResult = await _repository.DeleteAsync(target);
+        deleteResult.IsError.ShouldBeFalse();
+
+        ErrorOr<QuorumSettings> loadResult = await _repository.GetAsync(target);
+        loadResult.IsError.ShouldBeTrue();
+        loadResult.FirstError.Type.ShouldBe(ErrorType.NotFound);
+    }
+
+    [Test]
+    public async Task GetAsync_ShouldReturnNotFound_WhenMissing()
+    {
+        QuorumTarget target = QuorumTarget.Create(1, QuorumSettingsType.Channel, 123).Value;
+
+        ErrorOr<QuorumSettings> result = await _repository.GetAsync(target);
+
+        result.IsError.ShouldBeTrue();
+        result.FirstError.Type.ShouldBe(ErrorType.NotFound);
+    }
+
     [SetUp]
     public async Task SetUp()
     {
@@ -22,17 +50,6 @@ public sealed class QuorumSettingsRepositoryTests
     public async Task TearDown()
     {
         await _db.DisposeAsync();
-    }
-
-    [Test]
-    public async Task GetAsync_ShouldReturnNotFound_WhenMissing()
-    {
-        QuorumTarget target = QuorumTarget.Create(1, QuorumSettingsType.Channel, 123).Value;
-
-        ErrorOr<QuorumSettings> result = await _repository.GetAsync(target);
-
-        result.IsError.ShouldBeTrue();
-        result.FirstError.Type.ShouldBe(ErrorType.NotFound);
     }
 
     [Test]
@@ -73,22 +90,5 @@ public sealed class QuorumSettingsRepositoryTests
         loadResult.IsError.ShouldBeFalse();
         loadResult.Value.Proportion.ShouldBe(0.75);
         loadResult.Value.Roles.Select(x => x.Id).ShouldBe([30UL]);
-    }
-
-    [Test]
-    public async Task DeleteAsync_ShouldRemoveConfiguration()
-    {
-        QuorumTarget target = QuorumTarget.Create(1, QuorumSettingsType.Channel, 123).Value;
-        Proportion proportion = Proportion.Create(0.5).Value;
-        QuorumSettings settings = QuorumSettings.Create(target, [10UL], proportion).Value;
-
-        await _repository.UpsertAsync(settings);
-
-        ErrorOr<Deleted> deleteResult = await _repository.DeleteAsync(target);
-        deleteResult.IsError.ShouldBeFalse();
-
-        ErrorOr<QuorumSettings> loadResult = await _repository.GetAsync(target);
-        loadResult.IsError.ShouldBeTrue();
-        loadResult.FirstError.Type.ShouldBe(ErrorType.NotFound);
     }
 }

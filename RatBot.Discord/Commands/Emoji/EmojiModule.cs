@@ -30,42 +30,6 @@ public sealed class EmojiModule(ReactionUsageTracker reactionUsageTracker, Disco
         await UpdateUsagePageAsync(page).ConfigureAwait(false);
     }
 
-    private async Task RespondWithUsagePageAsync(int page)
-    {
-        ErrorOr<EmojiUsagePage> pageResult = await reactionUsageTracker.GetUsagePageAsync(page).ConfigureAwait(false);
-
-        if (pageResult.IsError)
-        {
-            await RespondAsync(pageResult.FirstError.Description, ephemeral: true).ConfigureAwait(false);
-            return;
-        }
-
-        ComponentBuilderV2 components = BuildUsagePageComponents(pageResult.Value, Context.User.Id);
-
-        await RespondAsync(ephemeral: true, components: components.Build()).ConfigureAwait(false);
-    }
-
-    private async Task UpdateUsagePageAsync(int page)
-    {
-        ErrorOr<EmojiUsagePage> pageResult = await reactionUsageTracker.GetUsagePageAsync(page).ConfigureAwait(false);
-
-        if (pageResult.IsError)
-        {
-            await RespondAsync(pageResult.FirstError.Description, ephemeral: true).ConfigureAwait(false);
-            return;
-        }
-
-        ComponentBuilderV2 components = BuildUsagePageComponents(pageResult.Value, Context.User.Id);
-
-        if (Context.Interaction is SocketMessageComponent component)
-        {
-            await component.UpdateAsync(message => message.Components = components.Build()).ConfigureAwait(false);
-            return;
-        }
-
-        await RespondAsync(ephemeral: true, components: components.Build()).ConfigureAwait(false);
-    }
-
     private ComponentBuilderV2 BuildUsagePageComponents(EmojiUsagePage page, ulong ownerUserId) =>
         new ComponentBuilderV2(
             new ContainerBuilder()
@@ -101,5 +65,41 @@ public sealed class EmojiModule(ReactionUsageTracker reactionUsageTracker, Disco
         GuildEmote? guildEmote = guild?.Emotes.FirstOrDefault(x => x.Id == emojiId);
 
         return guildEmote is not null ? guildEmote.ToString() : $"[custom:{emojiId}]";
+    }
+
+    private async Task RespondWithUsagePageAsync(int page)
+    {
+        ErrorOr<EmojiUsagePage> pageResult = await reactionUsageTracker.GetUsagePageAsync(page).ConfigureAwait(false);
+
+        if (pageResult.IsError)
+        {
+            await RespondAsync(pageResult.FirstError.Description, ephemeral: true).ConfigureAwait(false);
+            return;
+        }
+
+        ComponentBuilderV2 components = BuildUsagePageComponents(pageResult.Value, Context.User.Id);
+
+        await RespondAsync(ephemeral: true, components: components.Build()).ConfigureAwait(false);
+    }
+
+    private async Task UpdateUsagePageAsync(int page)
+    {
+        ErrorOr<EmojiUsagePage> pageResult = await reactionUsageTracker.GetUsagePageAsync(page).ConfigureAwait(false);
+
+        if (pageResult.IsError)
+        {
+            await RespondAsync(pageResult.FirstError.Description, ephemeral: true).ConfigureAwait(false);
+            return;
+        }
+
+        ComponentBuilderV2 components = BuildUsagePageComponents(pageResult.Value, Context.User.Id);
+
+        if (Context.Interaction is SocketMessageComponent component)
+        {
+            await component.UpdateAsync(message => message.Components = components.Build()).ConfigureAwait(false);
+            return;
+        }
+
+        await RespondAsync(ephemeral: true, components: components.Build()).ConfigureAwait(false);
     }
 }

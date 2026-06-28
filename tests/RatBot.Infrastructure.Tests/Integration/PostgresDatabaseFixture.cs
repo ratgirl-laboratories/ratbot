@@ -15,8 +15,6 @@ public sealed class PostgresDatabaseFixture
 
     internal static string ConnectionString => _container.GetConnectionString();
 
-    public static QuorumConfigurationStore CreateQuorumConfigurationStore() => new QuorumConfigurationStore(ConnectionString);
-
     public static BotDbContext CreateDbContext()
     {
         DbContextOptions<BotDbContext> options = new DbContextOptionsBuilder<BotDbContext>()
@@ -27,6 +25,8 @@ public sealed class PostgresDatabaseFixture
 
         return new BotDbContext(options);
     }
+
+    public static QuorumConfigurationStore CreateQuorumConfigurationStore() => new QuorumConfigurationStore(ConnectionString);
 
     public static async Task ResetAsync()
     {

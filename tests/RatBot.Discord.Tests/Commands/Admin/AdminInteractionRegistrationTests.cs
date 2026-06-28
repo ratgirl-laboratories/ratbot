@@ -33,51 +33,6 @@ public sealed class AdminInteractionRegistrationTests
     }
 
     [Test]
-    public void SendAsync_HasExpectedSlashCommandMetadata()
-    {
-        // Arrange
-        MethodInfo sendMethod =
-            typeof(AdminModule).GetMethod(nameof(AdminModule.SendAsync)) ?? throw new InvalidOperationException("Expected SendAsync method.");
-
-        // Act
-        SlashCommandAttribute slashCommand =
-            sendMethod.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
-
-        RequireUserPermissionAttribute userPermission =
-            sendMethod.GetCustomAttribute<RequireUserPermissionAttribute>()
-            ?? throw new InvalidOperationException("Expected user permission attribute.");
-
-        // Assert
-        slashCommand.Name.ShouldBe("send");
-        slashCommand.Description.ShouldBe("Send a multiline message as the bot to a specific channel.");
-        userPermission.GuildPermission.ShouldBe(GuildPermission.Administrator);
-    }
-
-    [Test]
-    public void SendModalAsync_HasExpectedModalMetadata()
-    {
-        // Arrange
-        MethodInfo modalMethod =
-            typeof(AdminModule).GetMethod(nameof(AdminModule.SendModalAsync))
-            ?? throw new InvalidOperationException("Expected SendModalAsync method.");
-
-        // Act
-        ModalInteractionAttribute modalInteraction =
-            modalMethod.GetCustomAttribute<ModalInteractionAttribute>()
-            ?? throw new InvalidOperationException("Expected modal interaction attribute.");
-
-        RequireUserPermissionAttribute userPermission =
-            modalMethod.GetCustomAttribute<RequireUserPermissionAttribute>()
-            ?? throw new InvalidOperationException("Expected user permission attribute.");
-
-        // Assert
-        modalInteraction.CustomId.ShouldBe("admin-send:*:*");
-        modalInteraction.IgnoreGroupNames.ShouldBeTrue();
-        modalInteraction.TreatAsRegex.ShouldBeFalse();
-        userPermission.GuildPermission.ShouldBe(GuildPermission.Administrator);
-    }
-
-    [Test]
     public void AdminSendModal_HasExpectedMessageInputMetadata()
     {
         // Arrange
@@ -126,5 +81,50 @@ public sealed class AdminInteractionRegistrationTests
         adminModule
             .ModalCommands.Single(command => string.Equals(command.Name, "admin-send:*:*", StringComparison.OrdinalIgnoreCase))
             .ShouldNotBeNull();
+    }
+
+    [Test]
+    public void SendAsync_HasExpectedSlashCommandMetadata()
+    {
+        // Arrange
+        MethodInfo sendMethod =
+            typeof(AdminModule).GetMethod(nameof(AdminModule.SendAsync)) ?? throw new InvalidOperationException("Expected SendAsync method.");
+
+        // Act
+        SlashCommandAttribute slashCommand =
+            sendMethod.GetCustomAttribute<SlashCommandAttribute>() ?? throw new InvalidOperationException("Expected slash command attribute.");
+
+        RequireUserPermissionAttribute userPermission =
+            sendMethod.GetCustomAttribute<RequireUserPermissionAttribute>()
+            ?? throw new InvalidOperationException("Expected user permission attribute.");
+
+        // Assert
+        slashCommand.Name.ShouldBe("send");
+        slashCommand.Description.ShouldBe("Send a multiline message as the bot to a specific channel.");
+        userPermission.GuildPermission.ShouldBe(GuildPermission.Administrator);
+    }
+
+    [Test]
+    public void SendModalAsync_HasExpectedModalMetadata()
+    {
+        // Arrange
+        MethodInfo modalMethod =
+            typeof(AdminModule).GetMethod(nameof(AdminModule.SendModalAsync))
+            ?? throw new InvalidOperationException("Expected SendModalAsync method.");
+
+        // Act
+        ModalInteractionAttribute modalInteraction =
+            modalMethod.GetCustomAttribute<ModalInteractionAttribute>()
+            ?? throw new InvalidOperationException("Expected modal interaction attribute.");
+
+        RequireUserPermissionAttribute userPermission =
+            modalMethod.GetCustomAttribute<RequireUserPermissionAttribute>()
+            ?? throw new InvalidOperationException("Expected user permission attribute.");
+
+        // Assert
+        modalInteraction.CustomId.ShouldBe("admin-send:*:*");
+        modalInteraction.IgnoreGroupNames.ShouldBeTrue();
+        modalInteraction.TreatAsRegex.ShouldBeFalse();
+        userPermission.GuildPermission.ShouldBe(GuildPermission.Administrator);
     }
 }

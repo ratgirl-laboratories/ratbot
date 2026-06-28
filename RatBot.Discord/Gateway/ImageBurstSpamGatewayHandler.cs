@@ -35,7 +35,21 @@ public sealed class ImageBurstSpamGatewayHandler(
 
     public void Unsubscribe() => discordClient.MessageReceived -= HandleMessageReceivedAsync;
 
-    private void Subscribe() => discordClient.MessageReceived += HandleMessageReceivedAsync;
+    private async Task HandleDetectionAsync(ImageBurstDetection detection)
+    {
+        SocketGuild guild = discordClient.GetGuild(detection.GuildId);
+
+        ImageBurstSpamDetectorOptions currentSettings = detectorSettings.Current;
+
+        string reason =
+            "Automatic image-burst spam detection: "
+            + $"{detection.ChannelIds.Count} channels with {currentSettings.RequiredAttachmentCount}+ attachments "
+            + $"in {currentSettings.Window} seconds.";
+
+        await guild.AddBanAsync(detection.UserId, _options.ImageBurstSpamHistoryPruneDays, reason).ConfigureAwait(false);
+
+        _logger.Warning("Banned user {UserId} for image-burst spam across {ChannelCount} channels.", detection.UserId, detection.ChannelIds.Count);
+    }
 
     private async Task HandleMessageReceivedAsync(SocketMessage message)
     {
@@ -58,6 +72,13 @@ public sealed class ImageBurstSpamGatewayHandler(
             _logger.Error(ex, "Failed processing image-burst spam detection for message {MessageId}.", message.Id);
         }
     }
+
+    private bool IsExempt(SocketGuildUser user) =>
+        _options.ImageBurstSpamAllowlistedUserIds.Contains(user.Id)
+        || user.Roles.Any(role => _options.ImageBurstSpamAllowlistedRoleIds.Contains(role.Id))
+        || HasStaffPermissions(user.GuildPermissions);
+
+    private void Subscribe() => discordClient.MessageReceived += HandleMessageReceivedAsync;
 
     private ImageBurstMessage? TryCreateQualifyingMessage(SocketMessage message)
     {
@@ -85,26 +106,5 @@ public sealed class ImageBurstSpamGatewayHandler(
         ImageBurstAttachment[] attachments = userMessage.Attachments.Select(x => new ImageBurstAttachment(x.Url)).ToArray();
 
         return new ImageBurstMessage(channel.Guild.Id, guildUser.Id, channel.Id, userMessage.Timestamp, attachments);
-    }
-
-    private bool IsExempt(SocketGuildUser user) =>
-        _options.ImageBurstSpamAllowlistedUserIds.Contains(user.Id)
-        || user.Roles.Any(role => _options.ImageBurstSpamAllowlistedRoleIds.Contains(role.Id))
-        || HasStaffPermissions(user.GuildPermissions);
-
-    private async Task HandleDetectionAsync(ImageBurstDetection detection)
-    {
-        SocketGuild guild = discordClient.GetGuild(detection.GuildId);
-
-        ImageBurstSpamDetectorOptions currentSettings = detectorSettings.Current;
-
-        string reason =
-            "Automatic image-burst spam detection: "
-            + $"{detection.ChannelIds.Count} channels with {currentSettings.RequiredAttachmentCount}+ attachments "
-            + $"in {currentSettings.Window} seconds.";
-
-        await guild.AddBanAsync(detection.UserId, _options.ImageBurstSpamHistoryPruneDays, reason).ConfigureAwait(false);
-
-        _logger.Warning("Banned user {UserId} for image-burst spam across {ChannelCount} channels.", detection.UserId, detection.ChannelIds.Count);
     }
 }

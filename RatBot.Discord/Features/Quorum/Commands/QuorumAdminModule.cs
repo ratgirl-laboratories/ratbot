@@ -31,6 +31,29 @@ public sealed class QuorumAdminModule(QuorumOperations operations) : Interaction
         );
     }
 
+    [SlashCommand("remove", "Remove quorum configuration for a channel.")]
+    public async Task RemoveAsync(
+        [Summary("channel", "The configured guild text channel or forum channel.")]
+        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.NewsThread, ChannelType.PublicThread, ChannelType.PrivateThread)]
+            IChannel channel
+    )
+    {
+        ErrorOr<QuorumScope> scopeResult = QuorumScopeResolver.ResolveScope(Context.Guild, channel);
+
+        if (scopeResult.IsError)
+        {
+            await RespondAsync(scopeResult.FirstError.Description, ephemeral: true);
+            return;
+        }
+
+        ErrorOr<Deleted> result = await operations.RemoveAsync(scopeResult.Value, CancellationToken.None);
+
+        await result.SwitchFirstAsync(
+            async _ => await RespondAsync(QuorumCommandResponses.Removed(scopeResult.Value), ephemeral: true),
+            async error => await RespondAsync(error.Description, ephemeral: true)
+        );
+    }
+
     [SlashCommand("role", "Add or remove a quorum voter role.")]
     public async Task RoleAsync(
         [Summary("channel", "The configured guild text channel or forum channel.")]
@@ -55,29 +78,6 @@ public sealed class QuorumAdminModule(QuorumOperations operations) : Interaction
 
         await result.SwitchFirstAsync(
             async _ => await RespondAsync(QuorumCommandResponses.Role(scopeResult.Value, role, shouldAdd), ephemeral: true),
-            async error => await RespondAsync(error.Description, ephemeral: true)
-        );
-    }
-
-    [SlashCommand("remove", "Remove quorum configuration for a channel.")]
-    public async Task RemoveAsync(
-        [Summary("channel", "The configured guild text channel or forum channel.")]
-        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.NewsThread, ChannelType.PublicThread, ChannelType.PrivateThread)]
-            IChannel channel
-    )
-    {
-        ErrorOr<QuorumScope> scopeResult = QuorumScopeResolver.ResolveScope(Context.Guild, channel);
-
-        if (scopeResult.IsError)
-        {
-            await RespondAsync(scopeResult.FirstError.Description, ephemeral: true);
-            return;
-        }
-
-        ErrorOr<Deleted> result = await operations.RemoveAsync(scopeResult.Value, CancellationToken.None);
-
-        await result.SwitchFirstAsync(
-            async _ => await RespondAsync(QuorumCommandResponses.Removed(scopeResult.Value), ephemeral: true),
             async error => await RespondAsync(error.Description, ephemeral: true)
         );
     }

@@ -12,7 +12,7 @@ public sealed class ReactionQueue
             AllowSynchronousContinuations = false,
         }
     );
+    public ChannelReader<ulong> Reader => _channel.Reader;
 
     public ChannelWriter<ulong> Writer => _channel.Writer;
-    public ChannelReader<ulong> Reader => _channel.Reader;
 }

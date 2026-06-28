@@ -27,61 +27,6 @@ public sealed class MetaProposalGatewayHandler(
         discordClient.MessageUpdated -= HandleMessageUpdatedAsync;
     }
 
-    private void Subscribe()
-    {
-        discordClient.ThreadCreated += HandleThreadCreatedAsync;
-        discordClient.ThreadDeleted += HandleThreadDeletedAsync;
-        discordClient.MessageDeleted += HandleMessageDeletedAsync;
-        discordClient.MessageUpdated += HandleMessageUpdatedAsync;
-    }
-
-    private async Task HandleThreadCreatedAsync(SocketThreadChannel thread)
-    {
-        try
-        {
-            using IServiceScope scope = scopeFactory.CreateScope();
-            MetaProposalService service = scope.ServiceProvider.GetRequiredService<MetaProposalService>();
-            ErrorOr<MetaSuggestionSettings> settingsResult = await service.GetSettingsAsync(thread.Guild.Id);
-
-            if (settingsResult.IsError)
-                return;
-
-            MetaSuggestionSettings settings = settingsResult.Value;
-
-            if (thread.ParentChannel.Id != settings.SuggestionsForumChannelId)
-                return;
-
-            ulong ownerId = ((IThreadChannel)thread).OwnerId;
-
-            if (ownerId == 0)
-            {
-                _logger.Warning("Ignoring meta suggestion thread {ThreadId} because owner id was unavailable.", thread.Id);
-
-                return;
-            }
-
-            await service.TrackSuggestionThreadAsync(thread.Guild.Id, thread.Id, settings.SuggestionsForumChannelId, ownerId, DateTimeOffset.UtcNow);
-        }
-        catch (Exception ex)
-        {
-            _logger.Warning(ex, "Failed to handle meta suggestion thread creation event.");
-        }
-    }
-
-    private async Task HandleThreadDeletedAsync(Cacheable<SocketThreadChannel, ulong> thread)
-    {
-        try
-        {
-            using IServiceScope scope = scopeFactory.CreateScope();
-            MetaProposalService service = scope.ServiceProvider.GetRequiredService<MetaProposalService>();
-            await service.ForgetDeletedUnsubmittedSuggestionAsync(thread.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.Warning(ex, "Failed to handle meta suggestion thread deletion event.");
-        }
-    }
-
     private async Task HandleMessageDeletedAsync(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
     {
         _ = channel;
@@ -143,5 +88,60 @@ public sealed class MetaProposalGatewayHandler(
         {
             _logger.Warning(ex, "Failed to handle manually finalized meta proposal poll update.");
         }
+    }
+
+    private async Task HandleThreadCreatedAsync(SocketThreadChannel thread)
+    {
+        try
+        {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            MetaProposalService service = scope.ServiceProvider.GetRequiredService<MetaProposalService>();
+            ErrorOr<MetaSuggestionSettings> settingsResult = await service.GetSettingsAsync(thread.Guild.Id);
+
+            if (settingsResult.IsError)
+                return;
+
+            MetaSuggestionSettings settings = settingsResult.Value;
+
+            if (thread.ParentChannel.Id != settings.SuggestionsForumChannelId)
+                return;
+
+            ulong ownerId = ((IThreadChannel)thread).OwnerId;
+
+            if (ownerId == 0)
+            {
+                _logger.Warning("Ignoring meta suggestion thread {ThreadId} because owner id was unavailable.", thread.Id);
+
+                return;
+            }
+
+            await service.TrackSuggestionThreadAsync(thread.Guild.Id, thread.Id, settings.SuggestionsForumChannelId, ownerId, DateTimeOffset.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Failed to handle meta suggestion thread creation event.");
+        }
+    }
+
+    private async Task HandleThreadDeletedAsync(Cacheable<SocketThreadChannel, ulong> thread)
+    {
+        try
+        {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            MetaProposalService service = scope.ServiceProvider.GetRequiredService<MetaProposalService>();
+            await service.ForgetDeletedUnsubmittedSuggestionAsync(thread.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Failed to handle meta suggestion thread deletion event.");
+        }
+    }
+
+    private void Subscribe()
+    {
+        discordClient.ThreadCreated += HandleThreadCreatedAsync;
+        discordClient.ThreadDeleted += HandleThreadDeletedAsync;
+        discordClient.MessageDeleted += HandleMessageDeletedAsync;
+        discordClient.MessageUpdated += HandleMessageUpdatedAsync;
     }
 }

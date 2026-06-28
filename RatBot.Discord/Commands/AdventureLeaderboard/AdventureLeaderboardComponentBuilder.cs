@@ -6,9 +6,9 @@ namespace RatBot.Discord.Commands.AdventureLeaderboard;
 
 public sealed class AdventureLeaderboardComponentBuilder
 {
-    private const int MaxRowsPerContainer = 25;
     private const int MaxContainersPerMessage = 5;
     private const int MaxDisplayableTextCharactersPerMessage = 3900;
+    private const int MaxRowsPerContainer = 25;
 
     public static ImmutableArray<MessageComponent> Build(AdventureLeaderboardViewModel model)
     {
@@ -55,9 +55,21 @@ public sealed class AdventureLeaderboardComponentBuilder
         return messages.ToImmutableArray();
     }
 
+    private static ImmutableArray<MessageComponent> BuildEmptyLeaderboard(string header) =>
+        ImmutableArray.Create(new ComponentBuilderV2(BuildHeaderContainer(header, ImmutableArray<string>.Empty)).Build());
+
     private static string BuildHeader(AdventureLeaderboardViewModel model) =>
         $"# Practical Python Adventure Leaderboard\n"
         + $"Year {model.Year} • {model.TotalEntrants} entrants • updated <t:{model.LastUpdated.ToUnixTimeSeconds()}:R>";
+
+    private static ContainerBuilder BuildHeaderContainer(string header, ImmutableArray<string> rows) =>
+        new ContainerBuilder()
+            .WithAccentColor(Color.Teal)
+            .WithTextDisplay(new TextDisplayBuilder().WithContent(header))
+            .WithSeparator(new SeparatorBuilder())
+            .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(rows)));
+
+    private static MessageComponent BuildMessage(ImmutableArray<ContainerBuilder> containers) => new ComponentBuilderV2(containers).Build();
 
     private static string BuildRow(AdventureLeaderboardViewRow row) =>
         string.Create(CultureInfo.InvariantCulture, $"{FormatRank(row.Rank)} `{row.Score}/{row.MaxScore}` `{row.Progress}` {row.DisplayName}\n");
@@ -75,6 +87,11 @@ public sealed class AdventureLeaderboardComponentBuilder
         return text.ToString();
     }
 
+    private static ContainerBuilder BuildRowsContainer(ImmutableArray<string> rows) =>
+        new ContainerBuilder().WithAccentColor(Color.Teal).WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(rows)));
+
+    private static ImmutableArray<string> BuildRowTexts(ImmutableArray<AdventureLeaderboardViewRow> rows) => rows.Select(BuildRow).ToImmutableArray();
+
     private static string FormatRank(int rank) =>
         rank switch
         {
@@ -84,15 +101,7 @@ public sealed class AdventureLeaderboardComponentBuilder
             _ => $"`#{rank:00}`",
         };
 
-    private static ContainerBuilder BuildHeaderContainer(string header, ImmutableArray<string> rows) =>
-        new ContainerBuilder()
-            .WithAccentColor(Color.Teal)
-            .WithTextDisplay(new TextDisplayBuilder().WithContent(header))
-            .WithSeparator(new SeparatorBuilder())
-            .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(rows)));
-
-    private static ContainerBuilder BuildRowsContainer(ImmutableArray<string> rows) =>
-        new ContainerBuilder().WithAccentColor(Color.Teal).WithTextDisplay(new TextDisplayBuilder().WithContent(BuildRows(rows)));
+    private static int RowsLength(ImmutableArray<string> rows) => rows.Sum(row => row.Length);
 
     private static ImmutableArray<string> TakeRows(ImmutableArray<string> rows, int startIndex, int availableCharacters)
     {
@@ -115,13 +124,4 @@ public sealed class AdventureLeaderboardComponentBuilder
 
         return chunk.ToImmutableArray();
     }
-
-    private static ImmutableArray<MessageComponent> BuildEmptyLeaderboard(string header) =>
-        ImmutableArray.Create(new ComponentBuilderV2(BuildHeaderContainer(header, ImmutableArray<string>.Empty)).Build());
-
-    private static MessageComponent BuildMessage(ImmutableArray<ContainerBuilder> containers) => new ComponentBuilderV2(containers).Build();
-
-    private static ImmutableArray<string> BuildRowTexts(ImmutableArray<AdventureLeaderboardViewRow> rows) => rows.Select(BuildRow).ToImmutableArray();
-
-    private static int RowsLength(ImmutableArray<string> rows) => rows.Sum(row => row.Length);
 }

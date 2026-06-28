@@ -27,28 +27,6 @@ public sealed class QuorumInteractionRegistrationTests
     }
 
     [Test]
-    public void Modules_HaveExpectedGroupPermissions()
-    {
-        AssertGroup(typeof(QuorumAdminModule), "quorum-admin", GuildPermission.Administrator);
-        AssertGroup(typeof(QuorumModule), "quorum", GuildPermission.MuteMembers);
-    }
-
-    [Test]
-    public void RoleAsync_UsesDiscordRoleAndDefaultsShouldAddToTrue()
-    {
-        MethodInfo method =
-            typeof(QuorumAdminModule).GetMethod(nameof(QuorumAdminModule.RoleAsync))
-            ?? throw new InvalidOperationException("Expected RoleAsync method.");
-
-        ParameterInfo[] parameters = method.GetParameters();
-
-        parameters.Select(parameter => parameter.ParameterType).ShouldBe([typeof(IChannel), typeof(IRole), typeof(bool)]);
-        parameters[2].GetCustomAttribute<SummaryAttribute>()?.Name.ShouldBe("should_add");
-        parameters[2].HasDefaultValue.ShouldBeTrue();
-        parameters[2].DefaultValue.ShouldBe(expected: true);
-    }
-
-    [Test]
     public async Task InteractionService_RegistersFinalQuorumCommandSurface()
     {
         ServiceProvider services = new ServiceCollection()
@@ -70,6 +48,28 @@ public sealed class QuorumInteractionRegistrationTests
 
         quorum.SlashGroupName.ShouldBe("quorum");
         quorum.SlashCommands.Select(command => command.Name).ShouldBe(["inspect", "calculate"], ignoreOrder: true);
+    }
+
+    [Test]
+    public void Modules_HaveExpectedGroupPermissions()
+    {
+        AssertGroup(typeof(QuorumAdminModule), "quorum-admin", GuildPermission.Administrator);
+        AssertGroup(typeof(QuorumModule), "quorum", GuildPermission.MuteMembers);
+    }
+
+    [Test]
+    public void RoleAsync_UsesDiscordRoleAndDefaultsShouldAddToTrue()
+    {
+        MethodInfo method =
+            typeof(QuorumAdminModule).GetMethod(nameof(QuorumAdminModule.RoleAsync))
+            ?? throw new InvalidOperationException("Expected RoleAsync method.");
+
+        ParameterInfo[] parameters = method.GetParameters();
+
+        parameters.Select(parameter => parameter.ParameterType).ShouldBe([typeof(IChannel), typeof(IRole), typeof(bool)]);
+        parameters[2].GetCustomAttribute<SummaryAttribute>()?.Name.ShouldBe("should_add");
+        parameters[2].HasDefaultValue.ShouldBeTrue();
+        parameters[2].DefaultValue.ShouldBe(expected: true);
     }
 
     private sealed class StubConfigurationStore : IQuorumConfigurationStore

@@ -2,8 +2,8 @@ namespace RatBot.Application.Moderation;
 
 public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions initialOptions)
 {
-    private readonly Lock _gate = new Lock();
     private ImageBurstSpamDetectorOptions _current = initialOptions;
+    private readonly Lock _gate = new Lock();
 
     public ImageBurstSpamDetectorSettings()
         : this(new ImageBurstSpamDetectorOptions()) { }

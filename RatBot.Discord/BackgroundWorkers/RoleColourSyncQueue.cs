@@ -54,10 +54,11 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
         await _channel.Writer.WriteAsync(new IRoleColourSyncQueue.WorkItem(guildId, userId), ct);
     }
 
-    public void OnWorkStarted(IRoleColourSyncQueue.WorkItem item)
+    public IRoleColourSyncQueue.Status GetStatus()
     {
-        Interlocked.Decrement(ref _pending);
-        Interlocked.Increment(ref _inFlight);
+        (double? perSec, TimeSpan? eta) = ComputeThroughputAndEta();
+
+        return new IRoleColourSyncQueue.Status(Volatile.Read(ref _pending), Volatile.Read(ref _inFlight), perSec, eta);
     }
 
     public void OnWorkCompleted(IRoleColourSyncQueue.WorkItem item)
@@ -77,11 +78,10 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
             _completedTimestamps.TryDequeue(out _);
     }
 
-    public IRoleColourSyncQueue.Status GetStatus()
+    public void OnWorkStarted(IRoleColourSyncQueue.WorkItem item)
     {
-        (double? perSec, TimeSpan? eta) = ComputeThroughputAndEta();
-
-        return new IRoleColourSyncQueue.Status(Volatile.Read(ref _pending), Volatile.Read(ref _inFlight), perSec, eta);
+        Interlocked.Decrement(ref _pending);
+        Interlocked.Increment(ref _inFlight);
     }
 
     private (double? perSec, TimeSpan? eta) ComputeThroughputAndEta()

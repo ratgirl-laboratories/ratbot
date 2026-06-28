@@ -5,28 +5,10 @@ namespace RatBot.Discord.Features.Quorum;
 
 public sealed class DiscordQuorumMemberIndex(DiscordSocketClient client, ILogger logger) : IDiscordGatewayHandler
 {
-    private readonly Lock _lock = new Lock();
-    private readonly SemaphoreSlim _warmupLock = new SemaphoreSlim(1, 1);
     private readonly Dictionary<ulong, GuildIndex> _guilds = [];
+    private readonly Lock _lock = new Lock();
     private readonly ILogger _logger = logger.ForContext<DiscordQuorumMemberIndex>();
-
-    public Task InitializeAsync(CancellationToken ct)
-    {
-        client.UserJoined += HandleUserJoinedAsync;
-        client.UserLeft += HandleUserLeftAsync;
-        client.GuildMemberUpdated += HandleGuildMemberUpdatedAsync;
-        client.RoleDeleted += HandleRoleDeletedAsync;
-
-        return Task.CompletedTask;
-    }
-
-    public void Unsubscribe()
-    {
-        client.UserJoined -= HandleUserJoinedAsync;
-        client.UserLeft -= HandleUserLeftAsync;
-        client.GuildMemberUpdated -= HandleGuildMemberUpdatedAsync;
-        client.RoleDeleted -= HandleRoleDeletedAsync;
-    }
+    private readonly SemaphoreSlim _warmupLock = new SemaphoreSlim(1, 1);
 
     public async Task EnsureTrackingAsync(SocketGuild guild, ImmutableHashSet<ulong> roleIds, CancellationToken ct)
     {
@@ -80,6 +62,16 @@ public sealed class DiscordQuorumMemberIndex(DiscordSocketClient client, ILogger
         }
     }
 
+    public Task InitializeAsync(CancellationToken ct)
+    {
+        client.UserJoined += HandleUserJoinedAsync;
+        client.UserLeft += HandleUserLeftAsync;
+        client.GuildMemberUpdated += HandleGuildMemberUpdatedAsync;
+        client.RoleDeleted += HandleRoleDeletedAsync;
+
+        return Task.CompletedTask;
+    }
+
     public bool TryCountEligibleVoters(ulong guildId, ImmutableHashSet<ulong> roleIds, out int eligibleVoterCount)
     {
         lock (_lock)
@@ -106,32 +98,41 @@ public sealed class DiscordQuorumMemberIndex(DiscordSocketClient client, ILogger
         }
     }
 
-    private Task HandleUserJoinedAsync(SocketGuildUser user)
+    public void Unsubscribe()
     {
-        try
-        {
-            IndexUserForRoles(user, GetTrackedRoleIds(user.Guild.Id));
-        }
-        catch (Exception ex)
-        {
-            _logger.ForContext("GuildId", user.Guild.Id).Warning(ex, "Failed to update quorum member index after member joined.");
-        }
-
-        return Task.CompletedTask;
+        client.UserJoined -= HandleUserJoinedAsync;
+        client.UserLeft -= HandleUserLeftAsync;
+        client.GuildMemberUpdated -= HandleGuildMemberUpdatedAsync;
+        client.RoleDeleted -= HandleRoleDeletedAsync;
     }
 
-    private Task HandleUserLeftAsync(SocketGuild guild, SocketUser user)
+    private ImmutableHashSet<ulong> GetMissingRoleIds(ulong guildId, ImmutableHashSet<ulong> roleIds)
     {
-        try
+        lock (_lock)
         {
-            RemoveUserFromGuild(guild.Id, user.Id);
+            return !_guilds.TryGetValue(guildId, out GuildIndex? guild)
+                ? roleIds
+                : roleIds.Where(roleId => !guild.WarmedRoleIds.Contains(roleId)).ToImmutableHashSet();
         }
-        catch (Exception ex)
-        {
-            _logger.ForContext("GuildId", guild.Id).Warning(ex, "Failed to update quorum member index after member left.");
-        }
+    }
 
-        return Task.CompletedTask;
+    private GuildIndex GetOrCreateGuildIndex(ulong guildId)
+    {
+        if (_guilds.TryGetValue(guildId, out GuildIndex? guild))
+            return guild;
+
+        guild = new GuildIndex();
+        _guilds.Add(guildId, guild);
+
+        return guild;
+    }
+
+    private ImmutableHashSet<ulong> GetTrackedRoleIds(ulong guildId)
+    {
+        lock (_lock)
+        {
+            return _guilds.TryGetValue(guildId, out GuildIndex? guild) ? guild.RoleMembers.Keys.ToImmutableHashSet() : ImmutableHashSet<ulong>.Empty;
+        }
     }
 
     private Task HandleGuildMemberUpdatedAsync(Cacheable<SocketGuildUser, ulong> before, SocketGuildUser after)
@@ -163,44 +164,32 @@ public sealed class DiscordQuorumMemberIndex(DiscordSocketClient client, ILogger
         return Task.CompletedTask;
     }
 
-    private ImmutableHashSet<ulong> GetMissingRoleIds(ulong guildId, ImmutableHashSet<ulong> roleIds)
+    private Task HandleUserJoinedAsync(SocketGuildUser user)
     {
-        lock (_lock)
+        try
         {
-            return !_guilds.TryGetValue(guildId, out GuildIndex? guild)
-                ? roleIds
-                : roleIds.Where(roleId => !guild.WarmedRoleIds.Contains(roleId)).ToImmutableHashSet();
+            IndexUserForRoles(user, GetTrackedRoleIds(user.Guild.Id));
         }
+        catch (Exception ex)
+        {
+            _logger.ForContext("GuildId", user.Guild.Id).Warning(ex, "Failed to update quorum member index after member joined.");
+        }
+
+        return Task.CompletedTask;
     }
 
-    private ImmutableHashSet<ulong> GetTrackedRoleIds(ulong guildId)
+    private Task HandleUserLeftAsync(SocketGuild guild, SocketUser user)
     {
-        lock (_lock)
+        try
         {
-            return _guilds.TryGetValue(guildId, out GuildIndex? guild) ? guild.RoleMembers.Keys.ToImmutableHashSet() : ImmutableHashSet<ulong>.Empty;
+            RemoveUserFromGuild(guild.Id, user.Id);
         }
-    }
-
-    private void PrepareRoleSetsForWarmup(ulong guildId, ImmutableHashSet<ulong> roleIds)
-    {
-        lock (_lock)
+        catch (Exception ex)
         {
-            GuildIndex guild = GetOrCreateGuildIndex(guildId);
-
-            foreach (ulong roleId in roleIds)
-                guild.RoleMembers[roleId] = [];
+            _logger.ForContext("GuildId", guild.Id).Warning(ex, "Failed to update quorum member index after member left.");
         }
-    }
 
-    private void MarkRolesReady(ulong guildId, ImmutableHashSet<ulong> roleIds)
-    {
-        lock (_lock)
-        {
-            GuildIndex guild = GetOrCreateGuildIndex(guildId);
-
-            foreach (ulong roleId in roleIds)
-                guild.WarmedRoleIds.Add(roleId);
-        }
+        return Task.CompletedTask;
     }
 
     private void IndexUserForRoles(IGuildUser user, ImmutableHashSet<ulong> roleIds)
@@ -225,15 +214,25 @@ public sealed class DiscordQuorumMemberIndex(DiscordSocketClient client, ILogger
         }
     }
 
-    private void RemoveUserFromGuild(ulong guildId, ulong userId)
+    private void MarkRolesReady(ulong guildId, ImmutableHashSet<ulong> roleIds)
     {
         lock (_lock)
         {
-            if (!_guilds.TryGetValue(guildId, out GuildIndex? guild))
-                return;
+            GuildIndex guild = GetOrCreateGuildIndex(guildId);
 
-            foreach (HashSet<ulong> userIds in guild.RoleMembers.Values)
-                userIds.Remove(userId);
+            foreach (ulong roleId in roleIds)
+                guild.WarmedRoleIds.Add(roleId);
+        }
+    }
+
+    private void PrepareRoleSetsForWarmup(ulong guildId, ImmutableHashSet<ulong> roleIds)
+    {
+        lock (_lock)
+        {
+            GuildIndex guild = GetOrCreateGuildIndex(guildId);
+
+            foreach (ulong roleId in roleIds)
+                guild.RoleMembers[roleId] = [];
         }
     }
 
@@ -249,15 +248,16 @@ public sealed class DiscordQuorumMemberIndex(DiscordSocketClient client, ILogger
         }
     }
 
-    private GuildIndex GetOrCreateGuildIndex(ulong guildId)
+    private void RemoveUserFromGuild(ulong guildId, ulong userId)
     {
-        if (_guilds.TryGetValue(guildId, out GuildIndex? guild))
-            return guild;
+        lock (_lock)
+        {
+            if (!_guilds.TryGetValue(guildId, out GuildIndex? guild))
+                return;
 
-        guild = new GuildIndex();
-        _guilds.Add(guildId, guild);
-
-        return guild;
+            foreach (HashSet<ulong> userIds in guild.RoleMembers.Values)
+                userIds.Remove(userId);
+        }
     }
 
     private sealed class GuildIndex

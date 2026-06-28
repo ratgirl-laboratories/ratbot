@@ -29,6 +29,25 @@ public sealed class ImageBurstSpamDetectorTests
         );
 
     [Test]
+    public void Observe_AfterDetection_DoesNotTriggerAgainWhileHandlingLockIsActive()
+    {
+        // Arrange
+        TestTimeProvider timeProvider = new TestTimeProvider(BaseTimestamp);
+        ImageBurstSpamDetector detector = CreateDetector(timeProvider);
+
+        detector.Observe(CreateMessage(channelId: 10, timestamp: BaseTimestamp)).ShouldBeNull();
+        detector.Observe(CreateMessage(channelId: 20, timestamp: BaseTimestamp.AddSeconds(1))).ShouldBeNull();
+        detector.Observe(CreateMessage(channelId: 30, timestamp: BaseTimestamp.AddSeconds(2))).ShouldBeNull();
+        detector.Observe(CreateMessage(channelId: 40, timestamp: BaseTimestamp.AddSeconds(3))).ShouldNotBeNull();
+
+        // Act
+        ImageBurstDetection? detection = detector.Observe(CreateMessage(channelId: 50, timestamp: BaseTimestamp.AddSeconds(4)));
+
+        // Assert
+        detection.ShouldBeNull();
+    }
+
+    [Test]
     public void Observe_WithFourDistinctChannelsInsideWindow_ReturnsDetection()
     {
         // Arrange
@@ -50,6 +69,24 @@ public sealed class ImageBurstSpamDetectorTests
     }
 
     [Test]
+    public void Observe_WithOldMessages_PrunesOutsideWindow()
+    {
+        // Arrange
+        TestTimeProvider timeProvider = new TestTimeProvider(BaseTimestamp);
+        ImageBurstSpamDetector detector = CreateDetector(timeProvider);
+
+        // Act
+        detector.Observe(CreateMessage(channelId: 10, timestamp: BaseTimestamp)).ShouldBeNull();
+        detector.Observe(CreateMessage(channelId: 20, timestamp: BaseTimestamp.AddSeconds(1))).ShouldBeNull();
+        detector.Observe(CreateMessage(channelId: 30, timestamp: BaseTimestamp.AddSeconds(2))).ShouldBeNull();
+
+        ImageBurstDetection? detection = detector.Observe(CreateMessage(channelId: 40, timestamp: BaseTimestamp.AddSeconds(46)));
+
+        // Assert
+        detection.ShouldBeNull();
+    }
+
+    [Test]
     public void Observe_WithRepeatedChannel_DoesNotIncreaseChannelCount()
     {
         // Arrange
@@ -64,6 +101,23 @@ public sealed class ImageBurstSpamDetectorTests
 
         // Assert
         detector.Observe(CreateMessage(channelId: 30, timestamp: BaseTimestamp.AddSeconds(20))).ShouldBeNull();
+    }
+
+    [Test]
+    public void Observe_WithSameUserInDifferentGuilds_DoesNotShareWindow()
+    {
+        // Arrange
+        TestTimeProvider timeProvider = new TestTimeProvider(BaseTimestamp);
+        ImageBurstSpamDetector detector = CreateDetector(timeProvider);
+
+        // Act
+        detector.Observe(CreateMessage(guildId: 1, channelId: 10, timestamp: BaseTimestamp)).ShouldBeNull();
+        detector.Observe(CreateMessage(guildId: 1, channelId: 20, timestamp: BaseTimestamp.AddSeconds(1))).ShouldBeNull();
+        detector.Observe(CreateMessage(guildId: 2, channelId: 30, timestamp: BaseTimestamp.AddSeconds(2))).ShouldBeNull();
+        detector.Observe(CreateMessage(guildId: 2, channelId: 40, timestamp: BaseTimestamp.AddSeconds(3))).ShouldBeNull();
+
+        // Assert
+        detector.Observe(CreateMessage(guildId: 1, channelId: 50, timestamp: BaseTimestamp.AddSeconds(4))).ShouldBeNull();
     }
 
     [Test]
@@ -93,60 +147,6 @@ public sealed class ImageBurstSpamDetectorTests
         detection.ShouldNotBeNull();
         detection.ChannelIds.ShouldBe([486841085210132490UL, 903481102591750184UL, 908076393198419988UL]);
         detection.Messages.Count.ShouldBe(3);
-    }
-
-    [Test]
-    public void Observe_WithOldMessages_PrunesOutsideWindow()
-    {
-        // Arrange
-        TestTimeProvider timeProvider = new TestTimeProvider(BaseTimestamp);
-        ImageBurstSpamDetector detector = CreateDetector(timeProvider);
-
-        // Act
-        detector.Observe(CreateMessage(channelId: 10, timestamp: BaseTimestamp)).ShouldBeNull();
-        detector.Observe(CreateMessage(channelId: 20, timestamp: BaseTimestamp.AddSeconds(1))).ShouldBeNull();
-        detector.Observe(CreateMessage(channelId: 30, timestamp: BaseTimestamp.AddSeconds(2))).ShouldBeNull();
-
-        ImageBurstDetection? detection = detector.Observe(CreateMessage(channelId: 40, timestamp: BaseTimestamp.AddSeconds(46)));
-
-        // Assert
-        detection.ShouldBeNull();
-    }
-
-    [Test]
-    public void Observe_WithSameUserInDifferentGuilds_DoesNotShareWindow()
-    {
-        // Arrange
-        TestTimeProvider timeProvider = new TestTimeProvider(BaseTimestamp);
-        ImageBurstSpamDetector detector = CreateDetector(timeProvider);
-
-        // Act
-        detector.Observe(CreateMessage(guildId: 1, channelId: 10, timestamp: BaseTimestamp)).ShouldBeNull();
-        detector.Observe(CreateMessage(guildId: 1, channelId: 20, timestamp: BaseTimestamp.AddSeconds(1))).ShouldBeNull();
-        detector.Observe(CreateMessage(guildId: 2, channelId: 30, timestamp: BaseTimestamp.AddSeconds(2))).ShouldBeNull();
-        detector.Observe(CreateMessage(guildId: 2, channelId: 40, timestamp: BaseTimestamp.AddSeconds(3))).ShouldBeNull();
-
-        // Assert
-        detector.Observe(CreateMessage(guildId: 1, channelId: 50, timestamp: BaseTimestamp.AddSeconds(4))).ShouldBeNull();
-    }
-
-    [Test]
-    public void Observe_AfterDetection_DoesNotTriggerAgainWhileHandlingLockIsActive()
-    {
-        // Arrange
-        TestTimeProvider timeProvider = new TestTimeProvider(BaseTimestamp);
-        ImageBurstSpamDetector detector = CreateDetector(timeProvider);
-
-        detector.Observe(CreateMessage(channelId: 10, timestamp: BaseTimestamp)).ShouldBeNull();
-        detector.Observe(CreateMessage(channelId: 20, timestamp: BaseTimestamp.AddSeconds(1))).ShouldBeNull();
-        detector.Observe(CreateMessage(channelId: 30, timestamp: BaseTimestamp.AddSeconds(2))).ShouldBeNull();
-        detector.Observe(CreateMessage(channelId: 40, timestamp: BaseTimestamp.AddSeconds(3))).ShouldNotBeNull();
-
-        // Act
-        ImageBurstDetection? detection = detector.Observe(CreateMessage(channelId: 50, timestamp: BaseTimestamp.AddSeconds(4)));
-
-        // Assert
-        detection.ShouldBeNull();
     }
 
     private sealed class TestTimeProvider(DateTimeOffset timestamp) : TimeProvider

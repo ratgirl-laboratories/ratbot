@@ -22,27 +22,6 @@ public static class Program
         await host.RunAsync();
     }
 
-    private static void ConfigureSerilog(IConfiguration config, LoggerConfiguration loggerConfiguration)
-    {
-        string serviceInstanceId = config["OTEL:Resource:ServiceInstanceId"] ?? Environment.MachineName;
-
-        loggerConfiguration
-            .MinimumLevel.Verbose()
-            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
-            .Enrich.FromLogContext()
-            .Enrich.WithProperty("service_name", config["OTEL:Resource:ServiceName"] ?? "ratbot")
-            .Enrich.WithProperty("service_instance_id", serviceInstanceId)
-            .Enrich.WithProperty("environment", config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production")
-            .WriteTo.Console(LogEventLevel.Debug)
-            .WriteTo.File("logs/verbose-.log", LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
-            .WriteTo.File("logs/debug-.log", LogEventLevel.Debug, rollingInterval: RollingInterval.Day)
-            .WriteTo.File("logs/info-.log", LogEventLevel.Information, rollingInterval: RollingInterval.Day)
-            .WriteTo.File("logs/warning-.log", LogEventLevel.Warning, rollingInterval: RollingInterval.Day)
-            .WriteTo.File("logs/error-.log", LogEventLevel.Error, rollingInterval: RollingInterval.Day);
-
-        ConfigureOpenTelemetryLogs(config, loggerConfiguration);
-    }
-
     private static void ConfigureOpenTelemetryLogs(IConfiguration config, LoggerConfiguration loggerConfiguration)
     {
         string? endpoint = config["OTEL:Logs:Endpoint"];
@@ -75,6 +54,27 @@ public static class Program
                 ["environment"] = environment,
             };
         });
+    }
+
+    private static void ConfigureSerilog(IConfiguration config, LoggerConfiguration loggerConfiguration)
+    {
+        string serviceInstanceId = config["OTEL:Resource:ServiceInstanceId"] ?? Environment.MachineName;
+
+        loggerConfiguration
+            .MinimumLevel.Verbose()
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .Enrich.WithProperty("service_name", config["OTEL:Resource:ServiceName"] ?? "ratbot")
+            .Enrich.WithProperty("service_instance_id", serviceInstanceId)
+            .Enrich.WithProperty("environment", config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production")
+            .WriteTo.Console(LogEventLevel.Debug)
+            .WriteTo.File("logs/verbose-.log", LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
+            .WriteTo.File("logs/debug-.log", LogEventLevel.Debug, rollingInterval: RollingInterval.Day)
+            .WriteTo.File("logs/info-.log", LogEventLevel.Information, rollingInterval: RollingInterval.Day)
+            .WriteTo.File("logs/warning-.log", LogEventLevel.Warning, rollingInterval: RollingInterval.Day)
+            .WriteTo.File("logs/error-.log", LogEventLevel.Error, rollingInterval: RollingInterval.Day);
+
+        ConfigureOpenTelemetryLogs(config, loggerConfiguration);
     }
 
     private static void EnableSerilogSelfDiagnostics() => SelfLog.Enable(message => Console.Error.WriteLine($"[SerilogSelfLog] {message}"));

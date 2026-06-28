@@ -11,13 +11,44 @@ namespace RatBot.Discord.Tests.Commands.Admin;
 public sealed class TextChannelServiceTests
 {
     private const ulong ChannelId = 456;
+    private IGuildUser _botUser = null!;
 
     private readonly ChannelPermissions _canSendPermissions = new ChannelPermissions(viewChannel: true, sendMessages: true);
+    private ITextChannel _channel = null!;
 
     private IGuild _guild = null!;
-    private IGuildUser _botUser = null!;
-    private ITextChannel _channel = null!;
     private TextChannelService _service = null!;
+
+    [Test]
+    public async Task SendMessagesAsync_WhenChannelExists_SendsEachMessageAndReturnsCount()
+    {
+        // Arrange
+        List<string> sentMessages = [];
+        _channel.SendMessageAsync(Arg.Do<string>(sentMessages.Add)).Returns(Substitute.For<IUserMessage>());
+
+        // Act
+        ErrorOr<int> result = await _service.SendMessagesAsync(ChannelId, ["first", "second"]);
+
+        // Assert
+        result.IsError.ShouldBeFalse();
+        result.Value.ShouldBe(2);
+        sentMessages.ShouldBe(["first", "second"]);
+    }
+
+    [Test]
+    public async Task SendMessagesAsync_WhenChannelIsMissing_ReturnsChannelNotFoundAndSendsNothing()
+    {
+        // Arrange
+        _guild.GetTextChannelAsync(ChannelId).Returns((ITextChannel?)null);
+
+        // Act
+        ErrorOr<int> result = await _service.SendMessagesAsync(ChannelId, ["hello"]);
+
+        // Assert
+        result.IsError.ShouldBeTrue();
+        result.FirstError.ShouldBe(AdminSendErrors.ChannelNotFound);
+        await _channel.DidNotReceive().SendMessageAsync(Arg.Any<string>());
+    }
 
     [SetUp]
     public void SetUp()
@@ -72,36 +103,5 @@ public sealed class TextChannelServiceTests
         result.IsError.ShouldBeTrue();
         result.FirstError.ShouldBe(AdminSendErrors.ChannelNotFound);
         await _guild.DidNotReceive().GetCurrentUserAsync();
-    }
-
-    [Test]
-    public async Task SendMessagesAsync_WhenChannelExists_SendsEachMessageAndReturnsCount()
-    {
-        // Arrange
-        List<string> sentMessages = [];
-        _channel.SendMessageAsync(Arg.Do<string>(sentMessages.Add)).Returns(Substitute.For<IUserMessage>());
-
-        // Act
-        ErrorOr<int> result = await _service.SendMessagesAsync(ChannelId, ["first", "second"]);
-
-        // Assert
-        result.IsError.ShouldBeFalse();
-        result.Value.ShouldBe(2);
-        sentMessages.ShouldBe(["first", "second"]);
-    }
-
-    [Test]
-    public async Task SendMessagesAsync_WhenChannelIsMissing_ReturnsChannelNotFoundAndSendsNothing()
-    {
-        // Arrange
-        _guild.GetTextChannelAsync(ChannelId).Returns((ITextChannel?)null);
-
-        // Act
-        ErrorOr<int> result = await _service.SendMessagesAsync(ChannelId, ["hello"]);
-
-        // Assert
-        result.IsError.ShouldBeTrue();
-        result.FirstError.ShouldBe(AdminSendErrors.ChannelNotFound);
-        await _channel.DidNotReceive().SendMessageAsync(Arg.Any<string>());
     }
 }

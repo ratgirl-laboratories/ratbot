@@ -14,13 +14,13 @@ public sealed class ImageSpamSettings
         BurstDurationSeconds = burstDurationSeconds;
     }
 
-    public int Id { get; private set; } = SingletonId;
+    public int BurstDurationSeconds { get; private set; }
 
-    public int RequiredChannelCount { get; private set; }
+    public int Id { get; private set; } = SingletonId;
 
     public int RequiredAttachmentCount { get; private set; }
 
-    public int BurstDurationSeconds { get; private set; }
+    public int RequiredChannelCount { get; private set; }
 
     public static ImageSpamSettings CreateDefault() => new ImageSpamSettings(SingletonId, 4, 2, 45);
 

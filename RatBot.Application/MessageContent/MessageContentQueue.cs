@@ -12,7 +12,7 @@ public sealed class MessageContentQueue
             AllowSynchronousContinuations = false,
         }
     );
+    public ChannelReader<string> Reader => _channel.Reader;
 
     public ChannelWriter<string> Writer => _channel.Writer;
-    public ChannelReader<string> Reader => _channel.Reader;
 }

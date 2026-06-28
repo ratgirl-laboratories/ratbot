@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +8,12 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddAutobannedUsers : Migration
     {
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "AutobannedUsers");
+        }
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -31,12 +37,6 @@ namespace RatBot.Infrastructure.Migrations
             migrationBuilder.CreateIndex(name: "IX_AutobannedUsers_GuildId", table: "AutobannedUsers", column: "GuildId");
 
             migrationBuilder.CreateIndex(name: "IX_AutobannedUsers_Moderator", table: "AutobannedUsers", column: "Moderator");
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "AutobannedUsers");
         }
     }
 }

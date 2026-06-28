@@ -4,6 +4,22 @@ namespace RatBot.Infrastructure.Persistence.Repositories;
 
 public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSettingsRepository
 {
+    public async Task<ErrorOr<Deleted>> DeleteAsync(QuorumTarget target)
+    {
+        QuorumSettings? entity = await dbContext
+            .Set<QuorumSettings>()
+            .SingleOrDefaultAsync(existing =>
+                existing.GuildId == target.GuildId && existing.TargetType == target.TargetType && existing.TargetId == target.TargetId
+            );
+
+        if (entity is null)
+            return Error.NotFound(description: "Quorum settings not found");
+
+        dbContext.Remove(entity);
+        await dbContext.SaveChangesAsync();
+        return Result.Deleted;
+    }
+
     public async Task<ErrorOr<QuorumSettings>> GetAsync(QuorumTarget target)
     {
         QuorumSettings? config = await dbContext
@@ -51,21 +67,5 @@ public sealed class QuorumSettingsRepository(BotDbContext dbContext) : IQuorumSe
 
         await dbContext.SaveChangesAsync();
         return Result.Success;
-    }
-
-    public async Task<ErrorOr<Deleted>> DeleteAsync(QuorumTarget target)
-    {
-        QuorumSettings? entity = await dbContext
-            .Set<QuorumSettings>()
-            .SingleOrDefaultAsync(existing =>
-                existing.GuildId == target.GuildId && existing.TargetType == target.TargetType && existing.TargetId == target.TargetId
-            );
-
-        if (entity is null)
-            return Error.NotFound(description: "Quorum settings not found");
-
-        dbContext.Remove(entity);
-        await dbContext.SaveChangesAsync();
-        return Result.Deleted;
     }
 }

@@ -17,29 +17,6 @@ public sealed class AdventureAccessController(
     private readonly ILogger _logger = logger.ForContext<AdventureAccessController>();
     private readonly AdventureLeaderboardOptions _options = options.Value;
 
-    private static async Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(
-        SocketGuild guild,
-        AdventureEntrySnapshot snapshot,
-        RequestOptions options
-    )
-    {
-        ImmutableDictionary<ulong, IGuildUser>.Builder members = ImmutableDictionary.CreateBuilder<ulong, IGuildUser>();
-
-        foreach (AdventureEntryRow row in snapshot.Rows)
-        {
-            if (!ulong.TryParse(row.UserId, out ulong userId))
-                continue;
-
-            IGuildUser? member =
-                guild.GetUser(userId) ?? await ((IGuild)guild).GetUserAsync(userId, CacheMode.AllowDownload, options).ConfigureAwait(false);
-
-            if (member is not null)
-                members.Add(userId, member);
-        }
-
-        return members.ToImmutable();
-    }
-
     private static async Task<HashSet<ulong>> GetThreadMemberIdsAsync(IThreadChannel thread, RequestOptions options)
     {
         switch (thread)
@@ -68,6 +45,29 @@ public sealed class AdventureAccessController(
             default:
                 return new HashSet<ulong>();
         }
+    }
+
+    private static async Task<ImmutableDictionary<ulong, IGuildUser>> ResolveGuildMembersAsync(
+        SocketGuild guild,
+        AdventureEntrySnapshot snapshot,
+        RequestOptions options
+    )
+    {
+        ImmutableDictionary<ulong, IGuildUser>.Builder members = ImmutableDictionary.CreateBuilder<ulong, IGuildUser>();
+
+        foreach (AdventureEntryRow row in snapshot.Rows)
+        {
+            if (!ulong.TryParse(row.UserId, out ulong userId))
+                continue;
+
+            IGuildUser? member =
+                guild.GetUser(userId) ?? await ((IGuild)guild).GetUserAsync(userId, CacheMode.AllowDownload, options).ConfigureAwait(false);
+
+            if (member is not null)
+                members.Add(userId, member);
+        }
+
+        return members.ToImmutable();
     }
 
     public async Task UpdateAccessGrantsAsync(SocketGuild guild, AdventureEntrySnapshot snapshot, CancellationToken ct)
@@ -187,27 +187,21 @@ public sealed class AdventureAccessController(
         );
     }
 
-    private async Task<bool> SendAdventureThreadWelcomeAsync(IThreadChannel thread, IGuildUser user, RequestOptions requestOptions)
+    private async Task<bool> PrepareThreadAsync(IThreadChannel thread, RequestOptions requestOptions)
     {
         try
         {
-            await thread
-                .SendMessageAsync(
-                    $"Congratulations, Adventurer {MentionUtils.MentionUser(user.Id)}!",
-                    allowedMentions: UserMentionsOnly,
-                    options: requestOptions
-                )
-                .ConfigureAwait(false);
+            if (thread.IsArchived)
+                await thread.ModifyAsync(properties => properties.Archived = false, requestOptions).ConfigureAwait(false);
+
+            if (!thread.HasJoined)
+                await thread.JoinAsync(requestOptions).ConfigureAwait(false);
 
             return true;
         }
-        catch (OperationCanceledException) when (requestOptions.CancelToken.IsCancellationRequested)
-        {
-            throw;
-        }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Failed to send adventure forum thread welcome message to user {UserId} in thread {ThreadId}.", user.Id, thread.Id);
+            _logger.Warning(ex, "Adventure forum thread {ThreadId} is inaccessible or could not be unarchived.", thread.Id);
 
             return false;
         }
@@ -231,21 +225,27 @@ public sealed class AdventureAccessController(
         return null;
     }
 
-    private async Task<bool> PrepareThreadAsync(IThreadChannel thread, RequestOptions requestOptions)
+    private async Task<bool> SendAdventureThreadWelcomeAsync(IThreadChannel thread, IGuildUser user, RequestOptions requestOptions)
     {
         try
         {
-            if (thread.IsArchived)
-                await thread.ModifyAsync(properties => properties.Archived = false, requestOptions).ConfigureAwait(false);
-
-            if (!thread.HasJoined)
-                await thread.JoinAsync(requestOptions).ConfigureAwait(false);
+            await thread
+                .SendMessageAsync(
+                    $"Congratulations, Adventurer {MentionUtils.MentionUser(user.Id)}!",
+                    allowedMentions: UserMentionsOnly,
+                    options: requestOptions
+                )
+                .ConfigureAwait(false);
 
             return true;
         }
+        catch (OperationCanceledException) when (requestOptions.CancelToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Adventure forum thread {ThreadId} is inaccessible or could not be unarchived.", thread.Id);
+            _logger.Warning(ex, "Failed to send adventure forum thread welcome message to user {UserId} in thread {ThreadId}.", user.Id, thread.Id);
 
             return false;
         }

@@ -4,6 +4,23 @@ public sealed class QuorumSettingsWriter(IQuorumSettingsRepository repository, I
 {
     private readonly ILogger _logger = logger.ForContext<QuorumSettingsWriter>();
 
+    public async Task<ErrorOr<Deleted>> DeleteAsync(QuorumTarget target, CancellationToken ct = default)
+    {
+        _ = ct;
+
+        ErrorOr<Deleted> result = await repository.DeleteAsync(target);
+
+        _logger.Information(
+            "Quorum settings delete attempted for guild {GuildId}, target type {TargetType}, target {TargetId}. Success={IsSuccess}",
+            target.GuildId,
+            target.TargetType,
+            target.TargetId,
+            !result.IsError
+        );
+
+        return result;
+    }
+
     public async Task<ErrorOr<QuorumSettingsUpsertResult>> UpsertAsync(
         QuorumTarget target,
         IEnumerable<ulong> roleIds,
@@ -62,22 +79,5 @@ public sealed class QuorumSettingsWriter(IQuorumSettingsRepository repository, I
         );
 
         return new QuorumSettingsUpsertResult(created, config);
-    }
-
-    public async Task<ErrorOr<Deleted>> DeleteAsync(QuorumTarget target, CancellationToken ct = default)
-    {
-        _ = ct;
-
-        ErrorOr<Deleted> result = await repository.DeleteAsync(target);
-
-        _logger.Information(
-            "Quorum settings delete attempted for guild {GuildId}, target type {TargetType}, target {TargetId}. Success={IsSuccess}",
-            target.GuildId,
-            target.TargetType,
-            target.TargetId,
-            !result.IsError
-        );
-
-        return result;
     }
 }

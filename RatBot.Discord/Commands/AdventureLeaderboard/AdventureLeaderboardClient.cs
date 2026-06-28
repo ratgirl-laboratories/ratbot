@@ -6,8 +6,8 @@ namespace RatBot.Discord.Commands.AdventureLeaderboard;
 
 public sealed class AdventureLeaderboardClient(IOptions<AdventureLeaderboardOptions> options)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
     private static readonly HttpClient HttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+    private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
     private readonly AdventureLeaderboardOptions _options = options.Value;
 

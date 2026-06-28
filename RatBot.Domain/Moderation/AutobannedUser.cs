@@ -4,8 +4,9 @@ public sealed record AutobannedUser
 {
     private AutobannedUser() { }
 
-    public ulong GuildId { get; private init; }
     public ulong BannedUser { get; private init; }
+
+    public ulong GuildId { get; private init; }
     public ulong Moderator { get; private init; }
     public DateTimeOffset RegisteredAtUtc { get; private init; }
 

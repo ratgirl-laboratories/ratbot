@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,6 +7,48 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class NormalizeQuorumConfigurations : Migration
     {
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "QuorumScopeConfigRoles");
+
+            migrationBuilder.DropTable(name: "QuorumScopeConfigs");
+
+            migrationBuilder.CreateTable(
+                name: "Configs",
+                columns: table => new
+                {
+                    Key = table.Column<string>(type: "text", nullable: false),
+                    Value = table.Column<string>(type: "jsonb", nullable: false),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Configs", x => new { x.Key, x.Value });
+                }
+            );
+
+            migrationBuilder.Sql(
+                """
+                INSERT INTO "Configs" ("Key", "Value")
+                SELECT
+                    'Quorum:GuildScopeConfig',
+                    jsonb_build_object(
+                        'GuildId', config."GuildId",
+                        'ScopeType', config."ScopeType",
+                        'ScopeId', config."ScopeId",
+                        'RoleIds', COALESCE(jsonb_agg(role."RoleId" ORDER BY role."RoleId"), '[]'::jsonb),
+                        'QuorumProportion', config."QuorumProportion"
+                    )
+                FROM "QuorumScopeConfigs" AS config
+                LEFT JOIN "QuorumScopeConfigRoles" AS role
+                    ON role."GuildId" = config."GuildId"
+                   AND role."ScopeType" = config."ScopeType"
+                   AND role."ScopeId" = config."ScopeId"
+                GROUP BY config."GuildId", config."ScopeType", config."ScopeId", config."QuorumProportion";
+                """
+            );
+        }
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -105,48 +147,6 @@ namespace RatBot.Infrastructure.Migrations
             );
 
             migrationBuilder.DropTable(name: "Configs");
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "QuorumScopeConfigRoles");
-
-            migrationBuilder.DropTable(name: "QuorumScopeConfigs");
-
-            migrationBuilder.CreateTable(
-                name: "Configs",
-                columns: table => new
-                {
-                    Key = table.Column<string>(type: "text", nullable: false),
-                    Value = table.Column<string>(type: "jsonb", nullable: false),
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Configs", x => new { x.Key, x.Value });
-                }
-            );
-
-            migrationBuilder.Sql(
-                """
-                INSERT INTO "Configs" ("Key", "Value")
-                SELECT
-                    'Quorum:GuildScopeConfig',
-                    jsonb_build_object(
-                        'GuildId', config."GuildId",
-                        'ScopeType', config."ScopeType",
-                        'ScopeId', config."ScopeId",
-                        'RoleIds', COALESCE(jsonb_agg(role."RoleId" ORDER BY role."RoleId"), '[]'::jsonb),
-                        'QuorumProportion', config."QuorumProportion"
-                    )
-                FROM "QuorumScopeConfigs" AS config
-                LEFT JOIN "QuorumScopeConfigRoles" AS role
-                    ON role."GuildId" = config."GuildId"
-                   AND role."ScopeType" = config."ScopeType"
-                   AND role."ScopeId" = config."ScopeId"
-                GROUP BY config."GuildId", config."ScopeType", config."ScopeId", config."QuorumProportion";
-                """
-            );
         }
     }
 }

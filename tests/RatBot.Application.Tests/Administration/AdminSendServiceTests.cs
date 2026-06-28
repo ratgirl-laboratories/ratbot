@@ -8,14 +8,23 @@ namespace RatBot.Application.Tests.Administration;
 [TestFixture]
 public sealed class AdminSendServiceTests
 {
-    private AdminSendService _service = null!;
     private IMessageChannelWriter _channelWriter = null!;
+    private AdminSendService _service = null!;
 
-    [SetUp]
-    public void SetUp()
+    [Test]
+    public async Task SendAsync_WhenBotLacksPermission_ReturnsInsufficientPermissionsAndSendsNothing()
     {
-        _service = new AdminSendService();
-        _channelWriter = Substitute.For<IMessageChannelWriter>();
+        // Arrange
+        _channelWriter.GetChannelAsync(123).Returns(new ResolvedMessageChannel(123, "<#123>"));
+        _channelWriter.ValidateBotCanSendAsync(123).Returns(AdminSendErrors.InsufficientPermissions);
+
+        // Act
+        ErrorOr<string> result = await _service.SendAsync(_channelWriter, 123, "hello");
+
+        // Assert
+        result.IsError.ShouldBeTrue();
+        result.FirstError.ShouldBe(AdminSendErrors.InsufficientPermissions);
+        await _channelWriter.DidNotReceiveWithAnyArgs().SendMessagesAsync(default, default!);
     }
 
     [Test]
@@ -31,22 +40,6 @@ public sealed class AdminSendServiceTests
         result.IsError.ShouldBeTrue();
         result.FirstError.ShouldBe(AdminSendErrors.ChannelNotFound);
         await _channelWriter.DidNotReceiveWithAnyArgs().ValidateBotCanSendAsync(default);
-        await _channelWriter.DidNotReceiveWithAnyArgs().SendMessagesAsync(default, default!);
-    }
-
-    [Test]
-    public async Task SendAsync_WhenBotLacksPermission_ReturnsInsufficientPermissionsAndSendsNothing()
-    {
-        // Arrange
-        _channelWriter.GetChannelAsync(123).Returns(new ResolvedMessageChannel(123, "<#123>"));
-        _channelWriter.ValidateBotCanSendAsync(123).Returns(AdminSendErrors.InsufficientPermissions);
-
-        // Act
-        ErrorOr<string> result = await _service.SendAsync(_channelWriter, 123, "hello");
-
-        // Assert
-        result.IsError.ShouldBeTrue();
-        result.FirstError.ShouldBe(AdminSendErrors.InsufficientPermissions);
         await _channelWriter.DidNotReceiveWithAnyArgs().SendMessagesAsync(default, default!);
     }
 
@@ -67,52 +60,6 @@ public sealed class AdminSendServiceTests
         await _channelWriter.DidNotReceiveWithAnyArgs().GetChannelAsync(default);
         await _channelWriter.DidNotReceiveWithAnyArgs().ValidateBotCanSendAsync(default);
         await _channelWriter.DidNotReceiveWithAnyArgs().SendMessagesAsync(default, default!);
-    }
-
-    [Test]
-    public async Task SendAsync_WithSingleChunk_SendsMessageAndReturnsSuccessText()
-    {
-        // Arrange
-        _channelWriter.GetChannelAsync(123).Returns(new ResolvedMessageChannel(123, "<#123>"));
-        _channelWriter.ValidateBotCanSendAsync(123).Returns(Result.Success);
-        _channelWriter.SendMessagesAsync(123, Arg.Any<IReadOnlyList<string>>()).Returns(1);
-
-        // Act
-        ErrorOr<string> result = await _service.SendAsync(_channelWriter, 123, "hello");
-
-        // Assert
-        result.IsError.ShouldBeFalse();
-        result.Value.ShouldBe("Sent your message to <#123>.");
-
-        await _channelWriter
-            .Received(1)
-            .SendMessagesAsync(123, Arg.Is<IReadOnlyList<string>>(messages => messages.Count == 1 && messages[0] == "hello"));
-    }
-
-    [Test]
-    public async Task SendAsync_WithMultipleChunks_SendsChunksInOrderAndReturnsPartCount()
-    {
-        // Arrange
-        _channelWriter.GetChannelAsync(123).Returns(new ResolvedMessageChannel(123, "<#123>"));
-        _channelWriter.ValidateBotCanSendAsync(123).Returns(Result.Success);
-        _channelWriter.SendMessagesAsync(123, Arg.Any<IReadOnlyList<string>>()).Returns(2);
-        string message = $"{new string('a', 1999)}\nsecond";
-
-        // Act
-        ErrorOr<string> result = await _service.SendAsync(_channelWriter, 123, message);
-
-        // Assert
-        result.IsError.ShouldBeFalse();
-        result.Value.ShouldBe("Sent your message to <#123> in 2 parts.");
-
-        await _channelWriter
-            .Received(1)
-            .SendMessagesAsync(
-                123,
-                Arg.Is<IReadOnlyList<string>>(messages =>
-                    messages.Count == 2 && messages[0] == new string('a', 1999) + "\n" && messages[1] == "second"
-                )
-            );
     }
 
     [Test]
@@ -150,5 +97,58 @@ public sealed class AdminSendServiceTests
         );
 
         exception.Message.ShouldBe("send failed");
+    }
+
+    [Test]
+    public async Task SendAsync_WithMultipleChunks_SendsChunksInOrderAndReturnsPartCount()
+    {
+        // Arrange
+        _channelWriter.GetChannelAsync(123).Returns(new ResolvedMessageChannel(123, "<#123>"));
+        _channelWriter.ValidateBotCanSendAsync(123).Returns(Result.Success);
+        _channelWriter.SendMessagesAsync(123, Arg.Any<IReadOnlyList<string>>()).Returns(2);
+        string message = $"{new string('a', 1999)}\nsecond";
+
+        // Act
+        ErrorOr<string> result = await _service.SendAsync(_channelWriter, 123, message);
+
+        // Assert
+        result.IsError.ShouldBeFalse();
+        result.Value.ShouldBe("Sent your message to <#123> in 2 parts.");
+
+        await _channelWriter
+            .Received(1)
+            .SendMessagesAsync(
+                123,
+                Arg.Is<IReadOnlyList<string>>(messages =>
+                    messages.Count == 2 && messages[0] == new string('a', 1999) + "\n" && messages[1] == "second"
+                )
+            );
+    }
+
+    [Test]
+    public async Task SendAsync_WithSingleChunk_SendsMessageAndReturnsSuccessText()
+    {
+        // Arrange
+        _channelWriter.GetChannelAsync(123).Returns(new ResolvedMessageChannel(123, "<#123>"));
+        _channelWriter.ValidateBotCanSendAsync(123).Returns(Result.Success);
+        _channelWriter.SendMessagesAsync(123, Arg.Any<IReadOnlyList<string>>()).Returns(1);
+
+        // Act
+        ErrorOr<string> result = await _service.SendAsync(_channelWriter, 123, "hello");
+
+        // Assert
+        result.IsError.ShouldBeFalse();
+        result.Value.ShouldBe("Sent your message to <#123>.");
+
+        await _channelWriter
+            .Received(1)
+            .SendMessagesAsync(123, Arg.Is<IReadOnlyList<string>>(messages => messages.Count == 1 && messages[0] == "hello"));
+    }
+
+    [SetUp]
+    public void SetUp()
+    {
+        _service = new AdminSendService();
+        _channelWriter = Substitute.For<IMessageChannelWriter>();
     }
 }

@@ -78,21 +78,25 @@ public sealed class EmojiAnalyticsBackgroundWorker(
         }
     }
 
-    private async Task<bool> WaitForDataAsync(CancellationToken ct)
+    private async Task ProcessMessageContentBatchAsync(Queue<string> messageContentBatch, CancellationToken ct)
     {
-        if (reactionQueue.Reader.TryPeek(out _) || messageContentQueue.Reader.TryPeek(out _))
-            return true;
+        try
+        {
+            AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
 
-        Task<bool> reactionWaitTask = reactionQueue.Reader.WaitToReadAsync(ct).AsTask();
-        Task<bool> messageContentWaitTask = messageContentQueue.Reader.WaitToReadAsync(ct).AsTask();
-        Task<bool> completedTask = await Task.WhenAny(reactionWaitTask, messageContentWaitTask).ConfigureAwait(false);
+            await using (scope.ConfigureAwait(false))
+            {
+                EmojiUsageTracker emojiUsageTracker = scope.ServiceProvider.GetRequiredService<EmojiUsageTracker>();
 
-        if (await completedTask.ConfigureAwait(false))
-            return true;
+                await emojiUsageTracker.RecordMessageBatchUsageAsync(messageContentBatch, ct).ConfigureAwait(false);
 
-        Task<bool> otherTask = ReferenceEquals(completedTask, reactionWaitTask) ? messageContentWaitTask : reactionWaitTask;
-
-        return await otherTask.ConfigureAwait(false);
+                _logger.Debug("Processed {Count} message content emoji usage events from channel.", messageContentBatch.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Failed to process message content emoji analytics batch.");
+        }
     }
 
     private async Task ProcessReactionBatchAsync(Queue<ulong> emojiBatch, CancellationToken ct)
@@ -116,24 +120,20 @@ public sealed class EmojiAnalyticsBackgroundWorker(
         }
     }
 
-    private async Task ProcessMessageContentBatchAsync(Queue<string> messageContentBatch, CancellationToken ct)
+    private async Task<bool> WaitForDataAsync(CancellationToken ct)
     {
-        try
-        {
-            AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+        if (reactionQueue.Reader.TryPeek(out _) || messageContentQueue.Reader.TryPeek(out _))
+            return true;
 
-            await using (scope.ConfigureAwait(false))
-            {
-                EmojiUsageTracker emojiUsageTracker = scope.ServiceProvider.GetRequiredService<EmojiUsageTracker>();
+        Task<bool> reactionWaitTask = reactionQueue.Reader.WaitToReadAsync(ct).AsTask();
+        Task<bool> messageContentWaitTask = messageContentQueue.Reader.WaitToReadAsync(ct).AsTask();
+        Task<bool> completedTask = await Task.WhenAny(reactionWaitTask, messageContentWaitTask).ConfigureAwait(false);
 
-                await emojiUsageTracker.RecordMessageBatchUsageAsync(messageContentBatch, ct).ConfigureAwait(false);
+        if (await completedTask.ConfigureAwait(false))
+            return true;
 
-                _logger.Debug("Processed {Count} message content emoji usage events from channel.", messageContentBatch.Count);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Warning(ex, "Failed to process message content emoji analytics batch.");
-        }
+        Task<bool> otherTask = ReferenceEquals(completedTask, reactionWaitTask) ? messageContentWaitTask : reactionWaitTask;
+
+        return await otherTask.ConfigureAwait(false);
     }
 }

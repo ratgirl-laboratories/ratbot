@@ -7,6 +7,10 @@ namespace RatBot.Discord.Commands.Moderation;
 [UsedImplicitly]
 public static class ModerationModule
 {
+    [Group("mod", "Moderation commands.")]
+    [DefaultMemberPermissions(GuildPermission.MuteMembers)]
+    public sealed class Moderation : SlashCommandBase { }
+
     [Group("smod", "Senior moderation commands.")]
     [DefaultMemberPermissions(GuildPermission.BanMembers)]
     public sealed class SeniorModeration(ILogger logger, IModerationService moderationService, SecretRoleManager secretRoleManager) : SlashCommandBase
@@ -103,8 +107,4 @@ public static class ModerationModule
             return ulong.TryParse(candidate, out roleId) && roleId != 0;
         }
     }
-
-    [Group("mod", "Moderation commands.")]
-    [DefaultMemberPermissions(GuildPermission.MuteMembers)]
-    public sealed class Moderation : SlashCommandBase { }
 }

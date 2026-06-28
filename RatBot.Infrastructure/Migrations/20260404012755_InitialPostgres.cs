@@ -8,6 +8,16 @@ namespace RatBot.Infrastructure.Migrations
     public partial class InitialPostgres : Migration
     {
         /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "EmojiUsageCounts");
+
+            migrationBuilder.DropTable(name: "GuildConfigs");
+
+            migrationBuilder.DropTable(name: "QuorumScopeConfigs");
+        }
+
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -67,16 +77,6 @@ namespace RatBot.Infrastructure.Migrations
                 table: "QuorumScopeConfigs",
                 columns: new[] { "GuildId", "ScopeType" }
             );
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "EmojiUsageCounts");
-
-            migrationBuilder.DropTable(name: "GuildConfigs");
-
-            migrationBuilder.DropTable(name: "QuorumScopeConfigs");
         }
     }
 }

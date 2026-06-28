@@ -8,12 +8,6 @@ namespace RatBot.Infrastructure.Migrations
     public partial class RemoveGuildConfig : Migration
     {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "GuildConfigs");
-        }
-
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -28,6 +22,12 @@ namespace RatBot.Infrastructure.Migrations
                     table.PrimaryKey("PK_GuildConfigs", x => x.GuildId);
                 }
             );
+        }
+
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "GuildConfigs");
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +8,14 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddColourModuleTables : Migration
     {
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "MemberColourPreferences");
+
+            migrationBuilder.DropTable(name: "RoleColourOptions");
+        }
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -87,14 +95,6 @@ namespace RatBot.Infrastructure.Migrations
             );
 
             migrationBuilder.CreateIndex(name: "IX_RoleColourOptions_SourceRoleId", table: "RoleColourOptions", column: "SourceRoleId", unique: true);
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "MemberColourPreferences");
-
-            migrationBuilder.DropTable(name: "RoleColourOptions");
         }
     }
 }

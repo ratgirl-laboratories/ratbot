@@ -5,19 +5,8 @@ namespace RatBot.Infrastructure.Features.Quorum.Persistence;
 
 internal static class QuorumPersistenceMapping
 {
-    private const string TextChannel = "text";
     private const string ForumChannel = "forum";
-
-    internal sealed class Data
-    {
-        public Guid Id { get; set; }
-        public long GuildId { get; set; }
-        public long ChannelId { get; set; }
-        public string ChannelKind { get; set; } = null!;
-        public decimal Proportion { get; set; }
-    }
-
-    public static long ToDatabaseId(ulong id) => checked((long)id);
+    private const string TextChannel = "text";
 
     public static string ToChannelKind(QuorumScope scope) =>
         scope switch
@@ -26,6 +15,8 @@ internal static class QuorumPersistenceMapping
             QuorumScope.ForumChannel => ForumChannel,
             _ => throw new UnreachableException(),
         };
+
+    public static long ToDatabaseId(ulong id) => checked((long)id);
 
     public static QuorumConfiguration ToDomain(Data data, IEnumerable<long> roleIds)
     {
@@ -53,4 +44,13 @@ internal static class QuorumPersistenceMapping
             ForumChannel => new QuorumScope.ForumChannel(ToDomainId(data.GuildId), ToDomainId(data.ChannelId)),
             _ => throw new InvalidOperationException($"Unknown quorum channel kind '{data.ChannelKind}'."),
         };
+
+    internal sealed class Data
+    {
+        public Guid Id { get; set; }
+        public long GuildId { get; set; }
+        public long ChannelId { get; set; }
+        public string ChannelKind { get; set; } = null!;
+        public decimal Proportion { get; set; }
+    }
 }

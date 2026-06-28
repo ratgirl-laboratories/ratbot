@@ -9,23 +9,13 @@ namespace RatBot.Application.Tests.Quorum;
 [TestFixture]
 public sealed class QuorumSettingsReaderTests
 {
-    private IQuorumSettingsRepository _repository = null!;
-    private QuorumSettingsReader _reader = null!;
-    private QuorumTarget _channelTarget;
     private QuorumTarget _categoryTarget;
+    private QuorumTarget _channelTarget;
+    private QuorumSettingsReader _reader = null!;
+    private IQuorumSettingsRepository _repository = null!;
 
     private static QuorumSettings CreateSettings(QuorumTarget target, IEnumerable<ulong> roleIds, double quorumProportion) =>
         QuorumSettings.Create(target, roleIds, Proportion.Create(quorumProportion).Value).Value;
-
-    [SetUp]
-    public void SetUp()
-    {
-        _repository = Substitute.For<IQuorumSettingsRepository>();
-        _reader = new QuorumSettingsReader(_repository);
-
-        _channelTarget = QuorumTarget.Create(123, QuorumSettingsType.Channel, 456).Value;
-        _categoryTarget = QuorumTarget.Create(123, QuorumSettingsType.Category, 789).Value;
-    }
 
     [Test]
     public async Task GetAsync_ReturnsRepositoryResult()
@@ -41,23 +31,6 @@ public sealed class QuorumSettingsReaderTests
         result.IsError.ShouldBeFalse();
         result.Value.ShouldBeSameAs(settings);
         await _repository.Received(1).GetAsync(_channelTarget);
-    }
-
-    [Test]
-    public async Task GetEffectiveAsync_WhenChannelSettingsExist_ReturnsChannelSettingsAndDoesNotReadCategory()
-    {
-        // Arrange
-        QuorumSettings channelSettings = CreateSettings(_channelTarget, [10], 0.75);
-        _repository.GetAsync(_channelTarget).Returns(Task.FromResult<ErrorOr<QuorumSettings>>(channelSettings));
-
-        // Act
-        ErrorOr<QuorumSettings> result = await _reader.GetEffectiveAsync(123, 456, 789);
-
-        // Assert
-        result.IsError.ShouldBeFalse();
-        result.Value.ShouldBeSameAs(channelSettings);
-        await _repository.Received(1).GetAsync(_channelTarget);
-        await _repository.DidNotReceive().GetAsync(_categoryTarget);
     }
 
     [Test]
@@ -112,5 +85,32 @@ public sealed class QuorumSettingsReaderTests
         result.FirstError.ShouldBe(channelError);
         await _repository.Received(1).GetAsync(_channelTarget);
         await _repository.DidNotReceive().GetAsync(_categoryTarget);
+    }
+
+    [Test]
+    public async Task GetEffectiveAsync_WhenChannelSettingsExist_ReturnsChannelSettingsAndDoesNotReadCategory()
+    {
+        // Arrange
+        QuorumSettings channelSettings = CreateSettings(_channelTarget, [10], 0.75);
+        _repository.GetAsync(_channelTarget).Returns(Task.FromResult<ErrorOr<QuorumSettings>>(channelSettings));
+
+        // Act
+        ErrorOr<QuorumSettings> result = await _reader.GetEffectiveAsync(123, 456, 789);
+
+        // Assert
+        result.IsError.ShouldBeFalse();
+        result.Value.ShouldBeSameAs(channelSettings);
+        await _repository.Received(1).GetAsync(_channelTarget);
+        await _repository.DidNotReceive().GetAsync(_categoryTarget);
+    }
+
+    [SetUp]
+    public void SetUp()
+    {
+        _repository = Substitute.For<IQuorumSettingsRepository>();
+        _reader = new QuorumSettingsReader(_repository);
+
+        _channelTarget = QuorumTarget.Create(123, QuorumSettingsType.Channel, 456).Value;
+        _categoryTarget = QuorumTarget.Create(123, QuorumSettingsType.Category, 789).Value;
     }
 }

@@ -26,32 +26,6 @@ public static class AdventureLeaderboardFormatter
         return new AdventureLeaderboardViewModel(year, snapshot.Rows.Length, rows.Length, lastUpdated, rows);
     }
 
-    private static ImmutableArray<AdventureLeaderboardViewRow> FormatRows(
-        ImmutableArray<AdventureEntryRow> sortedRows,
-        ImmutableHashSet<ulong> guildMemberUserIds
-    )
-    {
-        ImmutableArray<AdventureLeaderboardViewRow>.Builder rows = ImmutableArray.CreateBuilder<AdventureLeaderboardViewRow>(sortedRows.Length);
-
-        int? previousScore = null;
-        int currentRank = 0;
-
-        for (int index = 0; index < sortedRows.Length; index++)
-        {
-            AdventureEntryRow row = sortedRows[index];
-
-            if (previousScore != row.Score)
-            {
-                currentRank = index + 1;
-                previousScore = row.Score;
-            }
-
-            rows.Add(FormatRow(row, currentRank, guildMemberUserIds));
-        }
-
-        return rows.ToImmutable();
-    }
-
     private static string BuildProgressBar(IReadOnlyList<AdventureDayProgress> progress)
     {
         StringBuilder text = new StringBuilder(progress.Count);
@@ -89,6 +63,32 @@ public static class AdventureLeaderboardFormatter
                 : FormatPlainDisplayName(row.Name);
 
         return new AdventureLeaderboardViewRow(rank, row.Score, row.Progress.Count * 2, BuildProgressBar(row.Progress), displayName);
+    }
+
+    private static ImmutableArray<AdventureLeaderboardViewRow> FormatRows(
+        ImmutableArray<AdventureEntryRow> sortedRows,
+        ImmutableHashSet<ulong> guildMemberUserIds
+    )
+    {
+        ImmutableArray<AdventureLeaderboardViewRow>.Builder rows = ImmutableArray.CreateBuilder<AdventureLeaderboardViewRow>(sortedRows.Length);
+
+        int? previousScore = null;
+        int currentRank = 0;
+
+        for (int index = 0; index < sortedRows.Length; index++)
+        {
+            AdventureEntryRow row = sortedRows[index];
+
+            if (previousScore != row.Score)
+            {
+                currentRank = index + 1;
+                previousScore = row.Score;
+            }
+
+            rows.Add(FormatRow(row, currentRank, guildMemberUserIds));
+        }
+
+        return rows.ToImmutable();
     }
 
     private static bool IsGuildMember(AdventureEntryRow row, ImmutableHashSet<ulong> guildMemberUserIds) =>

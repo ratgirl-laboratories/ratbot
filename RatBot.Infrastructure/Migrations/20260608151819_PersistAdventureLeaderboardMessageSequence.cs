@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,12 +7,6 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class PersistAdventureLeaderboardMessageSequence : Migration
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropCheckConstraint(name: "CK_AdventureLeaderboardMessageState_SingletonId", table: "AdventureLeaderboardMessageState");
-        }
-
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
@@ -23,6 +17,12 @@ namespace RatBot.Infrastructure.Migrations
                 table: "AdventureLeaderboardMessageState",
                 sql: "\"Id\" = 1"
             );
+        }
+
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropCheckConstraint(name: "CK_AdventureLeaderboardMessageState_SingletonId", table: "AdventureLeaderboardMessageState");
         }
     }
 }

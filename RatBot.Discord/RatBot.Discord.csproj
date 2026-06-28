@@ -18,7 +18,4 @@
         <ProjectReference Include="..\RatBot.Infrastructure\RatBot.Infrastructure.csproj" />
         <ProjectReference Include="..\RatBot.Domain\RatBot.Domain.csproj" />
     </ItemGroup>
-    <ItemGroup>
-        <Folder Include="TemporaryPingRole\" />
-    </ItemGroup>
 </Project>

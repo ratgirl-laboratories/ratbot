@@ -8,6 +8,46 @@ public sealed class ReactionUsageTracker(IEmojiRepository emojiRepository, ITrac
 {
     private readonly ILogger _logger = logger.ForContext<ReactionUsageTracker>();
 
+    public async Task<ErrorOr<List<EmojiUsageCount>>> GetTopUsageAsync(int limit = 25, CancellationToken ct = default)
+    {
+        int clampedLimit = Math.Clamp(limit, 1, 100);
+        ErrorOr<EmojiUsagePage> pageResult = await GetUsagePageAsync(1, clampedLimit, ct).ConfigureAwait(false);
+
+        return pageResult.IsError ? pageResult.Errors : pageResult.Value.Items.ToList();
+    }
+
+    public async Task<ErrorOr<EmojiUsagePage>> GetUsagePageAsync(int page, int pageSize = 25, CancellationToken ct = default)
+    {
+        int clampedPageSize = Math.Clamp(pageSize, 1, 100);
+
+        if (!trackedEmojiCatalog.TryGetTrackedEmojiIds(out IReadOnlyCollection<ulong> trackedEmojiIds))
+            return Error.Unexpected(description: "Tracked guild emoji are not available yet.");
+
+        await PruneUntrackedEmojiAsync(trackedEmojiIds, ct).ConfigureAwait(false);
+
+        IQueryable<EmojiUsageCount> query = emojiRepository.EmojiUsageCounts.AsNoTracking().Where(x => trackedEmojiIds.Contains(x.EmojiId));
+
+        int totalCount = await query.CountAsync(ct).ConfigureAwait(false);
+
+        if (totalCount == 0)
+            return Error.NotFound(description: "No emoji usage has been recorded yet.");
+
+        int totalPages = (int)Math.Ceiling((double)totalCount / clampedPageSize);
+        int clampedPage = Math.Clamp(page, 1, totalPages);
+
+        List<EmojiUsageCount> topUsage = await emojiRepository
+            .EmojiUsageCounts.AsNoTracking()
+            .Where(x => trackedEmojiIds.Contains(x.EmojiId))
+            .OrderByDescending(x => x.ReactionUsageCount + x.MessageUsageCount)
+            .ThenBy(x => x.EmojiId)
+            .Skip((clampedPage - 1) * clampedPageSize)
+            .Take(clampedPageSize)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return new EmojiUsagePage(topUsage, clampedPage, totalPages, totalCount);
+    }
+
     public async Task RecordBatchUsageAsync(IEnumerable<ulong> emojiIds, CancellationToken ct = default)
     {
         if (!trackedEmojiCatalog.TryGetTrackedEmojiIds(out IReadOnlyCollection<ulong> trackedEmojiIds))
@@ -47,46 +87,6 @@ public sealed class ReactionUsageTracker(IEmojiRepository emojiRepository, ITrac
 
         foreach ((ulong Id, int N) usage in usages)
             _logger.Verbose("Recorded {EmojiUsageCount} usages for emoji {EmojiId}.", usage.N, usage.Id);
-    }
-
-    public async Task<ErrorOr<List<EmojiUsageCount>>> GetTopUsageAsync(int limit = 25, CancellationToken ct = default)
-    {
-        int clampedLimit = Math.Clamp(limit, 1, 100);
-        ErrorOr<EmojiUsagePage> pageResult = await GetUsagePageAsync(1, clampedLimit, ct).ConfigureAwait(false);
-
-        return pageResult.IsError ? pageResult.Errors : pageResult.Value.Items.ToList();
-    }
-
-    public async Task<ErrorOr<EmojiUsagePage>> GetUsagePageAsync(int page, int pageSize = 25, CancellationToken ct = default)
-    {
-        int clampedPageSize = Math.Clamp(pageSize, 1, 100);
-
-        if (!trackedEmojiCatalog.TryGetTrackedEmojiIds(out IReadOnlyCollection<ulong> trackedEmojiIds))
-            return Error.Unexpected(description: "Tracked guild emoji are not available yet.");
-
-        await PruneUntrackedEmojiAsync(trackedEmojiIds, ct).ConfigureAwait(false);
-
-        IQueryable<EmojiUsageCount> query = emojiRepository.EmojiUsageCounts.AsNoTracking().Where(x => trackedEmojiIds.Contains(x.EmojiId));
-
-        int totalCount = await query.CountAsync(ct).ConfigureAwait(false);
-
-        if (totalCount == 0)
-            return Error.NotFound(description: "No emoji usage has been recorded yet.");
-
-        int totalPages = (int)Math.Ceiling((double)totalCount / clampedPageSize);
-        int clampedPage = Math.Clamp(page, 1, totalPages);
-
-        List<EmojiUsageCount> topUsage = await emojiRepository
-            .EmojiUsageCounts.AsNoTracking()
-            .Where(x => trackedEmojiIds.Contains(x.EmojiId))
-            .OrderByDescending(x => x.ReactionUsageCount + x.MessageUsageCount)
-            .ThenBy(x => x.EmojiId)
-            .Skip((clampedPage - 1) * clampedPageSize)
-            .Take(clampedPageSize)
-            .ToListAsync(ct)
-            .ConfigureAwait(false);
-
-        return new EmojiUsagePage(topUsage, clampedPage, totalPages, totalCount);
     }
 
     private Task<int> PruneUntrackedEmojiAsync(IReadOnlyCollection<ulong> trackedEmojiIds, CancellationToken ct) =>

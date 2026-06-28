@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,6 +7,12 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddTemporaryPingRole : Migration
     {
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "TemporaryPingRoleSettings");
+        }
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -24,12 +30,6 @@ namespace RatBot.Infrastructure.Migrations
                     table.CheckConstraint("CK_TemporaryPingRoleSettings_SingletonId", "\"Id\" = 1");
                 }
             );
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "TemporaryPingRoleSettings");
         }
     }
 }

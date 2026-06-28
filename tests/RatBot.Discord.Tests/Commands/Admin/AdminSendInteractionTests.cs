@@ -11,25 +11,8 @@ namespace RatBot.Discord.Tests.Commands.Admin;
 [TestFixture]
 public sealed class AdminSendInteractionTests
 {
-    private const ulong InvokerUserId = 123;
     private const ulong ChannelId = 456;
-
-    [Test]
-    [TestCase(false, true)]
-    [TestCase(true, false)]
-    public async Task SendAsync_WhenBotLacksRequiredChannelPermission_RespondsEphemeralWithInsufficientPermissions(bool canView, bool canSendMessages)
-    {
-        // Arrange
-        AdminSendInteractionContextBuilder builder = new AdminSendInteractionContextBuilder().WithBotChannelPermissions(canView, canSendMessages);
-
-        // Act
-        await builder.ExecuteAdminSendAsync();
-
-        // Assert
-        await builder.Interaction.Received(1).RespondAsync(AdminSendErrors.InsufficientPermissions.Description, ephemeral: true);
-
-        await builder.Interaction.DidNotReceive().RespondWithModalAsync(Arg.Any<Modal>(), Arg.Any<RequestOptions>());
-    }
+    private const ulong InvokerUserId = 123;
 
     [Test]
     public async Task SendAsync_WhenBotHasRequiredChannelPermissions_RespondsWithAdminSendModal()
@@ -46,6 +29,23 @@ public sealed class AdminSendInteractionTests
             .RespondWithModalAsync(Arg.Is<Modal>(modal => modal.CustomId == $"admin-send:{InvokerUserId}:{ChannelId}"), Arg.Any<RequestOptions>());
 
         await builder.Interaction.DidNotReceive().RespondAsync(Arg.Any<string>(), ephemeral: true);
+    }
+
+    [Test]
+    [TestCase(false, true)]
+    [TestCase(true, false)]
+    public async Task SendAsync_WhenBotLacksRequiredChannelPermission_RespondsEphemeralWithInsufficientPermissions(bool canView, bool canSendMessages)
+    {
+        // Arrange
+        AdminSendInteractionContextBuilder builder = new AdminSendInteractionContextBuilder().WithBotChannelPermissions(canView, canSendMessages);
+
+        // Act
+        await builder.ExecuteAdminSendAsync();
+
+        // Assert
+        await builder.Interaction.Received(1).RespondAsync(AdminSendErrors.InsufficientPermissions.Description, ephemeral: true);
+
+        await builder.Interaction.DidNotReceive().RespondWithModalAsync(Arg.Any<Modal>(), Arg.Any<RequestOptions>());
     }
 
     [Test]

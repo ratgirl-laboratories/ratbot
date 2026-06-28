@@ -17,14 +17,14 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
     public ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorOptions options)
         : this(timeProvider, CreateSettings(options)) { }
 
+    private static ImageBurstSpamDetectorSettings CreateSettings(ImageBurstSpamDetectorOptions options) =>
+        new ImageBurstSpamDetectorSettings(options);
+
     private static void PruneOldMessages(Queue<ImageBurstMessage> buffer, DateTimeOffset cutoff)
     {
         while (buffer.Count > 0 && buffer.Peek().Timestamp < cutoff)
             buffer.Dequeue();
     }
-
-    private static ImageBurstSpamDetectorSettings CreateSettings(ImageBurstSpamDetectorOptions options) =>
-        new ImageBurstSpamDetectorSettings(options);
 
     public ImageBurstDetection? Observe(ImageBurstMessage message)
     {

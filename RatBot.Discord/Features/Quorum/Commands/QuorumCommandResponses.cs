@@ -6,16 +6,10 @@ namespace RatBot.Discord.Features.Quorum.Commands;
 
 internal static class QuorumCommandResponses
 {
-    public static string Registration(QuorumRegistration registration) =>
-        $"{(registration.Created ? "Registered" : "Updated")} quorum for {MentionUtils.MentionChannel(registration.Configuration.Scope.ChannelId)} "
-        + $"at {FormatProportion(registration.Configuration.Proportion)}.";
-
-    public static string Role(QuorumScope scope, IRole role, bool shouldAdd) =>
-        shouldAdd
-            ? $"Added {role.Mention} as a voter role for {MentionUtils.MentionChannel(scope.ChannelId)}."
-            : $"Removed {role.Mention} from the voter roles for {MentionUtils.MentionChannel(scope.ChannelId)}.";
-
-    public static string Removed(QuorumScope scope) => $"Removed quorum configuration for {MentionUtils.MentionChannel(scope.ChannelId)}.";
+    public static string Calculation(QuorumCalculation calculation) =>
+        $"Eligible voters: {calculation.EligibleVoterCount}\n"
+        + $"Proportion: {FormatProportion(calculation.Proportion)}\n"
+        + $"Required quorum: {calculation.RequiredVotes}";
 
     public static string Inspection(QuorumConfiguration configuration)
     {
@@ -29,10 +23,16 @@ internal static class QuorumCommandResponses
             + $"Complete: {(configuration.IsComplete ? "yes" : "no")}";
     }
 
-    public static string Calculation(QuorumCalculation calculation) =>
-        $"Eligible voters: {calculation.EligibleVoterCount}\n"
-        + $"Proportion: {FormatProportion(calculation.Proportion)}\n"
-        + $"Required quorum: {calculation.RequiredVotes}";
+    public static string Registration(QuorumRegistration registration) =>
+        $"{(registration.Created ? "Registered" : "Updated")} quorum for {MentionUtils.MentionChannel(registration.Configuration.Scope.ChannelId)} "
+        + $"at {FormatProportion(registration.Configuration.Proportion)}.";
+
+    public static string Removed(QuorumScope scope) => $"Removed quorum configuration for {MentionUtils.MentionChannel(scope.ChannelId)}.";
+
+    public static string Role(QuorumScope scope, IRole role, bool shouldAdd) =>
+        shouldAdd
+            ? $"Added {role.Mention} as a voter role for {MentionUtils.MentionChannel(scope.ChannelId)}."
+            : $"Removed {role.Mention} from the voter roles for {MentionUtils.MentionChannel(scope.ChannelId)}.";
 
     private static string FormatProportion(QuorumProportion proportion) =>
         $"{(proportion.Value * 100).ToString("0.##", CultureInfo.InvariantCulture)}%";

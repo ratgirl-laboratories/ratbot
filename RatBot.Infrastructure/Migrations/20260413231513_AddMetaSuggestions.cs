@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -9,6 +9,14 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddMetaSuggestions : Migration
     {
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "MetaSuggestions");
+
+            migrationBuilder.DropTable(name: "MetaSuggestionSettings");
+        }
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -64,14 +72,6 @@ namespace RatBot.Infrastructure.Migrations
                 column: "ThreadChannelId",
                 unique: true
             );
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "MetaSuggestions");
-
-            migrationBuilder.DropTable(name: "MetaSuggestionSettings");
         }
     }
 }

@@ -15,8 +15,6 @@ public sealed class UserUpdatedGatewayHandler(DiscordSocketClient discordClient,
 
     public void Unsubscribe() => discordClient.GuildMemberUpdated -= HandleGuildMemberUpdated;
 
-    private void Subscribe() => discordClient.GuildMemberUpdated += HandleGuildMemberUpdated;
-
     private Task HandleGuildMemberUpdated(Cacheable<SocketGuildUser, ulong> before, SocketGuildUser after)
     {
         try
@@ -63,4 +61,6 @@ public sealed class UserUpdatedGatewayHandler(DiscordSocketClient discordClient,
             return Task.FromException(exception);
         }
     }
+
+    private void Subscribe() => discordClient.GuildMemberUpdated += HandleGuildMemberUpdated;
 }

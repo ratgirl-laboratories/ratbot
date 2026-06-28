@@ -28,6 +28,29 @@ public sealed class SettingsInteractionRegistrationTests
     }
 
     [Test]
+    public async Task ImageSpamConfigAsync_CanBeRegisteredByInteractionService()
+    {
+        // Arrange
+        DiscordSocketClient client = new DiscordSocketClient();
+        InteractionService interactionService = new InteractionService(client);
+        ServiceProvider services = new ServiceCollection()
+            .AddSingleton<ImageBurstSpamDetectorSettings>()
+            .AddSingleton<IImageSpamSettingsStore, FakeImageSpamSettingsStore>()
+            .AddScoped<ImageSpamSettingsService>()
+            .BuildServiceProvider();
+
+        // Act
+        ModuleInfo module = await interactionService.AddModuleAsync<SpamModule>(services);
+        SlashCommandInfo command = module.SlashCommands.Single();
+
+        // Assert
+        command.Name.ShouldBe("image-spam-config");
+        command.Parameters.Select(parameter => parameter.Name).ShouldBe(["number-of-channels", "attachment-count", "burst-duration"]);
+        command.Parameters.Select(parameter => parameter.Name.Length <= 32).ShouldBe([true, true, true]);
+        command.Parameters.Select(parameter => parameter.IsRequired).ShouldBe([false, false, false]);
+    }
+
+    [Test]
     public void ImageSpamConfigAsync_HasExpectedSlashCommandMetadata()
     {
         // Arrange
@@ -58,26 +81,17 @@ public sealed class SettingsInteractionRegistrationTests
     }
 
     [Test]
-    public async Task ImageSpamConfigAsync_CanBeRegisteredByInteractionService()
+    public void MetaSettingsCommands_HaveExpectedParameters()
     {
-        // Arrange
-        DiscordSocketClient client = new DiscordSocketClient();
-        InteractionService interactionService = new InteractionService(client);
-        ServiceProvider services = new ServiceCollection()
-            .AddSingleton<ImageBurstSpamDetectorSettings>()
-            .AddSingleton<IImageSpamSettingsStore, FakeImageSpamSettingsStore>()
-            .AddScoped<ImageSpamSettingsService>()
-            .BuildServiceProvider();
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetSuggestionsForumChannelAsync), "suggestions", typeof(IForumChannel));
 
-        // Act
-        ModuleInfo module = await interactionService.AddModuleAsync<SpamModule>(services);
-        SlashCommandInfo command = module.SlashCommands.Single();
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetProposalsForumChannelAsync), "proposals", typeof(IForumChannel));
 
-        // Assert
-        command.Name.ShouldBe("image-spam-config");
-        command.Parameters.Select(parameter => parameter.Name).ShouldBe(["number-of-channels", "attachment-count", "burst-duration"]);
-        command.Parameters.Select(parameter => parameter.Name.Length <= 32).ShouldBe([true, true, true]);
-        command.Parameters.Select(parameter => parameter.IsRequired).ShouldBe([false, false, false]);
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetCabinetRoleAsync), "cabinet", typeof(IRole));
+
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetCabinetChairRoleAsync), "chair", typeof(IRole));
+
+        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetCommitteeRoleAsync), "committee", typeof(IRole));
     }
 
     [Test]
@@ -93,20 +107,6 @@ public sealed class SettingsInteractionRegistrationTests
         // Assert
         group.Name.ShouldBe("meta");
         group.Description.ShouldBe("Meta configuration.");
-    }
-
-    [Test]
-    public void MetaSettingsCommands_HaveExpectedParameters()
-    {
-        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetSuggestionsForumChannelAsync), "suggestions", typeof(IForumChannel));
-
-        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetProposalsForumChannelAsync), "proposals", typeof(IForumChannel));
-
-        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetCabinetRoleAsync), "cabinet", typeof(IRole));
-
-        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetCabinetChairRoleAsync), "chair", typeof(IRole));
-
-        AssertMetaCommand(nameof(SettingsModule.MetaSettingsModule.SetCommitteeRoleAsync), "committee", typeof(IRole));
     }
 
     private sealed class FakeImageSpamSettingsStore : IImageSpamSettingsStore

@@ -15,6 +15,108 @@ public sealed class QuorumConfigurationStore(string connectionString) : IQuorumC
         proportion AS "Proportion"
         """;
 
+    private static object ConfigurationParameters(Guid id, QuorumScope scope, QuorumProportion proportion) =>
+        new
+        {
+            Id = id,
+            GuildId = QuorumPersistenceMapping.ToDatabaseId(scope.GuildId),
+            ChannelId = QuorumPersistenceMapping.ToDatabaseId(scope.ChannelId),
+            ChannelKind = QuorumPersistenceMapping.ToChannelKind(scope),
+            Proportion = proportion.Value,
+        };
+
+    private static QuorumPersistenceMapping.Data CreateData(Guid id, QuorumScope scope, QuorumProportion proportion) =>
+        new QuorumPersistenceMapping.Data
+        {
+            Id = id,
+            GuildId = QuorumPersistenceMapping.ToDatabaseId(scope.GuildId),
+            ChannelId = QuorumPersistenceMapping.ToDatabaseId(scope.ChannelId),
+            ChannelKind = QuorumPersistenceMapping.ToChannelKind(scope),
+            Proportion = proportion.Value,
+        };
+
+    private static Task<IEnumerable<long>> GetRoleIdsAsync(
+        NpgsqlConnection connection,
+        Guid configurationId,
+        NpgsqlTransaction? transaction,
+        CancellationToken ct
+    ) =>
+        connection.QueryAsync<long>(
+            new CommandDefinition(
+                """
+                SELECT role_id
+                FROM public.quorum_voter_roles
+                WHERE quorum_configuration_id = @ConfigurationId
+                ORDER BY role_id
+                """,
+                new { ConfigurationId = configurationId },
+                transaction,
+                cancellationToken: ct
+            )
+        );
+
+    private static async Task ReplaceRolesAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        QuorumConfiguration configuration,
+        CancellationToken ct
+    )
+    {
+        await connection
+            .ExecuteAsync(
+                new CommandDefinition(
+                    "DELETE FROM public.quorum_voter_roles WHERE quorum_configuration_id = @Id",
+                    new { Id = configuration.Id.Value },
+                    transaction,
+                    cancellationToken: ct
+                )
+            )
+            .ConfigureAwait(false);
+
+        object[] roles = configuration
+            .VoterRoles.RoleIds.Order()
+            .Select(roleId => (object)new { QuorumConfigurationId = configuration.Id.Value, RoleId = QuorumPersistenceMapping.ToDatabaseId(roleId) })
+            .ToArray();
+
+        if (roles.Length == 0)
+            return;
+
+        await connection
+            .ExecuteAsync(
+                new CommandDefinition(
+                    """
+                    INSERT INTO public.quorum_voter_roles (quorum_configuration_id, role_id)
+                    VALUES (@QuorumConfigurationId, @RoleId)
+                    """,
+                    roles,
+                    transaction,
+                    cancellationToken: ct
+                )
+            )
+            .ConfigureAwait(false);
+    }
+
+    private static object ScopeParameters(QuorumScope scope) =>
+        new { GuildId = QuorumPersistenceMapping.ToDatabaseId(scope.GuildId), ChannelId = QuorumPersistenceMapping.ToDatabaseId(scope.ChannelId) };
+
+    public async Task<ErrorOr<Deleted>> DeleteAsync(QuorumScope scope, CancellationToken ct)
+    {
+        await using NpgsqlConnection connection = CreateConnection();
+        await connection.OpenAsync(ct).ConfigureAwait(false);
+
+        int deleted = await connection
+            .ExecuteAsync(
+                new CommandDefinition(
+                    "DELETE FROM public.quorum_configurations WHERE guild_id = @GuildId AND channel_id = @ChannelId",
+                    ScopeParameters(scope),
+                    cancellationToken: ct
+                )
+            )
+            .ConfigureAwait(false);
+
+        return deleted > 0 ? Result.Deleted : QuorumErrors.ConfigurationNotFound;
+    }
+
     public async Task<ErrorOr<QuorumConfiguration>> GetAsync(QuorumScope scope, CancellationToken ct)
     {
         await using NpgsqlConnection connection = CreateConnection();
@@ -126,107 +228,5 @@ public sealed class QuorumConfigurationStore(string connectionString) : IQuorumC
         return configuration;
     }
 
-    public async Task<ErrorOr<Deleted>> DeleteAsync(QuorumScope scope, CancellationToken ct)
-    {
-        await using NpgsqlConnection connection = CreateConnection();
-        await connection.OpenAsync(ct).ConfigureAwait(false);
-
-        int deleted = await connection
-            .ExecuteAsync(
-                new CommandDefinition(
-                    "DELETE FROM public.quorum_configurations WHERE guild_id = @GuildId AND channel_id = @ChannelId",
-                    ScopeParameters(scope),
-                    cancellationToken: ct
-                )
-            )
-            .ConfigureAwait(false);
-
-        return deleted > 0 ? Result.Deleted : QuorumErrors.ConfigurationNotFound;
-    }
-
     private NpgsqlConnection CreateConnection() => new NpgsqlConnection(connectionString);
-
-    private static QuorumPersistenceMapping.Data CreateData(Guid id, QuorumScope scope, QuorumProportion proportion) =>
-        new QuorumPersistenceMapping.Data
-        {
-            Id = id,
-            GuildId = QuorumPersistenceMapping.ToDatabaseId(scope.GuildId),
-            ChannelId = QuorumPersistenceMapping.ToDatabaseId(scope.ChannelId),
-            ChannelKind = QuorumPersistenceMapping.ToChannelKind(scope),
-            Proportion = proportion.Value,
-        };
-
-    private static object ScopeParameters(QuorumScope scope) =>
-        new { GuildId = QuorumPersistenceMapping.ToDatabaseId(scope.GuildId), ChannelId = QuorumPersistenceMapping.ToDatabaseId(scope.ChannelId) };
-
-    private static object ConfigurationParameters(Guid id, QuorumScope scope, QuorumProportion proportion) =>
-        new
-        {
-            Id = id,
-            GuildId = QuorumPersistenceMapping.ToDatabaseId(scope.GuildId),
-            ChannelId = QuorumPersistenceMapping.ToDatabaseId(scope.ChannelId),
-            ChannelKind = QuorumPersistenceMapping.ToChannelKind(scope),
-            Proportion = proportion.Value,
-        };
-
-    private static Task<IEnumerable<long>> GetRoleIdsAsync(
-        NpgsqlConnection connection,
-        Guid configurationId,
-        NpgsqlTransaction? transaction,
-        CancellationToken ct
-    ) =>
-        connection.QueryAsync<long>(
-            new CommandDefinition(
-                """
-                SELECT role_id
-                FROM public.quorum_voter_roles
-                WHERE quorum_configuration_id = @ConfigurationId
-                ORDER BY role_id
-                """,
-                new { ConfigurationId = configurationId },
-                transaction,
-                cancellationToken: ct
-            )
-        );
-
-    private static async Task ReplaceRolesAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        QuorumConfiguration configuration,
-        CancellationToken ct
-    )
-    {
-        await connection
-            .ExecuteAsync(
-                new CommandDefinition(
-                    "DELETE FROM public.quorum_voter_roles WHERE quorum_configuration_id = @Id",
-                    new { Id = configuration.Id.Value },
-                    transaction,
-                    cancellationToken: ct
-                )
-            )
-            .ConfigureAwait(false);
-
-        object[] roles = configuration
-            .VoterRoles.RoleIds.Order()
-            .Select(roleId => (object)new { QuorumConfigurationId = configuration.Id.Value, RoleId = QuorumPersistenceMapping.ToDatabaseId(roleId) })
-            .ToArray();
-
-        if (roles.Length == 0)
-            return;
-
-        await connection
-            .ExecuteAsync(
-                new CommandDefinition(
-                    """
-                    INSERT INTO public.quorum_voter_roles (quorum_configuration_id, role_id)
-                    VALUES (@QuorumConfigurationId, @RoleId)
-                    """,
-                    roles,
-                    transaction,
-                    cancellationToken: ct
-                )
-            )
-            .ConfigureAwait(false);
-    }
 }

@@ -15,6 +15,21 @@ public sealed class TextChannelService(IGuild guild) : IMessageChannelWriter
         return ErrorOrFactory.From(new ResolvedMessageChannel(channel.Id, channel.Mention));
     }
 
+    public async Task<ErrorOr<int>> SendMessagesAsync(ulong channelId, IReadOnlyList<string> messages)
+    {
+        ErrorOr<ITextChannel> channelResult = await ResolveTextChannelAsync(channelId);
+
+        if (channelResult.IsError)
+            return channelResult.Errors;
+
+        ITextChannel channel = channelResult.Value;
+
+        foreach (string message in messages)
+            await channel.SendMessageAsync(message);
+
+        return messages.Count;
+    }
+
     public async Task<ErrorOr<Success>> ValidateBotCanSendAsync(ulong channelId)
     {
         ErrorOr<ITextChannel> channelResult = await ResolveTextChannelAsync(channelId);
@@ -29,21 +44,6 @@ public sealed class TextChannelService(IGuild guild) : IMessageChannelWriter
             return AdminSendErrors.InsufficientPermissions;
 
         return Result.Success;
-    }
-
-    public async Task<ErrorOr<int>> SendMessagesAsync(ulong channelId, IReadOnlyList<string> messages)
-    {
-        ErrorOr<ITextChannel> channelResult = await ResolveTextChannelAsync(channelId);
-
-        if (channelResult.IsError)
-            return channelResult.Errors;
-
-        ITextChannel channel = channelResult.Value;
-
-        foreach (string message in messages)
-            await channel.SendMessageAsync(message);
-
-        return messages.Count;
     }
 
     private async Task<ErrorOr<ITextChannel>> ResolveTextChannelAsync(ulong channelId)

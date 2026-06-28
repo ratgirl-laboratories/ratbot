@@ -12,20 +12,20 @@ public sealed class ReactionGatewayHandler(DiscordSocketClient discordClient, Re
         return Task.CompletedTask;
     }
 
-    public void Unsubscribe()
-    {
-        discordClient.ReactionAdded -= HandleReactionAddedAsync;
-        discordClient.ReactionRemoved -= HandleReactionRemovedAsync;
-        discordClient.ReactionsCleared -= HandleReactionsClearedAsync;
-        discordClient.ReactionsRemovedForEmote -= HandleReactionsRemovedForEmoteAsync;
-    }
-
     public void Subscribe()
     {
         discordClient.ReactionAdded += HandleReactionAddedAsync;
         discordClient.ReactionRemoved += HandleReactionRemovedAsync;
         discordClient.ReactionsCleared += HandleReactionsClearedAsync;
         discordClient.ReactionsRemovedForEmote += HandleReactionsRemovedForEmoteAsync;
+    }
+
+    public void Unsubscribe()
+    {
+        discordClient.ReactionAdded -= HandleReactionAddedAsync;
+        discordClient.ReactionRemoved -= HandleReactionRemovedAsync;
+        discordClient.ReactionsCleared -= HandleReactionsClearedAsync;
+        discordClient.ReactionsRemovedForEmote -= HandleReactionsRemovedForEmoteAsync;
     }
 
     private async Task HandleReactionAddedAsync(

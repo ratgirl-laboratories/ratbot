@@ -41,6 +41,43 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
     public Task ResolveFinalizedPollAsync(MetaProposalService service, MetaProposalState state, IUserMessage pollMessage, CancellationToken ct) =>
         ResolvePollMessageAsync(service, state, pollMessage, requestFinalization: false, ct);
 
+    private async Task CompletePollAsync(MetaProposalService service, MetaProposalState state, bool submitWon, CancellationToken ct)
+    {
+        ErrorOr<MetaProposalState> completed = await service.CompletePollAsync(state.Id, submitWon, ct);
+
+        if (completed.IsError)
+            return;
+
+        MetaProposalState updated = completed.Value;
+
+        if (!submitWon)
+        {
+            if (updated.Status is MetaProposalStatus.Closed)
+                await workflow.LockArchiveThreadAsync(updated.SuggestionThreadChannelId);
+
+            return;
+        }
+
+        ErrorOr<MetaSuggestionSettings> settingsResult = await service.GetSettingsAsync(updated.GuildId, ct);
+
+        if (settingsResult.IsError)
+            return;
+
+        ErrorOr<ulong> publishResult = await workflow.PublishProposalAsync(updated, settingsResult.Value, pingCabinet: false, ct);
+
+        if (!publishResult.IsError)
+        {
+            await service.RecordPublishedAsync(updated.Id, publishResult.Value, ct);
+            await workflow.LockArchiveThreadAsync(updated.SuggestionThreadChannelId);
+            return;
+        }
+
+        ErrorOr<ulong> errorMessage = await workflow.PostPublicationErrorAsync(updated, settingsResult.Value, updated.PublicationErrorMessageId, ct);
+
+        if (!errorMessage.IsError)
+            await service.RecordPublicationFailureAsync(updated.Id, errorMessage.Value, DateTimeOffset.UtcNow, ct);
+    }
+
     private async Task ResolvePollMessageAsync(
         MetaProposalService service,
         MetaProposalState state,
@@ -86,42 +123,5 @@ public sealed class MetaProposalPollResolver(MetaProposalDiscordWorkflow workflo
         }
 
         await CompletePollAsync(service, state, SubmitWon(poll, results), ct);
-    }
-
-    private async Task CompletePollAsync(MetaProposalService service, MetaProposalState state, bool submitWon, CancellationToken ct)
-    {
-        ErrorOr<MetaProposalState> completed = await service.CompletePollAsync(state.Id, submitWon, ct);
-
-        if (completed.IsError)
-            return;
-
-        MetaProposalState updated = completed.Value;
-
-        if (!submitWon)
-        {
-            if (updated.Status is MetaProposalStatus.Closed)
-                await workflow.LockArchiveThreadAsync(updated.SuggestionThreadChannelId);
-
-            return;
-        }
-
-        ErrorOr<MetaSuggestionSettings> settingsResult = await service.GetSettingsAsync(updated.GuildId, ct);
-
-        if (settingsResult.IsError)
-            return;
-
-        ErrorOr<ulong> publishResult = await workflow.PublishProposalAsync(updated, settingsResult.Value, pingCabinet: false, ct);
-
-        if (!publishResult.IsError)
-        {
-            await service.RecordPublishedAsync(updated.Id, publishResult.Value, ct);
-            await workflow.LockArchiveThreadAsync(updated.SuggestionThreadChannelId);
-            return;
-        }
-
-        ErrorOr<ulong> errorMessage = await workflow.PostPublicationErrorAsync(updated, settingsResult.Value, updated.PublicationErrorMessageId, ct);
-
-        if (!errorMessage.IsError)
-            await service.RecordPublicationFailureAsync(updated.Id, errorMessage.Value, DateTimeOffset.UtcNow, ct);
     }
 }

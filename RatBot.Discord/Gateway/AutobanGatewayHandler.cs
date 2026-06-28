@@ -20,8 +20,6 @@ public sealed class AutobanGatewayHandler(
 
     public void Unsubscribe() => discordClient.UserJoined -= HandleUserJoinedAsync;
 
-    private void Subscribe() => discordClient.UserJoined += HandleUserJoinedAsync;
-
     private async Task HandleUserJoinedAsync(SocketGuildUser user)
     {
         ulong guildId = user.Guild.Id;
@@ -47,4 +45,6 @@ public sealed class AutobanGatewayHandler(
             _logger.Error(ex, "Failed processing autoban join check for user {UserId} in guild {GuildId}.", userId, guildId);
         }
     }
+
+    private void Subscribe() => discordClient.UserJoined += HandleUserJoinedAsync;
 }

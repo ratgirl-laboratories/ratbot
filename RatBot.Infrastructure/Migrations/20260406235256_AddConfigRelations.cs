@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,25 +7,6 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddConfigRelations : Migration
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "QuorumScopeConfigs");
-
-            migrationBuilder.CreateTable(
-                name: "Configs",
-                columns: table => new
-                {
-                    Key = table.Column<string>(type: "text", nullable: false),
-                    Value = table.Column<string>(type: "jsonb", nullable: false),
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Configs", x => new { x.Key, x.Value });
-                }
-            );
-        }
-
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
@@ -61,6 +42,25 @@ namespace RatBot.Infrastructure.Migrations
                 name: "IX_QuorumScopeConfigs_GuildId_ScopeType",
                 table: "QuorumScopeConfigs",
                 columns: new[] { "GuildId", "ScopeType" }
+            );
+        }
+
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "QuorumScopeConfigs");
+
+            migrationBuilder.CreateTable(
+                name: "Configs",
+                columns: table => new
+                {
+                    Key = table.Column<string>(type: "text", nullable: false),
+                    Value = table.Column<string>(type: "jsonb", nullable: false),
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Configs", x => new { x.Key, x.Value });
+                }
             );
         }
     }

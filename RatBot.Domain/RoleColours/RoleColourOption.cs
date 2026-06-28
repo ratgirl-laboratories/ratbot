@@ -5,24 +5,24 @@ public sealed class RoleColourOption
     // EF Core private ctor
     private RoleColourOption() { }
 
-    public Id OptionId { get; private set; } = Id.Empty;
-
-    // Stable identifier used by admins and users
-    public string Key { get; private set; } = null!;
-
-    // Uppercase/normalized form for uniqueness checks
-    public string NormalisedKey { get; private set; } = null!;
-
-    // Human-friendly label for display
-    public string Label { get; private set; } = null!;
-
-    public ulong SourceRoleId { get; private set; }
+    public DateTimeOffset CreatedAtUtc { get; private set; }
 
     public ulong DisplayRoleId { get; private set; }
 
     public bool IsEnabled { get; private set; }
 
-    public DateTimeOffset CreatedAtUtc { get; private set; }
+    // Stable identifier used by admins and users
+    public string Key { get; private set; } = null!;
+
+    // Human-friendly label for display
+    public string Label { get; private set; } = null!;
+
+    // Uppercase/normalized form for uniqueness checks
+    public string NormalisedKey { get; private set; } = null!;
+
+    public Id OptionId { get; private set; } = Id.Empty;
+
+    public ulong SourceRoleId { get; private set; }
 
     public DateTimeOffset UpdatedAtUtc { get; private set; }
 
@@ -56,6 +56,15 @@ public sealed class RoleColourOption
         };
     }
 
+    public void Disable()
+    {
+        if (!IsEnabled)
+            return;
+
+        IsEnabled = false;
+        Touch();
+    }
+
     public ErrorOr<Success> Update(string key, string label, ulong displayRoleId)
     {
         if (SourceRoleId == displayRoleId)
@@ -76,15 +85,6 @@ public sealed class RoleColourOption
         Touch();
 
         return Result.Success;
-    }
-
-    public void Disable()
-    {
-        if (!IsEnabled)
-            return;
-
-        IsEnabled = false;
-        Touch();
     }
 
     private void Touch() => UpdatedAtUtc = DateTimeOffset.UtcNow;

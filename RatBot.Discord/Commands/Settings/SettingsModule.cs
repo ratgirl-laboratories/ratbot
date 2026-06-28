@@ -12,9 +12,10 @@ namespace RatBot.Discord.Commands.Settings;
 [DefaultMemberPermissions(GuildPermission.Administrator)]
 public sealed class SettingsModule : SlashCommandBase
 {
+    private const string LABEL_REFRESH = "Refresh";
+
     // ReSharper disable InconsistentNaming
     private const string RESPONSE_NO_GUILD = "This command can only be used in a guild.";
-    private const string LABEL_REFRESH = "Refresh";
 
     // ReSharper enable InconsistentNaming
 

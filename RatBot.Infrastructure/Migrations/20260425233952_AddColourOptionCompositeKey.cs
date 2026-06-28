@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,6 +7,14 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddColourOptionCompositeKey : Migration
     {
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropIndex(name: "IX_RoleColourOptions_SourceRoleId_DisplayRoleId", table: "RoleColourOptions");
+
+            migrationBuilder.CreateIndex(name: "IX_RoleColourOptions_SourceRoleId", table: "RoleColourOptions", column: "SourceRoleId", unique: true);
+        }
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -18,14 +26,6 @@ namespace RatBot.Infrastructure.Migrations
                 columns: new[] { "SourceRoleId", "DisplayRoleId" },
                 unique: true
             );
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropIndex(name: "IX_RoleColourOptions_SourceRoleId_DisplayRoleId", table: "RoleColourOptions");
-
-            migrationBuilder.CreateIndex(name: "IX_RoleColourOptions_SourceRoleId", table: "RoleColourOptions", column: "SourceRoleId", unique: true);
         }
     }
 }

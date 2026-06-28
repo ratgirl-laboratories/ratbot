@@ -18,13 +18,13 @@ public sealed class QuorumSettings
 
     public ulong GuildId { get; }
 
-    public QuorumSettingsType TargetType { get; }
-
-    public ulong TargetId { get; }
+    public double Proportion { get; private set; }
 
     public IReadOnlyCollection<QuorumSettingsRole> Roles => _roles;
 
-    public double Proportion { get; private set; }
+    public ulong TargetId { get; }
+
+    public QuorumSettingsType TargetType { get; }
 
     public static ErrorOr<QuorumSettings> Create(QuorumTarget target, IEnumerable<ulong> roleIds, Proportion proportion)
     {

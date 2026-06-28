@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,6 +7,18 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class UpdateEmojiTableAgain : Migration
     {
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.Sql(
+                """
+                ALTER TABLE "EmojiUsageCounts"
+                ALTER COLUMN "EmojiId" TYPE character varying(128)
+                USING "EmojiId"::text;
+                """
+            );
+        }
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -27,18 +39,6 @@ namespace RatBot.Infrastructure.Migrations
                 ALTER TABLE "EmojiUsageCounts"
                 ALTER COLUMN "EmojiId" TYPE bigint
                 USING "EmojiId"::bigint;
-                """
-            );
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.Sql(
-                """
-                ALTER TABLE "EmojiUsageCounts"
-                ALTER COLUMN "EmojiId" TYPE character varying(128)
-                USING "EmojiId"::text;
                 """
             );
         }

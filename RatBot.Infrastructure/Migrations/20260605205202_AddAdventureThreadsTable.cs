@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,6 +7,12 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddAdventureThreadsTable : Migration
     {
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "AdventureForumThreadLinks");
+        }
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -37,12 +43,6 @@ namespace RatBot.Infrastructure.Migrations
                 column: "ThreadId",
                 unique: true
             );
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "AdventureForumThreadLinks");
         }
     }
 }

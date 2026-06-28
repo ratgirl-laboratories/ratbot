@@ -5,15 +5,15 @@ public sealed class MemberColourPreference
     // EF Core private ctor
     private MemberColourPreference() { }
 
-    public Id PreferenceId { get; private set; } = Id.Empty;
-
-    public ulong UserId { get; private set; }
+    public bool IsNoColourSelected => Kind == MemberColourPreferenceKind.NoColour;
 
     public MemberColourPreferenceKind Kind { get; private set; }
 
+    public Id PreferenceId { get; private set; } = Id.Empty;
+
     public RoleColourOption.Id? SelectedOptionId { get; private set; }
 
-    public bool IsNoColourSelected => Kind == MemberColourPreferenceKind.NoColour;
+    public ulong UserId { get; private set; }
 
     public static MemberColourPreference CreateForOption(ulong userId, RoleColourOption.Id selectedId) =>
         new MemberColourPreference
@@ -33,6 +33,12 @@ public sealed class MemberColourPreference
             SelectedOptionId = null,
         };
 
+    public void SelectNoColour()
+    {
+        Kind = MemberColourPreferenceKind.NoColour;
+        SelectedOptionId = null;
+    }
+
     public void SelectOption(RoleColourOption.Id id)
     {
         if (id.Equals(RoleColourOption.Id.Empty))
@@ -40,12 +46,6 @@ public sealed class MemberColourPreference
 
         Kind = MemberColourPreferenceKind.ConfiguredOption;
         SelectedOptionId = id;
-    }
-
-    public void SelectNoColour()
-    {
-        Kind = MemberColourPreferenceKind.NoColour;
-        SelectedOptionId = null;
     }
 
     public readonly record struct Id(Guid Value)

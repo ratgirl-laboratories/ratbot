@@ -11,34 +11,6 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
         || MetaCommandPermissions.IsCabinet(settings, user)
         || hours != MetaCommandIds.DefaultPollHours && MetaCommandPermissions.IsChairOrAdmin(settings, user);
 
-    [SlashCommand("propose", "Create a proposal poll in this suggestion thread.")]
-    public async Task ProposeAsync()
-    {
-        if (Context.Guild is null || Context.Channel is not IThreadChannel thread)
-        {
-            await RespondAsync("This command can only be used in a tracked suggestion thread.", ephemeral: true);
-            return;
-        }
-
-        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(thread.Id);
-
-        if (stateResult.IsError)
-        {
-            await RespondAsync(stateResult.FirstError.Description, ephemeral: true);
-            return;
-        }
-
-        if (Context.User is not IGuildUser user || !MetaCommandPermissions.IsAuthorOrAdmin(stateResult.Value, user))
-        {
-            await RespondAsync("Only the thread author may propose here.", ephemeral: true);
-            return;
-        }
-
-        string customId = $"{MetaCommandIds.ProposalModalPrefix}:{Context.User.Id}:{thread.Id}:{MetaCommandIds.DefaultPollHours}";
-
-        await Context.Interaction.RespondWithModalAsync<MetaProposalModal>(customId);
-    }
-
     [ModalInteraction($"{MetaCommandIds.ProposalModalPrefix}:*:*:*", true)]
     public async Task ProposalModalAsync(ulong userId, ulong threadId, uint hours, MetaProposalModal modal)
     {
@@ -127,6 +99,34 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
         );
     }
 
+    [SlashCommand("propose", "Create a proposal poll in this suggestion thread.")]
+    public async Task ProposeAsync()
+    {
+        if (Context.Guild is null || Context.Channel is not IThreadChannel thread)
+        {
+            await RespondAsync("This command can only be used in a tracked suggestion thread.", ephemeral: true);
+            return;
+        }
+
+        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(thread.Id);
+
+        if (stateResult.IsError)
+        {
+            await RespondAsync(stateResult.FirstError.Description, ephemeral: true);
+            return;
+        }
+
+        if (Context.User is not IGuildUser user || !MetaCommandPermissions.IsAuthorOrAdmin(stateResult.Value, user))
+        {
+            await RespondAsync("Only the thread author may propose here.", ephemeral: true);
+            return;
+        }
+
+        string customId = $"{MetaCommandIds.ProposalModalPrefix}:{Context.User.Id}:{thread.Id}:{MetaCommandIds.DefaultPollHours}";
+
+        await Context.Interaction.RespondWithModalAsync<MetaProposalModal>(customId);
+    }
+
     [ComponentInteraction($"{MetaCommandIds.ResubmitPrefix}:*", true)]
     public async Task ResubmitAsync(string id)
     {
@@ -179,19 +179,6 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
 
 public record MetaProposalModal : IModal
 {
-    [InputLabel("Title")]
-    [ModalTextInput("title", maxLength: MetaProposalState.MaxTitleLength, placeholder: "The title of the proposal thread")]
-    public required string ProposalTitle { get; [UsedImplicitly] init; }
-
-    [InputLabel("Summary")]
-    [ModalTextInput(
-        "summary",
-        TextInputStyle.Paragraph,
-        maxLength: 1500,
-        placeholder: "Please provide a brief, high-level overview of your proposal. (1500 characters)"
-    )]
-    public required string Summary { get; [UsedImplicitly] init; }
-
     [InputLabel("Motivation")]
     [ModalTextInput(
         "motivation",
@@ -200,6 +187,10 @@ public record MetaProposalModal : IModal
         placeholder: "Please provide a detailed explanation of what your proposal seeks to address. (1950 characters)"
     )]
     public required string Motivation { get; [UsedImplicitly] init; }
+
+    [InputLabel("Title")]
+    [ModalTextInput("title", maxLength: MetaProposalState.MaxTitleLength, placeholder: "The title of the proposal thread")]
+    public required string ProposalTitle { get; [UsedImplicitly] init; }
 
     [InputLabel("Specification")]
     [ModalTextInput(
@@ -210,6 +201,14 @@ public record MetaProposalModal : IModal
     )]
     public required string Specification { get; [UsedImplicitly] init; }
 
+    [InputLabel("Summary")]
+    [ModalTextInput(
+        "summary",
+        TextInputStyle.Paragraph,
+        maxLength: 1500,
+        placeholder: "Please provide a brief, high-level overview of your proposal. (1500 characters)"
+    )]
+    public required string Summary { get; [UsedImplicitly] init; }
+
     string IModal.Title => "Make a proposal";
 }
-

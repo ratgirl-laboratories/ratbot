@@ -20,6 +20,19 @@ public sealed class MessageChunkerTests
     }
 
     [Test]
+    public void SplitMessageIntoChunks_WithInvalidChunkSize_ReturnsValidationError()
+    {
+        // Arrange
+
+        // Act
+        ErrorOr<string[]> result = MessageChunker.SplitMessageIntoChunks("message", 0);
+
+        // Assert
+        result.IsError.ShouldBeTrue();
+        result.FirstError.Type.ShouldBe(ErrorType.Validation);
+    }
+
+    [Test]
     public void SplitMessageIntoChunks_WithMessageOverLimit_ReturnsTwoChunks()
     {
         // Arrange
@@ -60,18 +73,5 @@ public sealed class MessageChunkerTests
 
         // Assert
         chunks.ShouldBe(["abc", "def"]);
-    }
-
-    [Test]
-    public void SplitMessageIntoChunks_WithInvalidChunkSize_ReturnsValidationError()
-    {
-        // Arrange
-
-        // Act
-        ErrorOr<string[]> result = MessageChunker.SplitMessageIntoChunks("message", 0);
-
-        // Assert
-        result.IsError.ShouldBeTrue();
-        result.FirstError.Type.ShouldBe(ErrorType.Validation);
     }
 }

@@ -15,8 +15,6 @@ public sealed class MessageContentGatewayHandler(DiscordSocketClient discordClie
 
     public void Unsubscribe() => discordClient.MessageReceived -= HandleMessageReceivedAsync;
 
-    private void Subscribe() => discordClient.MessageReceived += HandleMessageReceivedAsync;
-
     private async Task HandleMessageReceivedAsync(SocketMessage message)
     {
         if (message is not SocketUserMessage userMessage)
@@ -33,4 +31,6 @@ public sealed class MessageContentGatewayHandler(DiscordSocketClient discordClie
 
         _logger.Debug("Queued message content for emoji analytics.");
     }
+
+    private void Subscribe() => discordClient.MessageReceived += HandleMessageReceivedAsync;
 }

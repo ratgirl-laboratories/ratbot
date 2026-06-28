@@ -16,8 +16,6 @@ public sealed class SecretRoleGatewayHandler(DiscordSocketClient discordClient, 
 
     public void Unsubscribe() => discordClient.MessageReceived -= HandleMessageReceivedAsync;
 
-    private void Subscribe() => discordClient.MessageReceived += HandleMessageReceivedAsync;
-
     private async Task HandleMessageReceivedAsync(SocketMessage message)
     {
         if (
@@ -74,4 +72,6 @@ public sealed class SecretRoleGatewayHandler(DiscordSocketClient discordClient, 
             );
         }
     }
+
+    private void Subscribe() => discordClient.MessageReceived += HandleMessageReceivedAsync;
 }

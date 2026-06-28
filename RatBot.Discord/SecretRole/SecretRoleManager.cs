@@ -5,8 +5,8 @@ namespace RatBot.Discord.SecretRole;
 
 public sealed class SecretRoleManager(IServiceScopeFactory scopeFactory)
 {
-    private readonly SemaphoreSlim _updateLock = new SemaphoreSlim(1, 1);
     private SecretRoleSetting? _current;
+    private readonly SemaphoreSlim _updateLock = new SemaphoreSlim(1, 1);
 
     public SecretRoleSetting? Current => Volatile.Read(ref _current);
 

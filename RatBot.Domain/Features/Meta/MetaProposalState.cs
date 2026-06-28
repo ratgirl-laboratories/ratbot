@@ -2,40 +2,14 @@ namespace RatBot.Domain.Features.Meta;
 
 public sealed class MetaProposalState
 {
-    public const int MaxTitleLength = 100;
     public const int MaxFailedPollAttempts = 3;
     public const int MaxPublicationRetryFailuresBeforePing = 10;
+    public const int MaxTitleLength = 100;
 
     private MetaProposalState() { }
 
-    public Guid Id { get; private set; }
-    public ulong GuildId { get; private set; }
-    public ulong SuggestionThreadChannelId { get; private set; }
-    public ulong SuggestionsForumChannelId { get; private set; }
-    public ulong OriginalThreadAuthorUserId { get; private set; }
-    public DateTimeOffset TrackedAtUtc { get; private set; }
-    public MetaProposalStatus Status { get; private set; }
     public int FailedPollAttempts { get; private set; }
-    public ulong? ProposalAuthorUserId { get; private set; }
-    public string? ProposalTitle { get; private set; }
-    public string? Summary { get; private set; }
-    public string? Motivation { get; private set; }
-    public string? Specification { get; private set; }
-    public DateTimeOffset? ProposedAtUtc { get; private set; }
-    public ulong? PollMessageId { get; private set; }
-    public DateTimeOffset? PollExpiresAtUtc { get; private set; }
-    public int PollFinalizationRetries { get; private set; }
-    public ulong? ProposalThreadChannelId { get; private set; }
-    public ulong? PublicationErrorMessageId { get; private set; }
-    public DateTimeOffset? LastPublicationRetryAtUtc { get; private set; }
-    public int PublicationRetryFailures { get; private set; }
-    public ulong? VetoedByUserId { get; private set; }
-    public DateTimeOffset? VetoedAtUtc { get; private set; }
-    public string? VetoReason { get; private set; }
-
-    public bool IsTerminal => Status is MetaProposalStatus.Vetoed or MetaProposalStatus.Closed;
-
-    public bool HasSubmittedProposal => Status is not MetaProposalStatus.SuggestionOpen and not MetaProposalStatus.PollActive;
+    public ulong GuildId { get; private set; }
 
     public bool HasProposalText =>
         ProposalAuthorUserId is not null
@@ -44,6 +18,33 @@ public sealed class MetaProposalState
         && !string.IsNullOrWhiteSpace(Motivation)
         && !string.IsNullOrWhiteSpace(Specification)
         && ProposedAtUtc is not null;
+
+    public bool HasSubmittedProposal => Status is not MetaProposalStatus.SuggestionOpen and not MetaProposalStatus.PollActive;
+
+    public Guid Id { get; private set; }
+
+    public bool IsTerminal => Status is MetaProposalStatus.Vetoed or MetaProposalStatus.Closed;
+    public DateTimeOffset? LastPublicationRetryAtUtc { get; private set; }
+    public string? Motivation { get; private set; }
+    public ulong OriginalThreadAuthorUserId { get; private set; }
+    public DateTimeOffset? PollExpiresAtUtc { get; private set; }
+    public int PollFinalizationRetries { get; private set; }
+    public ulong? PollMessageId { get; private set; }
+    public ulong? ProposalAuthorUserId { get; private set; }
+    public ulong? ProposalThreadChannelId { get; private set; }
+    public string? ProposalTitle { get; private set; }
+    public DateTimeOffset? ProposedAtUtc { get; private set; }
+    public ulong? PublicationErrorMessageId { get; private set; }
+    public int PublicationRetryFailures { get; private set; }
+    public string? Specification { get; private set; }
+    public MetaProposalStatus Status { get; private set; }
+    public ulong SuggestionsForumChannelId { get; private set; }
+    public ulong SuggestionThreadChannelId { get; private set; }
+    public string? Summary { get; private set; }
+    public DateTimeOffset TrackedAtUtc { get; private set; }
+    public DateTimeOffset? VetoedAtUtc { get; private set; }
+    public ulong? VetoedByUserId { get; private set; }
+    public string? VetoReason { get; private set; }
 
     public static ErrorOr<MetaProposalState> TrackSuggestionThread(
         Guid id,
@@ -86,6 +87,97 @@ public sealed class MetaProposalState
 
     private static Error RequiredId(string fieldName) =>
         Error.Validation($"MetaProposal.{fieldName}Required", $"A valid {fieldName.ToLowerInvariant()} is required.");
+
+    public ErrorOr<Success> ClearDeletedPoll()
+    {
+        if (Status is not MetaProposalStatus.PollActive)
+            return Result.Success;
+
+        PollMessageId = null;
+        PollExpiresAtUtc = null;
+        PollFinalizationRetries = 0;
+        Status = MetaProposalStatus.SuggestionOpen;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> Close()
+    {
+        if (IsTerminal)
+            return Result.Success;
+
+        Status = MetaProposalStatus.Closed;
+        PollMessageId = null;
+        PollExpiresAtUtc = null;
+        PollFinalizationRetries = 0;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> CompletePoll(bool submitWon)
+    {
+        if (Status is not MetaProposalStatus.PollActive)
+            return Error.Conflict("MetaProposal.NoActivePoll", "There is no active proposal poll.");
+
+        PollMessageId = null;
+        PollExpiresAtUtc = null;
+        PollFinalizationRetries = 0;
+
+        if (submitWon)
+        {
+            Status = MetaProposalStatus.PublicationPending;
+            return Result.Success;
+        }
+
+        FailedPollAttempts++;
+
+        Status = FailedPollAttempts >= MaxFailedPollAttempts ? MetaProposalStatus.Closed : MetaProposalStatus.SuggestionOpen;
+
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> MarkPublicationRetryStarted(DateTimeOffset attemptedAtUtc)
+    {
+        if (Status is not MetaProposalStatus.PublicationRetry and not MetaProposalStatus.PublicationPending)
+            return Error.Conflict("MetaProposal.NotAwaitingPublication", "This proposal is not awaiting publication.");
+
+        LastPublicationRetryAtUtc = attemptedAtUtc;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> RecordPollFinalizationRetry()
+    {
+        if (Status is not MetaProposalStatus.PollActive)
+            return Error.Conflict("MetaProposal.NoActivePoll", "There is no active proposal poll.");
+
+        PollFinalizationRetries++;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> RecordPublicationFailure(ulong errorMessageId, DateTimeOffset attemptedAtUtc)
+    {
+        if (Status is not MetaProposalStatus.PublicationPending and not MetaProposalStatus.PublicationRetry)
+            return Error.Conflict("MetaProposal.NotAwaitingPublication", "This proposal is not awaiting publication.");
+
+        if (errorMessageId == 0)
+            return RequiredId(nameof(PublicationErrorMessageId));
+
+        PublicationRetryFailures++;
+        PublicationErrorMessageId = errorMessageId;
+        LastPublicationRetryAtUtc = attemptedAtUtc;
+        Status = MetaProposalStatus.PublicationRetry;
+        return Result.Success;
+    }
+
+    public ErrorOr<Success> RecordPublished(ulong proposalThreadChannelId)
+    {
+        if (proposalThreadChannelId == 0)
+            return RequiredId(nameof(ProposalThreadChannelId));
+
+        ProposalThreadChannelId = proposalThreadChannelId;
+        PublicationErrorMessageId = null;
+        PublicationRetryFailures = 0;
+        Status = MetaProposalStatus.Published;
+        return Result.Success;
+    }
 
     public ErrorOr<Success> StartPoll(
         ulong proposalAuthorUserId,
@@ -144,97 +236,6 @@ public sealed class MetaProposalState
         PollFinalizationRetries = 0;
         Status = MetaProposalStatus.PollActive;
 
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> ClearDeletedPoll()
-    {
-        if (Status is not MetaProposalStatus.PollActive)
-            return Result.Success;
-
-        PollMessageId = null;
-        PollExpiresAtUtc = null;
-        PollFinalizationRetries = 0;
-        Status = MetaProposalStatus.SuggestionOpen;
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> RecordPollFinalizationRetry()
-    {
-        if (Status is not MetaProposalStatus.PollActive)
-            return Error.Conflict("MetaProposal.NoActivePoll", "There is no active proposal poll.");
-
-        PollFinalizationRetries++;
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> CompletePoll(bool submitWon)
-    {
-        if (Status is not MetaProposalStatus.PollActive)
-            return Error.Conflict("MetaProposal.NoActivePoll", "There is no active proposal poll.");
-
-        PollMessageId = null;
-        PollExpiresAtUtc = null;
-        PollFinalizationRetries = 0;
-
-        if (submitWon)
-        {
-            Status = MetaProposalStatus.PublicationPending;
-            return Result.Success;
-        }
-
-        FailedPollAttempts++;
-
-        Status = FailedPollAttempts >= MaxFailedPollAttempts ? MetaProposalStatus.Closed : MetaProposalStatus.SuggestionOpen;
-
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> RecordPublicationFailure(ulong errorMessageId, DateTimeOffset attemptedAtUtc)
-    {
-        if (Status is not MetaProposalStatus.PublicationPending and not MetaProposalStatus.PublicationRetry)
-            return Error.Conflict("MetaProposal.NotAwaitingPublication", "This proposal is not awaiting publication.");
-
-        if (errorMessageId == 0)
-            return RequiredId(nameof(PublicationErrorMessageId));
-
-        PublicationRetryFailures++;
-        PublicationErrorMessageId = errorMessageId;
-        LastPublicationRetryAtUtc = attemptedAtUtc;
-        Status = MetaProposalStatus.PublicationRetry;
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> MarkPublicationRetryStarted(DateTimeOffset attemptedAtUtc)
-    {
-        if (Status is not MetaProposalStatus.PublicationRetry and not MetaProposalStatus.PublicationPending)
-            return Error.Conflict("MetaProposal.NotAwaitingPublication", "This proposal is not awaiting publication.");
-
-        LastPublicationRetryAtUtc = attemptedAtUtc;
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> RecordPublished(ulong proposalThreadChannelId)
-    {
-        if (proposalThreadChannelId == 0)
-            return RequiredId(nameof(ProposalThreadChannelId));
-
-        ProposalThreadChannelId = proposalThreadChannelId;
-        PublicationErrorMessageId = null;
-        PublicationRetryFailures = 0;
-        Status = MetaProposalStatus.Published;
-        return Result.Success;
-    }
-
-    public ErrorOr<Success> Close()
-    {
-        if (IsTerminal)
-            return Result.Success;
-
-        Status = MetaProposalStatus.Closed;
-        PollMessageId = null;
-        PollExpiresAtUtc = null;
-        PollFinalizationRetries = 0;
         return Result.Success;
     }
 

@@ -10,6 +10,12 @@ namespace RatBot.Infrastructure.Migrations;
 [Migration("20260625213000_AddQuorumConfigurationTables")]
 public sealed class AddQuorumConfigurationTables : Migration
 {
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropTable(name: "quorum_voter_roles");
+        migrationBuilder.DropTable(name: "quorum_configurations");
+    }
+
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
@@ -50,11 +56,5 @@ public sealed class AddQuorumConfigurationTables : Migration
                 );
             }
         );
-    }
-
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.DropTable(name: "quorum_voter_roles");
-        migrationBuilder.DropTable(name: "quorum_configurations");
     }
 }

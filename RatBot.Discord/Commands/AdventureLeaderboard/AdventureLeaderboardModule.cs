@@ -9,51 +9,6 @@ namespace RatBot.Discord.Commands.AdventureLeaderboard;
 public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manager, BotDbContext dbContext)
     : InteractionModuleBase<IInteractionContext>
 {
-    [SlashCommand("show-leaderboard", "Create and keep an adventure leaderboard message updated.")]
-    [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task ShowLeaderboardAsync(
-        [Summary("channel", "Channel where RatBot should post the leaderboard.")] ITextChannel channel,
-        [Summary("year", "Adventure event year to show.")] int year
-    )
-    {
-        IGuildUser currentUser = await Context.Guild.GetCurrentUserAsync().ConfigureAwait(false);
-        ChannelPermissions permissions = currentUser.GetPermissions(channel);
-
-        if (!permissions.ViewChannel || !permissions.SendMessages)
-        {
-            await RespondAsync("I cannot send messages in that channel.", ephemeral: true).ConfigureAwait(false);
-            return;
-        }
-
-        await DeferAsync(ephemeral: true).ConfigureAwait(false);
-
-        try
-        {
-            IUserMessage message = await manager.CreateLeaderboardMessageAsync(channel, year, CancellationToken.None).ConfigureAwait(false);
-
-            await FollowupAsync($"Leaderboard posted in {channel.Mention}: {message.GetJumpUrl()}", ephemeral: true).ConfigureAwait(false);
-        }
-        catch (Exception)
-        {
-            await FollowupAsync($"I could not create the leaderboard message in {channel.Mention}.", ephemeral: true).ConfigureAwait(false);
-
-            throw;
-        }
-    }
-
-    [SlashCommand("exclude", "Exclude a user from the active adventure leaderboard.")]
-    [RequireUserPermission(GuildPermission.Administrator)]
-    public async Task ExcludeAsync([Summary("user", "User to exclude from the adventure leaderboard.")] IUser user)
-    {
-        await DeferAsync(ephemeral: true).ConfigureAwait(false);
-
-        bool added = await manager.ExcludeUserAsync(user.Id, CancellationToken.None).ConfigureAwait(false);
-        string displayName = Format.Sanitize(user.Username);
-        string action = added ? "Excluded" : "Already excluding";
-
-        await FollowupAsync($"{action} {displayName} ({user.Id}) from the adventure leaderboard.", ephemeral: true).ConfigureAwait(false);
-    }
-
     [SlashCommand("create-threads", "Create private adventure solution threads under a text channel.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task CreateThreadsAsync([Summary("channel_id", "Parent text channel ID.")] string channelId)
@@ -120,5 +75,50 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manag
         }
 
         await FollowupAsync($"Created {links.Count} private adventure solution threads in {channel.Mention}.", ephemeral: true).ConfigureAwait(false);
+    }
+
+    [SlashCommand("exclude", "Exclude a user from the active adventure leaderboard.")]
+    [RequireUserPermission(GuildPermission.Administrator)]
+    public async Task ExcludeAsync([Summary("user", "User to exclude from the adventure leaderboard.")] IUser user)
+    {
+        await DeferAsync(ephemeral: true).ConfigureAwait(false);
+
+        bool added = await manager.ExcludeUserAsync(user.Id, CancellationToken.None).ConfigureAwait(false);
+        string displayName = Format.Sanitize(user.Username);
+        string action = added ? "Excluded" : "Already excluding";
+
+        await FollowupAsync($"{action} {displayName} ({user.Id}) from the adventure leaderboard.", ephemeral: true).ConfigureAwait(false);
+    }
+
+    [SlashCommand("show-leaderboard", "Create and keep an adventure leaderboard message updated.")]
+    [RequireUserPermission(GuildPermission.Administrator)]
+    public async Task ShowLeaderboardAsync(
+        [Summary("channel", "Channel where RatBot should post the leaderboard.")] ITextChannel channel,
+        [Summary("year", "Adventure event year to show.")] int year
+    )
+    {
+        IGuildUser currentUser = await Context.Guild.GetCurrentUserAsync().ConfigureAwait(false);
+        ChannelPermissions permissions = currentUser.GetPermissions(channel);
+
+        if (!permissions.ViewChannel || !permissions.SendMessages)
+        {
+            await RespondAsync("I cannot send messages in that channel.", ephemeral: true).ConfigureAwait(false);
+            return;
+        }
+
+        await DeferAsync(ephemeral: true).ConfigureAwait(false);
+
+        try
+        {
+            IUserMessage message = await manager.CreateLeaderboardMessageAsync(channel, year, CancellationToken.None).ConfigureAwait(false);
+
+            await FollowupAsync($"Leaderboard posted in {channel.Mention}: {message.GetJumpUrl()}", ephemeral: true).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            await FollowupAsync($"I could not create the leaderboard message in {channel.Mention}.", ephemeral: true).ConfigureAwait(false);
+
+            throw;
+        }
     }
 }

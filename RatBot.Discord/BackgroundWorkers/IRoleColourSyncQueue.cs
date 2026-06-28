@@ -9,12 +9,12 @@ public interface IRoleColourSyncQueue
     bool Enqueue(ulong guildId, ulong userId);
     ValueTask EnqueueAsync(ulong guildId, ulong userId, CancellationToken ct);
 
-    void OnWorkStarted(WorkItem item);
+    Status GetStatus();
     void OnWorkCompleted(WorkItem item);
 
-    Status GetStatus();
-
-    public readonly record struct WorkItem(ulong GuildId, ulong UserId);
+    void OnWorkStarted(WorkItem item);
 
     public sealed record Status(int Pending, int InFlight, double? PerSecond, TimeSpan? Eta);
+
+    public readonly record struct WorkItem(ulong GuildId, ulong UserId);
 }

@@ -4,6 +4,14 @@ namespace RatBot.Discord.Features.Quorum.Commands;
 
 public static class QuorumScopeResolver
 {
+    public static ErrorOr<ulong> ResolveRoleId(IGuild? currentGuild, IRole role)
+    {
+        if (currentGuild is null)
+            return Error.Validation(description: "This command can only be used in a guild.");
+
+        return role.Guild.Id == currentGuild.Id ? role.Id : Error.Validation(description: "That role does not belong to this guild.");
+    }
+
     public static ErrorOr<QuorumScope> ResolveScope(IGuild? currentGuild, IChannel channel)
     {
         if (currentGuild is null)
@@ -18,14 +26,6 @@ public static class QuorumScopeResolver
             IThreadChannel => Error.Validation(description: "The thread's parent channel could not be resolved."),
             _ => ResolveScopeChannel(currentGuild, channel),
         };
-    }
-
-    public static ErrorOr<ulong> ResolveRoleId(IGuild? currentGuild, IRole role)
-    {
-        if (currentGuild is null)
-            return Error.Validation(description: "This command can only be used in a guild.");
-
-        return role.Guild.Id == currentGuild.Id ? role.Id : Error.Validation(description: "That role does not belong to this guild.");
     }
 
     internal static ErrorOr<QuorumScope> ResolveScopeChannel(IGuild currentGuild, IChannel scopeChannel) =>

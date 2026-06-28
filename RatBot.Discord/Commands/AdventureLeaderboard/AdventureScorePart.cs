@@ -11,9 +11,9 @@ public readonly record struct AdventureScorePart(int Index)
 
     public string ThreadName => $"Week {Week} Part {Part}";
 
-    private int Week => (Index - 1) / 2 + 1;
-
     private int Part => (Index - 1) % 2 + 1;
+
+    private int Week => (Index - 1) / 2 + 1;
 
     public static ImmutableHashSet<int> CompletedParts(IReadOnlyList<AdventureDayProgress> progress)
     {

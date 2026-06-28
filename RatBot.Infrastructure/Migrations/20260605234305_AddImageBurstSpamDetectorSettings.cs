@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,6 +7,12 @@ namespace RatBot.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddImageBurstSpamDetectorSettings : Migration
     {
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(name: "ImageSpamSettings");
+        }
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -27,12 +33,6 @@ namespace RatBot.Infrastructure.Migrations
                     table.CheckConstraint("CK_ImageSpamSettings_RequiredChannelCount_Positive", "\"RequiredChannelCount\" > 0");
                 }
             );
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "ImageSpamSettings");
         }
     }
 }

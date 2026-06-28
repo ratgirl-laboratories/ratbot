@@ -6,22 +6,22 @@ public sealed class DiscordOptions
 {
     public const string SectionName = "Discord";
 
-    [Required]
-    public string Token { get; init; } = string.Empty;
-
     [Range(1, ulong.MaxValue)]
     public ulong GuildId { get; init; }
 
-    [Range(1000, 50000)]
-    public int MessageCacheSize { get; init; } = 5000;
+    public ulong[] ImageBurstSpamAllowlistedRoleIds { get; init; } = [];
+
+    public ulong[] ImageBurstSpamAllowlistedUserIds { get; init; } = [];
+
+    [Range(0, 7)]
+    public int ImageBurstSpamHistoryPruneDays { get; init; } = 1;
 
     [Range(5, 1440)]
     public int MemberCacheRefreshIntervalMinutes { get; init; } = 30;
 
-    public ulong[] ImageBurstSpamAllowlistedUserIds { get; init; } = [];
+    [Range(1000, 50000)]
+    public int MessageCacheSize { get; init; } = 5000;
 
-    public ulong[] ImageBurstSpamAllowlistedRoleIds { get; init; } = [];
-
-    [Range(0, 7)]
-    public int ImageBurstSpamHistoryPruneDays { get; init; } = 1;
+    [Required]
+    public string Token { get; init; } = string.Empty;
 }

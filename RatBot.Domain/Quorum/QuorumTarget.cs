@@ -11,9 +11,9 @@ public readonly record struct QuorumTarget
 
     public ulong GuildId { get; }
 
-    public QuorumSettingsType TargetType { get; }
-
     public ulong TargetId { get; }
+
+    public QuorumSettingsType TargetType { get; }
 
     public static ErrorOr<QuorumTarget> Create(ulong guildId, QuorumSettingsType targetType, ulong targetId)
     {

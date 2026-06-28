@@ -5,6 +5,16 @@ using System.Text.Json.Serialization;
 
 namespace RatBot.Discord.Commands.AdventureLeaderboard;
 
+public readonly record struct AdventureAccessGrant(int ScorePartIndex, ulong ThreadId, ulong UserId);
+
+public readonly record struct AdventureAccessGrants(ImmutableHashSet<AdventureAccessGrant> Grants);
+
+public readonly record struct AdventureDayProgress(bool Part1Complete, bool Part2Complete)
+{
+    public static AdventureDayProgress FromPair(bool[]? pair) =>
+        new AdventureDayProgress(pair is { Length: > 0 } && pair[0], pair is { Length: > 1 } && pair[1]);
+}
+
 #pragma warning disable MA0048, MA0008
 
 public readonly record struct AdventureEntryDto
@@ -22,10 +32,16 @@ public readonly record struct AdventureEntryDto
     public string? UserId { get; init; }
 }
 
-public readonly record struct AdventureDayProgress(bool Part1Complete, bool Part2Complete)
+public readonly record struct AdventureEntryRow(int ApiOrder, string UserId, string Name, string Github, IReadOnlyList<AdventureDayProgress> Progress)
 {
-    public static AdventureDayProgress FromPair(bool[]? pair) =>
-        new AdventureDayProgress(pair is { Length: > 0 } && pair[0], pair is { Length: > 1 } && pair[1]);
+    public int Score => Progress.Sum(day => (day.Part1Complete ? 1 : 0) + (day.Part2Complete ? 1 : 0));
+
+    public static AdventureEntryRow FromDto(AdventureEntryDto dto, int apiOrder)
+    {
+        List<AdventureDayProgress> progress = (dto.Progress ?? []).Select(AdventureDayProgress.FromPair).ToList();
+
+        return new AdventureEntryRow(apiOrder, dto.UserId ?? string.Empty, dto.Name ?? string.Empty, dto.Github ?? string.Empty, progress);
+    }
 }
 
 public readonly record struct AdventureEntrySnapshot(ImmutableArray<AdventureEntryRow> Rows, string Hash)
@@ -39,6 +55,8 @@ public readonly record struct AdventureEntrySnapshot(ImmutableArray<AdventureEnt
 
         return new AdventureEntrySnapshot(snapshotRows, hash);
     }
+
+    private static void AppendCanonicalString(StringBuilder text, string value) => text.Append(value.Length).Append(':').Append(value).Append('\n');
 
     private static string BuildCanonicalString(IReadOnlyList<AdventureEntryRow> rows)
     {
@@ -60,37 +78,7 @@ public readonly record struct AdventureEntrySnapshot(ImmutableArray<AdventureEnt
 
         return text.ToString();
     }
-
-    private static void AppendCanonicalString(StringBuilder text, string value) => text.Append(value.Length).Append(':').Append(value).Append('\n');
 }
-
-public readonly record struct AdventureEntryRow(int ApiOrder, string UserId, string Name, string Github, IReadOnlyList<AdventureDayProgress> Progress)
-{
-    public int Score => Progress.Sum(day => (day.Part1Complete ? 1 : 0) + (day.Part2Complete ? 1 : 0));
-
-    public static AdventureEntryRow FromDto(AdventureEntryDto dto, int apiOrder)
-    {
-        List<AdventureDayProgress> progress = (dto.Progress ?? []).Select(AdventureDayProgress.FromPair).ToList();
-
-        return new AdventureEntryRow(apiOrder, dto.UserId ?? string.Empty, dto.Name ?? string.Empty, dto.Github ?? string.Empty, progress);
-    }
-}
-
-public readonly record struct AdventureLeaderboardViewModel(
-    int Year,
-    int TotalEntrants,
-    int VisibleEntrants,
-    DateTimeOffset LastUpdated,
-    ImmutableArray<AdventureLeaderboardViewRow> Rows
-);
-
-public readonly record struct AdventureLeaderboardViewRow(int Rank, int Score, int MaxScore, string Progress, string DisplayName);
-
-public readonly record struct AdventureAccessGrants(ImmutableHashSet<AdventureAccessGrant> Grants);
-
-public readonly record struct AdventureAccessGrant(int ScorePartIndex, ulong ThreadId, ulong UserId);
-
-public readonly record struct AdventureThreadLinkage(int ScorePartIndex, string ThreadName);
 
 public sealed partial class AdventureLeaderboardManager
 {
@@ -104,5 +92,17 @@ public sealed partial class AdventureLeaderboardManager
 
     private readonly record struct TrackedLeaderboardMessageTarget(IGuild Guild, ITextChannel Channel, IReadOnlyList<IUserMessage> Messages);
 }
+
+public readonly record struct AdventureLeaderboardViewModel(
+    int Year,
+    int TotalEntrants,
+    int VisibleEntrants,
+    DateTimeOffset LastUpdated,
+    ImmutableArray<AdventureLeaderboardViewRow> Rows
+);
+
+public readonly record struct AdventureLeaderboardViewRow(int Rank, int Score, int MaxScore, string Progress, string DisplayName);
+
+public readonly record struct AdventureThreadLinkage(int ScorePartIndex, string ThreadName);
 
 #pragma warning restore MA0048, MA0008

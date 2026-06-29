@@ -12,6 +12,20 @@ public sealed class UserTimezoneStore(string connectionString) : IUserTimezoneSt
         updated_at_utc AS "UpdatedAtUtc"
         """;
 
+    private static long ToDatabaseId(ulong id) => checked((long)id);
+
+    private static UserTimezone ToDomain(Data data)
+    {
+        ErrorOr<IanaTimezoneId> timezone = IanaTimezoneId.Create(data.TimezoneId);
+
+        if (timezone.IsError)
+            throw new InvalidOperationException("Persisted user timezone is invalid.");
+
+        return new UserTimezone(ToDomainId(data.UserId), timezone.Value, data.UpdatedAtUtc);
+    }
+
+    private static ulong ToDomainId(long id) => checked((ulong)id);
+
     public async Task<ErrorOr<UserTimezone>> GetAsync(ulong userId, CancellationToken ct = default)
     {
         await using NpgsqlConnection connection = CreateConnection();
@@ -69,26 +83,12 @@ public sealed class UserTimezoneStore(string connectionString) : IUserTimezoneSt
         return ToDomain(data);
     }
 
-    private static UserTimezone ToDomain(Data data)
-    {
-        ErrorOr<IanaTimezoneId> timezone = IanaTimezoneId.Create(data.TimezoneId);
-
-        if (timezone.IsError)
-            throw new InvalidOperationException("Persisted user timezone is invalid.");
-
-        return new UserTimezone(ToDomainId(data.UserId), timezone.Value, data.UpdatedAtUtc);
-    }
-
-    private static long ToDatabaseId(ulong id) => checked((long)id);
-
-    private static ulong ToDomainId(long id) => checked((ulong)id);
-
     private NpgsqlConnection CreateConnection() => new NpgsqlConnection(connectionString);
 
     private sealed class Data
     {
-        public long UserId { get; set; }
-        public string TimezoneId { get; set; } = null!;
-        public DateTimeOffset UpdatedAtUtc { get; set; }
+        public long UserId { get; init; }
+        public string TimezoneId { get; init; } = null!;
+        public DateTimeOffset UpdatedAtUtc { get; init; }
     }
 }

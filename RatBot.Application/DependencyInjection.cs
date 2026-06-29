@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application.Administration;
 using RatBot.Application.Features.Quorum;
+using RatBot.Application.Features.Timezone;
 using RatBot.Application.MessageContent;
 using RatBot.Application.Moderation;
 using RatBot.Application.Quorum;
@@ -25,6 +26,7 @@ public static class DependencyInjection
             services.AddScoped<EmojiUsageTracker>();
             services.AddScoped<IModerationService, ModerationService>();
             services.AddScoped<QuorumOperations>();
+            services.AddScoped<UserTimezoneOperations>();
             services.AddScoped<IQuorumSettingsReader, QuorumSettingsReader>();
             services.AddScoped<IQuorumSettingsWriter, QuorumSettingsWriter>();
         }

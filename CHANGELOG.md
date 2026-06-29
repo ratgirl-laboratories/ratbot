@@ -1,11 +1,20 @@
 # Changelog
 
-All notable user-facing changes to RatBot will be documented in this file.
+All notable user-facing changes to ratbot will be documented in this file.
 
 This project uses [Towncrier](https://towncrier.readthedocs.io/) for human-written changelog fragments.
+
+<!-- towncrier release notes start -->
+
+## 0.2.0 - 2026-06-29
+
+### Added
+
+- Added /timezone, allowing users to configure a private IANA timezone for date-aware commands. (#timezone-command)
+
 
 ## 0.1.0 - 2026-06-28
 
 ### Added
 
-- Established the current RatBot codebase as the v0.1.0 release baseline.
+- Established the current ratbot codebase as the v0.1.0 release baseline.

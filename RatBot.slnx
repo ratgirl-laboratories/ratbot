@@ -24,7 +24,6 @@
     <Folder Name="/build/">
         <File Path="Directory.Build.props" />
         <File Path="Directory.Packages.props" />
-        <File Path="dotnet-tools.json" />
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/RatBot.Domain.Tests/RatBot.Domain.Tests.csproj" />

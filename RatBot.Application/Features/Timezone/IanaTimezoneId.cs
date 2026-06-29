@@ -21,22 +21,22 @@ public sealed record IanaTimezoneId
     public static ErrorOr<IanaTimezoneId> Create(string rawInput)
     {
         if (string.IsNullOrWhiteSpace(rawInput))
-            return TimeZoneErrors.InvalidInput;
+            return TimezoneErrors.InvalidInput;
 
         string candidate = rawInput.Trim();
 
         if (!LooksLikeIanaTimeZoneId(candidate))
-            return TimeZoneErrors.InvalidInput;
+            return TimezoneErrors.InvalidInput;
 
         TimeZoneInfo? timeZone = TimeZoneInfo
             .GetSystemTimeZones()
             .FirstOrDefault(timeZone => string.Equals(timeZone.Id, candidate, StringComparison.OrdinalIgnoreCase));
 
-        return timeZone is null ? TimeZoneErrors.InvalidInput : new IanaTimezoneId(timeZone.Id);
+        return timeZone is null ? TimezoneErrors.InvalidInput : new IanaTimezoneId(timeZone.Id);
     }
 
     private static bool LooksLikeIanaTimeZoneId(string value) =>
-        string.Equals(value, "UTC", StringComparison.Ordinal) || value.Contains('/', StringComparison.Ordinal);
+        string.Equals(value, "UTC", StringComparison.OrdinalIgnoreCase) || value.Contains('/', StringComparison.Ordinal);
 
     /// <summary>
     /// Resolves this timezone identifier to the runtime timezone information.

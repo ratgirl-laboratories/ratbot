@@ -1,8 +1,6 @@
 using System.Collections.Immutable;
-using System.Net.Http;
 using Microsoft.Extensions.Options;
 using RatBot.Application.Features.Logging;
-using RatBot.Discord.Features.Logging;
 using RatBot.Discord.Gateway;
 using RatBot.Domain.Features.Logging;
 using RatBot.Infrastructure.Features.Logging;
@@ -111,8 +109,7 @@ public sealed class ModerationLoggingGatewayHandler(
                     configuration,
                     LoggingEventKind.Edit,
                     BuildEditText(userMessage, before, after),
-                    before.Attachments,
-                    CancellationToken.None
+                    before.Attachments
                 )
                 .ConfigureAwait(false);
 
@@ -162,8 +159,7 @@ public sealed class ModerationLoggingGatewayHandler(
                     configuration,
                     LoggingEventKind.Delete,
                     BuildDeleteText(message.Id, channelValue.Id, observed, evidence, now),
-                    evidence.Attachments,
-                    CancellationToken.None
+                    evidence.Attachments
                 )
                 .ConfigureAwait(false);
 
@@ -205,7 +201,7 @@ public sealed class ModerationLoggingGatewayHandler(
                 return;
 
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            ulong[] messageIds = messages.Select(message => message.Id).Distinct().ToArray();
+            ImmutableArray<ulong> messageIds = messages.Select(message => message.Id).Distinct().ToImmutableArray();
             IReadOnlyDictionary<ulong, ObservedMessage> observed = await store
                 .FindObservedMessagesAsync(messageIds, CancellationToken.None)
                 .ConfigureAwait(false);
@@ -215,8 +211,7 @@ public sealed class ModerationLoggingGatewayHandler(
                     configuration,
                     LoggingEventKind.BulkDelete,
                     BuildBulkDeleteText(channelValue.Id, messageIds, observed, evidence, now),
-                    FlattenAttachments(evidence.Values),
-                    CancellationToken.None
+                    FlattenAttachments(evidence.Values)
                 )
                 .ConfigureAwait(false);
 
@@ -259,39 +254,14 @@ public sealed class ModerationLoggingGatewayHandler(
         );
     }
 
-    private async Task<byte[]?> TryDownloadAttachmentAsync(string url, CancellationToken ct)
-    {
-        try
-        {
-            using HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-                return null;
-
-            long? contentLength = response.Content.Headers.ContentLength;
-
-            if (contentLength > _options.MaxAttachmentBytesPerAttachment)
-                return null;
-
-            await using Stream stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            using MemoryStream buffer = new MemoryStream();
-            await stream.CopyToAsync(buffer, ct).ConfigureAwait(false);
-
-            return buffer.Length <= _options.MaxAttachmentBytesPerAttachment ? buffer.ToArray() : null;
-        }
-        catch (Exception ex)
-        {
-            _logger.Debug(ex, "Failed to download moderation logging attachment evidence.");
-            return null;
-        }
-    }
+    private Task<byte[]?> TryDownloadAttachmentAsync(string url, CancellationToken ct) =>
+        AttachmentEvidenceDownloader.TryDownloadAsync(httpClient, url, _options.MaxAttachmentBytesPerAttachment, _logger, ct);
 
     private async Task<IUserMessage?> SendLogAsync(
         LoggingConfiguration configuration,
         LoggingEventKind eventKind,
         string text,
-        IReadOnlyCollection<CachedAttachmentEvidence> attachments,
-        CancellationToken ct
+        IReadOnlyCollection<CachedAttachmentEvidence> attachments
     )
     {
         ulong? destinationChannelId = configuration.GetDestinationChannelId(eventKind);
@@ -302,16 +272,16 @@ public sealed class ModerationLoggingGatewayHandler(
         if (attachments.Count == 0)
             return await logChannel.SendMessageAsync(text).ConfigureAwait(false);
 
-        List<FileAttachment> files = new List<FileAttachment>();
-        List<MemoryStream> streams = new List<MemoryStream>();
+        Queue<FileAttachment> files = new Queue<FileAttachment>();
+        Queue<MemoryStream> streams = new Queue<MemoryStream>();
 
         try
         {
             foreach (CachedAttachmentEvidence attachment in attachments)
             {
                 MemoryStream stream = new MemoryStream(attachment.Bytes);
-                streams.Add(stream);
-                files.Add(new FileAttachment(stream, $"evidence-{attachment.Index}.bin"));
+                streams.Enqueue(stream);
+                files.Enqueue(new FileAttachment(stream, $"evidence-{attachment.Index}.bin"));
             }
 
             return await logChannel.SendFilesAsync(files, text).ConfigureAwait(false);
@@ -354,23 +324,23 @@ public sealed class ModerationLoggingGatewayHandler(
 
     private static string BuildBulkDeleteText(
         ulong channelId,
-        IReadOnlyCollection<ulong> messageIds,
+        ImmutableArray<ulong> messageIds,
         IReadOnlyDictionary<ulong, ObservedMessage> observed,
         IReadOnlyDictionary<ulong, MessageEvidence> evidence,
         DateTimeOffset deletedAtUtc
     )
     {
-        int attributedCount = messageIds.Count(messageId => observed.ContainsKey(messageId));
-        int evidenceCount = messageIds.Count(messageId => evidence.ContainsKey(messageId));
+        int attributedCount = messageIds.Count(observed.ContainsKey);
+        int evidenceCount = messageIds.Count(evidence.ContainsKey);
         string details = BuildBulkDeleteDetails(messageIds, observed, evidence);
 
-        return $"Bulk delete in <#{channelId}> at {deletedAtUtc:O}. Messages: {messageIds.Count}. "
+        return $"Bulk delete in <#{channelId}> at {deletedAtUtc:O}. Messages: {messageIds.Length}. "
             + $"Attributed: {attributedCount}. Cached evidence: {evidenceCount}.\n"
             + details;
     }
 
     private static string BuildBulkDeleteDetails(
-        IReadOnlyCollection<ulong> messageIds,
+        ImmutableArray<ulong> messageIds,
         IReadOnlyDictionary<ulong, ObservedMessage> observed,
         IReadOnlyDictionary<ulong, MessageEvidence> evidence
     )
@@ -390,14 +360,14 @@ public sealed class ModerationLoggingGatewayHandler(
             lines.Add($"- `{messageId}` {author}.{content}");
         }
 
-        if (messageIds.Count > 20)
-            lines.Add($"- and {messageIds.Count - 20} more message(s).");
+        if (messageIds.Length > 20)
+            lines.Add($"- and {messageIds.Length - 20} more message(s).");
 
         return string.Join('\n', lines);
     }
 
-    private static IReadOnlyCollection<CachedAttachmentEvidence> FlattenAttachments(IEnumerable<MessageEvidence> evidence) =>
-        evidence.SelectMany(item => item.Attachments).Take(10).ToArray();
+    private static ImmutableArray<CachedAttachmentEvidence> FlattenAttachments(IEnumerable<MessageEvidence> evidence) =>
+        evidence.SelectMany(item => item.Attachments).Take(10).ToImmutableArray();
 
     private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
 

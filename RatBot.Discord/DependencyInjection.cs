@@ -1,11 +1,14 @@
 using Microsoft.Extensions.Options;
 using RatBot.Application.Common.Forums;
 using RatBot.Application.Common.Interfaces;
+using RatBot.Application.Features.Logging;
 using RatBot.Application.Features.Quorum;
 using RatBot.Discord.BackgroundWorkers;
 using RatBot.Discord.Commands.AdventureLeaderboard;
 using RatBot.Discord.Commands.Emoji;
 using RatBot.Discord.Configuration;
+using RatBot.Discord.Features.Logging;
+using RatBot.Discord.Features.Logging.Gateway;
 using RatBot.Discord.Features.Meta;
 using RatBot.Discord.Features.Meta.BackgroundWorkers;
 using RatBot.Discord.Features.Meta.Gateway;
@@ -36,6 +39,18 @@ public static class DependencyInjection
                 .AddOptions<AdventureLeaderboardOptions>()
                 .Bind(configuration.GetSection(AdventureLeaderboardOptions.SectionName))
                 .Validate(options => options.AdventurerRoleId != 0, "Adventure role id is required.")
+                .ValidateOnStart();
+
+            services
+                .AddOptions<LoggingOptions>()
+                .Bind(configuration.GetSection(LoggingOptions.SectionName))
+                .Validate(options => options.MaxCachedMessageCount > 0, "Logging max cached message count must be positive.")
+                .Validate(options => options.MaxAttachmentCountPerMessage >= 0, "Logging max attachment count per message must not be negative.")
+                .Validate(
+                    options => options.MaxAttachmentBytesPerAttachment >= 0,
+                    "Logging max attachment bytes per attachment must not be negative."
+                )
+                .Validate(options => options.MaxTotalCachedAttachmentBytes >= 0, "Logging max total cached attachment bytes must not be negative.")
                 .ValidateOnStart();
 
             services.AddSingleton(sp =>
@@ -70,6 +85,10 @@ public static class DependencyInjection
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<ReactionGatewayHandler>());
             services.AddSingleton<MessageContentGatewayHandler>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<MessageContentGatewayHandler>());
+            services.AddSingleton(sp => new MessageEvidenceCache(sp.GetRequiredService<IOptions<LoggingOptions>>().Value.ToEvidenceCacheSettings()));
+            services.AddSingleton<HttpClient>();
+            services.AddSingleton<ModerationLoggingGatewayHandler>();
+            services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<ModerationLoggingGatewayHandler>());
             services.AddSingleton<ImageBurstSpamGatewayHandler>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<ImageBurstSpamGatewayHandler>());
             services.AddSingleton<UserUpdatedGatewayHandler>();

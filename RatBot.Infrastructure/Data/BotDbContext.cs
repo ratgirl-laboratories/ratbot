@@ -1,4 +1,5 @@
 using RatBot.Application.Common.Interfaces;
+using RatBot.Domain.Features.Logging;
 using RatBot.Domain.SecretRole;
 
 namespace RatBot.Infrastructure.Data;
@@ -15,12 +16,16 @@ public sealed class BotDbContext(DbContextOptions<BotDbContext> options) : DbCon
 
     public DbSet<EmojiUsageCount> EmojiUsageCounts => Set<EmojiUsageCount>();
     public DbSet<ImageSpamSettings> ImageSpamSettings => Set<ImageSpamSettings>();
+    public DbSet<LoggingConfiguration> LoggingConfigurations => Set<LoggingConfiguration>();
+    public DbSet<LoggingExcludedChannel> LoggingExcludedChannels => Set<LoggingExcludedChannel>();
     public DbSet<MemberColourPreference> MemberColourPreferences => Set<MemberColourPreference>();
+    public DbSet<MessageLogEntry> MessageLogEntries => Set<MessageLogEntry>();
     public DbSet<MetaProposalState> MetaProposalStates => Set<MetaProposalState>();
     public DbSet<MetaSuggestionSettings> MetaSuggestionSettings => Set<MetaSuggestionSettings>();
     public DbSet<QuorumSettings> QuorumSettings => Set<QuorumSettings>();
     public DbSet<QuorumSettingsRole> QuorumSettingsRoles => Set<QuorumSettingsRole>();
     public DbSet<RoleColourOption> RoleColourOptions => Set<RoleColourOption>();
+    public DbSet<ObservedMessage> ObservedMessages => Set<ObservedMessage>();
     public DbSet<SecretRoleSetting> TemporaryPingRoleSettings => Set<SecretRoleSetting>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

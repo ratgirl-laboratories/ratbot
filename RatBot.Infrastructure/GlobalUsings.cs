@@ -6,6 +6,7 @@ global using Microsoft.EntityFrameworkCore.Migrations;
 global using RatBot.Application.Features.Meta;
 global using RatBot.Domain.Adventure;
 global using RatBot.Domain.Emoji;
+global using RatBot.Domain.Features.Logging;
 global using RatBot.Domain.Features.Meta;
 global using RatBot.Domain.Moderation;
 global using RatBot.Domain.Quorum;

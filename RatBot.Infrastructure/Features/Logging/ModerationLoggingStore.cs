@@ -1,5 +1,3 @@
-using RatBot.Domain.Features.Logging;
-
 namespace RatBot.Infrastructure.Features.Logging;
 
 public sealed class ModerationLoggingStore(BotDbContext db)

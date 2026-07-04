@@ -1,5 +1,3 @@
-using RatBot.Domain.Features.Logging;
-
 namespace RatBot.Infrastructure.Features.Logging.Persistence;
 
 public sealed class ObservedMessageConfiguration : IEntityTypeConfiguration<ObservedMessage>

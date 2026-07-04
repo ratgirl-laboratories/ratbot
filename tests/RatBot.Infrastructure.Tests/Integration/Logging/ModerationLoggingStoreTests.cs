@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using RatBot.Domain.Features.Logging;
 using RatBot.Infrastructure.Data;
 using RatBot.Infrastructure.Features.Logging;
-using Shouldly;
 
 namespace RatBot.Infrastructure.Tests.Integration.Logging;
 

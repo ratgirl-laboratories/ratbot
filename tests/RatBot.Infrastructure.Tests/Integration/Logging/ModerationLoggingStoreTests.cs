@@ -122,6 +122,25 @@ public sealed class ModerationLoggingStoreTests
     }
 
     [Test]
+    public async Task ObserveMessageAsync_WhenMessageAlreadyObserved_PreservesOriginalObservation()
+    {
+        DateTimeOffset firstObservedAt = new DateTimeOffset(2026, 7, 4, 10, 0, 0, TimeSpan.Zero);
+        DateTimeOffset secondObservedAt = firstObservedAt.AddMinutes(5);
+        await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
+        ModerationLoggingStore store = new ModerationLoggingStore(db);
+
+        await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, firstObservedAt), CancellationToken.None);
+        await store.ObserveMessageAsync(new ObservedMessage(10, 1, 4, 5, secondObservedAt), CancellationToken.None);
+
+        List<ObservedMessage> observedMessages = await db.ObservedMessages.AsNoTracking().ToListAsync();
+
+        observedMessages.Count.ShouldBe(1);
+        observedMessages.Single().ObservedAtUtc.ShouldBe(firstObservedAt);
+        observedMessages.Single().ChannelId.ShouldBe(2UL);
+        observedMessages.Single().AuthorId.ShouldBe(3UL);
+    }
+
+    [Test]
     public async Task RecordLogEntriesAsync_AllowsBulkDeleteRowsPointingAtSameLogMessage()
     {
         await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();

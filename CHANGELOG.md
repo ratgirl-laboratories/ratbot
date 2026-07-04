@@ -6,6 +6,13 @@ This project uses [Towncrier](https://towncrier.readthedocs.io/) for human-writt
 
 <!-- towncrier release notes start -->
 
+## 0.3.0 - 2026-07-04
+
+### Added
+
+- Added moderation logging for deleted, bulk-deleted, and edited messages, with configurable destinations, exclusions, and bounded evidence retention
+
+
 ## 0.2.0 - 2026-06-29
 
 ### Added

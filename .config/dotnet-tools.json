@@ -23,13 +23,6 @@
       ],
       "rollForward": true
     },
-    "sa1201ier": {
-      "version": "0.1.21",
-      "commands": [
-        "sa1201ier"
-      ],
-      "rollForward": true
-    },
     "husky": {
       "version": "0.9.1",
       "commands": [

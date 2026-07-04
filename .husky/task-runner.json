@@ -2,14 +2,6 @@
     "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
     "tasks": [
         {
-            "name": "sa1201ier",
-            "group": "pre-commit",
-            "command": "dotnet",
-            "args": ["sa1201ier", "${staged}"],
-            "include": ["**/*.cs"],
-            "output": "always"
-        },
-        {
             "name": "csharpier",
             "group": "pre-commit",
             "command": "dotnet",

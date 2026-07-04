@@ -40,6 +40,22 @@ public sealed class MessageEvidenceCacheTests
     }
 
     [Test]
+    public void Put_WhenEntryIsRefreshed_DoesNotEvictItFromStaleQueueEntry()
+    {
+        MessageEvidenceCache cache = new MessageEvidenceCache(Settings(maxCachedMessageCount: 2));
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        cache.Put(Evidence(1, attachmentSize: 10), now, TimeSpan.FromMinutes(5));
+        cache.Put(Evidence(2, attachmentSize: 10), now.AddSeconds(1), TimeSpan.FromMinutes(5));
+        cache.Put(Evidence(1, attachmentSize: 10), now.AddSeconds(2), TimeSpan.FromMinutes(5));
+        cache.Put(Evidence(3, attachmentSize: 10), now.AddSeconds(3), TimeSpan.FromMinutes(5));
+
+        cache.TryGet(1, now.AddSeconds(3), out MessageEvidence _).ShouldBeTrue();
+        cache.TryGet(2, now.AddSeconds(3), out MessageEvidence _).ShouldBeFalse();
+        cache.TryGet(3, now.AddSeconds(3), out MessageEvidence _).ShouldBeTrue();
+    }
+
+    [Test]
     public void Put_EnforcesTotalAttachmentBytes()
     {
         MessageEvidenceCache cache = new MessageEvidenceCache(
@@ -52,6 +68,24 @@ public sealed class MessageEvidenceCacheTests
 
         cache.TryGet(1, now.AddSeconds(1), out MessageEvidence _).ShouldBeFalse();
         cache.TryGet(2, now.AddSeconds(1), out MessageEvidence _).ShouldBeTrue();
+    }
+
+    [Test]
+    public void Put_WhenCapacityIsSustained_EvictsOldestCurrentEntries()
+    {
+        MessageEvidenceCache cache = new MessageEvidenceCache(Settings(maxCachedMessageCount: 3));
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        for (ulong messageId = 1; messageId <= 10; messageId++)
+            cache.Put(Evidence(messageId, attachmentSize: 10), now.AddSeconds(messageId), TimeSpan.FromMinutes(5));
+
+        cache.Count.ShouldBe(3);
+
+        for (ulong messageId = 1; messageId <= 7; messageId++)
+            cache.TryGet(messageId, now.AddSeconds(10), out MessageEvidence _).ShouldBeFalse();
+
+        for (ulong messageId = 8; messageId <= 10; messageId++)
+            cache.TryGet(messageId, now.AddSeconds(10), out MessageEvidence _).ShouldBeTrue();
     }
 
     [Test]

@@ -140,6 +140,40 @@ public sealed class ModerationLoggingStoreTests
     }
 
     [Test]
+    public async Task DeleteExpiredMetadataAsync_DeletesExpiredRowsAndPreservesBoundaryAndRecentRows()
+    {
+        DateTimeOffset cutoff = new DateTimeOffset(2026, 7, 4, 10, 0, 0, TimeSpan.Zero);
+        await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
+        ModerationLoggingStore store = new ModerationLoggingStore(db);
+
+        await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, cutoff.AddSeconds(-1)), CancellationToken.None);
+        await store.ObserveMessageAsync(new ObservedMessage(11, 1, 2, 3, cutoff), CancellationToken.None);
+        await store.ObserveMessageAsync(new ObservedMessage(12, 1, 2, 3, cutoff.AddSeconds(1)), CancellationToken.None);
+        await store.RecordLogEntriesAsync(
+            new[]
+            {
+                new MessageLogEntry(20, 30, cutoff.AddSeconds(-1)),
+                new MessageLogEntry(21, 31, cutoff),
+                new MessageLogEntry(22, 32, cutoff.AddSeconds(1)),
+            },
+            CancellationToken.None
+        );
+
+        int firstDeletedCount = await store.DeleteExpiredMetadataAsync(cutoff, CancellationToken.None);
+        int secondDeletedCount = await store.DeleteExpiredMetadataAsync(cutoff, CancellationToken.None);
+
+        firstDeletedCount.ShouldBe(2);
+        secondDeletedCount.ShouldBe(0);
+        (
+            await db.ObservedMessages.AsNoTracking().Select(message => message.OriginalMessageId).OrderBy(messageId => messageId).ToListAsync()
+        ).ShouldBe([11UL, 12UL]);
+        (await db.MessageLogEntries.AsNoTracking().Select(entry => entry.OriginalMessageId).OrderBy(messageId => messageId).ToListAsync()).ShouldBe([
+            21UL,
+            22UL,
+        ]);
+    }
+
+    [Test]
     public void PersistenceModel_DoesNotContainPrivateEvidenceOrDiscordIdentityFields()
     {
         using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();

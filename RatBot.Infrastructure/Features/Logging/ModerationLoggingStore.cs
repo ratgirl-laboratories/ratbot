@@ -134,4 +134,18 @@ public sealed class ModerationLoggingStore(BotDbContext db)
         db.MessageLogEntries.AddRange(materialized);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
+
+    public async Task<int> DeleteExpiredMetadataAsync(DateTimeOffset cutoffUtc, CancellationToken ct)
+    {
+        int deletedObservedMessages = await db
+            .ObservedMessages.Where(message => message.ObservedAtUtc < cutoffUtc)
+            .ExecuteDeleteAsync(ct)
+            .ConfigureAwait(false);
+        int deletedLogEntries = await db
+            .MessageLogEntries.Where(entry => entry.CapturedAtUtc < cutoffUtc)
+            .ExecuteDeleteAsync(ct)
+            .ConfigureAwait(false);
+
+        return deletedObservedMessages + deletedLogEntries;
+    }
 }

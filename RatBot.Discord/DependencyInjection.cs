@@ -8,6 +8,7 @@ using RatBot.Discord.Commands.AdventureLeaderboard;
 using RatBot.Discord.Commands.Emoji;
 using RatBot.Discord.Configuration;
 using RatBot.Discord.Features.Logging;
+using RatBot.Discord.Features.Logging.BackgroundWorkers;
 using RatBot.Discord.Features.Logging.Gateway;
 using RatBot.Discord.Features.Meta;
 using RatBot.Discord.Features.Meta.BackgroundWorkers;
@@ -51,6 +52,8 @@ public static class DependencyInjection
                     "Logging max attachment bytes per attachment must not be negative."
                 )
                 .Validate(options => options.MaxTotalCachedAttachmentBytes >= 0, "Logging max total cached attachment bytes must not be negative.")
+                .Validate(options => options.MetadataRetentionPeriod > TimeSpan.Zero, "Logging metadata retention period must be positive.")
+                .Validate(options => options.MetadataCleanupInterval > TimeSpan.Zero, "Logging metadata cleanup interval must be positive.")
                 .ValidateOnStart();
 
             services.AddSingleton(sp =>
@@ -116,6 +119,7 @@ public static class DependencyInjection
             services.AddHostedService<RoleColourSyncBackgroundWorker>();
             services.AddHostedService<MetaProposalPollBackgroundWorker>();
             services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardManager>());
+            services.AddHostedService<LoggingMetadataCleanupBackgroundWorker>();
 
             // Quorum Module
             services.AddSingleton<DiscordQuorumMemberIndex>();

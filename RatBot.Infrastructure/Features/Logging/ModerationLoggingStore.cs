@@ -1,9 +1,10 @@
 namespace RatBot.Infrastructure.Features.Logging;
 
-public sealed class ModerationLoggingStore(BotDbContext db)
+public sealed class ModerationLoggingStore(IDbContextFactory<BotDbContext> dbContextFactory)
 {
     public async Task<int> DeleteExpiredMetadataAsync(DateTimeOffset cutoffUtc, CancellationToken ct)
     {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
         int deletedObservedMessages = await db
             .ObservedMessages.Where(message => message.ObservedAtUtc < cutoffUtc)
             .ExecuteDeleteAsync(ct)
@@ -18,6 +19,8 @@ public sealed class ModerationLoggingStore(BotDbContext db)
 
     public async Task<ExcludeChannelResult> ExcludeAsync(ulong guildId, ulong channelId, DateTimeOffset excludedAtUtc, CancellationToken ct)
     {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
         bool exists = await IsExcludedAsync(guildId, channelId, ct).ConfigureAwait(false);
 
         if (exists)
@@ -28,18 +31,24 @@ public sealed class ModerationLoggingStore(BotDbContext db)
         return ExcludeChannelResult.Excluded;
     }
 
-    public async Task<ObservedMessage?> FindObservedMessageAsync(ulong originalMessageId, CancellationToken ct) =>
-        await db
+    public async Task<ObservedMessage?> FindObservedMessageAsync(ulong originalMessageId, CancellationToken ct)
+    {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
+        return await db
             .ObservedMessages.AsNoTracking()
             .SingleOrDefaultAsync(message => message.OriginalMessageId == originalMessageId, ct)
             .ConfigureAwait(false);
+    }
 
     public async Task<IReadOnlyDictionary<ulong, ObservedMessage>> FindObservedMessagesAsync(
         IEnumerable<ulong> originalMessageIds,
         CancellationToken ct
     )
     {
-        ulong[] ids = originalMessageIds.Distinct().ToArray();
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IEnumerable<ulong> ids = originalMessageIds.Distinct();
 
         return await db
             .ObservedMessages.AsNoTracking()
@@ -50,6 +59,8 @@ public sealed class ModerationLoggingStore(BotDbContext db)
 
     public async Task<LoggingConfiguration> GetConfigurationAsync(ulong guildId, CancellationToken ct)
     {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
         LoggingConfiguration? configuration = await db
             .LoggingConfigurations.AsNoTracking()
             .SingleOrDefaultAsync(configuration => configuration.GuildId == guildId, ct)
@@ -60,6 +71,8 @@ public sealed class ModerationLoggingStore(BotDbContext db)
 
     public async Task<IncludeChannelResult> IncludeAsync(ulong guildId, ulong channelId, CancellationToken ct)
     {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
         LoggingExcludedChannel? excludedChannel = await db
             .LoggingExcludedChannels.Where(channel => channel.GuildId == guildId && channel.ChannelId == channelId)
             .SingleOrDefaultAsync(ct)
@@ -73,22 +86,32 @@ public sealed class ModerationLoggingStore(BotDbContext db)
         return IncludeChannelResult.Included;
     }
 
-    public async Task<bool> IsExcludedAsync(ulong guildId, ulong channelId, CancellationToken ct) =>
-        await db
+    public async Task<bool> IsExcludedAsync(ulong guildId, ulong channelId, CancellationToken ct)
+    {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
+        return await db
             .LoggingExcludedChannels.AsNoTracking()
             .AnyAsync(channel => channel.GuildId == guildId && channel.ChannelId == channelId, ct)
             .ConfigureAwait(false);
+    }
 
-    public async Task<IReadOnlyList<LoggingExcludedChannel>> ListExclusionsAsync(ulong guildId, CancellationToken ct) =>
-        await db
+    public async Task<IReadOnlyList<LoggingExcludedChannel>> ListExclusionsAsync(ulong guildId, CancellationToken ct)
+    {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
+        return await db
             .LoggingExcludedChannels.AsNoTracking()
             .Where(channel => channel.GuildId == guildId)
             .OrderBy(channel => channel.ChannelId)
             .ToListAsync(ct)
             .ConfigureAwait(false);
+    }
 
     public async Task ObserveMessageAsync(ObservedMessage observedMessage, CancellationToken ct)
     {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
         ObservedMessage? existing = await db.ObservedMessages.FindAsync(new object[] { observedMessage.OriginalMessageId }, ct).ConfigureAwait(false);
 
         if (existing is null)
@@ -99,6 +122,8 @@ public sealed class ModerationLoggingStore(BotDbContext db)
 
     public async Task RecordLogEntriesAsync(IEnumerable<MessageLogEntry> entries, CancellationToken ct)
     {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
         MessageLogEntry[] materialized = entries.ToArray();
 
         if (materialized.Length == 0)
@@ -117,7 +142,9 @@ public sealed class ModerationLoggingStore(BotDbContext db)
         CancellationToken ct
     )
     {
-        if (evidenceRetentionPeriod.HasValue && evidenceRetentionPeriod.Value <= TimeSpan.Zero)
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+
+        if (evidenceRetentionPeriod <= TimeSpan.Zero)
             return Error.Validation(description: "Evidence retention period must be greater than zero seconds.");
 
         LoggingConfiguration existing = await GetConfigurationAsync(guildId, ct).ConfigureAwait(false);

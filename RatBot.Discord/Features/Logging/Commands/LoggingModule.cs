@@ -8,7 +8,7 @@ namespace RatBot.Discord.Features.Logging.Commands;
 
 [Group("logging", "Moderation logging commands.")]
 [DefaultMemberPermissions(GuildPermission.Administrator)]
-public sealed class LoggingModule(BotDbContext db) : InteractionModuleBase<IInteractionContext>
+public sealed class LoggingModule(IDbContextFactory<BotDbContext> contextFactory) : InteractionModuleBase<IInteractionContext>
 {
     [SlashCommand("config", "View or update moderation logging configuration.")]
     [RequireUserPermission(GuildPermission.Administrator)]
@@ -24,7 +24,7 @@ public sealed class LoggingModule(BotDbContext db) : InteractionModuleBase<IInte
         if (!await ValidateAsync().ConfigureAwait(false))
             return;
 
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = new ModerationLoggingStore(contextFactory);
         ErrorOr<LoggingConfiguration> result = await store
             .UpdateConfigurationAsync(
                 Context.Guild.Id,
@@ -56,7 +56,7 @@ public sealed class LoggingModule(BotDbContext db) : InteractionModuleBase<IInte
             return;
 
         IChannel targetChannel = channel ?? Context.Channel;
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = new ModerationLoggingStore(contextFactory);
         ExcludeChannelResult result = await store
             .ExcludeAsync(Context.Guild.Id, targetChannel.Id, DateTimeOffset.UtcNow, CancellationToken.None)
             .ConfigureAwait(false);
@@ -80,7 +80,7 @@ public sealed class LoggingModule(BotDbContext db) : InteractionModuleBase<IInte
             return;
 
         IChannel targetChannel = channel ?? Context.Channel;
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = new ModerationLoggingStore(contextFactory);
         IncludeChannelResult result = await store.IncludeAsync(Context.Guild.Id, targetChannel.Id, CancellationToken.None).ConfigureAwait(false);
 
         string response =
@@ -97,14 +97,16 @@ public sealed class LoggingModule(BotDbContext db) : InteractionModuleBase<IInte
         if (!await ValidateAsync().ConfigureAwait(false))
             return;
 
-        IReadOnlyList<LoggingExcludedChannel> exclusions = await db
+        BotDbContext db = await contextFactory.CreateDbContextAsync().ConfigureAwait(false);
+
+        LoggingExcludedChannel[] exclusions = await db
             .LoggingExcludedChannels.AsNoTracking()
             .Where(exclusion => exclusion.GuildId == Context.Guild.Id)
             .OrderBy(exclusion => exclusion.ChannelId)
-            .ToListAsync(CancellationToken.None)
+            .ToArrayAsync(CancellationToken.None)
             .ConfigureAwait(false);
 
-        if (exclusions.Count == 0)
+        if (exclusions.Length == 0)
         {
             await RespondAsync("No channels are excluded from logging.", ephemeral: true).ConfigureAwait(false);
             return;

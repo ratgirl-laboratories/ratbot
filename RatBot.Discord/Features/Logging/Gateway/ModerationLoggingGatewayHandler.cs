@@ -9,8 +9,8 @@ namespace RatBot.Discord.Features.Logging.Gateway;
 
 public sealed class ModerationLoggingGatewayHandler(
     DiscordSocketClient discordClient,
-    IServiceScopeFactory scopeFactory,
     MessageEvidenceCache evidenceCache,
+    ModerationLoggingStore loggingStore,
     HttpClient httpClient,
     IOptions<LoggingOptions> options,
     ILogger logger
@@ -46,20 +46,18 @@ public sealed class ModerationLoggingGatewayHandler(
 
         try
         {
-            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-            ModerationLoggingStore store = scope.ServiceProvider.GetRequiredService<ModerationLoggingStore>();
-            LoggingConfiguration configuration = await store.GetConfigurationAsync(guildId, CancellationToken.None).ConfigureAwait(false);
+            LoggingConfiguration configuration = await loggingStore.GetConfigurationAsync(guildId, CancellationToken.None).ConfigureAwait(false);
 
             if (!configuration.Enabled)
                 return;
 
-            bool isExcluded = await store.IsExcludedAsync(guildId, userMessage.Channel.Id, CancellationToken.None).ConfigureAwait(false);
+            bool isExcluded = await loggingStore.IsExcludedAsync(guildId, userMessage.Channel.Id, CancellationToken.None).ConfigureAwait(false);
 
             if (isExcluded)
                 return;
 
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            await store
+            await loggingStore
                 .ObserveMessageAsync(
                     new ObservedMessage(userMessage.Id, guildId, userMessage.Channel.Id, userMessage.Author.Id, now),
                     CancellationToken.None
@@ -89,14 +87,12 @@ public sealed class ModerationLoggingGatewayHandler(
 
         try
         {
-            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-            ModerationLoggingStore store = scope.ServiceProvider.GetRequiredService<ModerationLoggingStore>();
-            LoggingConfiguration configuration = await store.GetConfigurationAsync(guildId, CancellationToken.None).ConfigureAwait(false);
+            LoggingConfiguration configuration = await loggingStore.GetConfigurationAsync(guildId, CancellationToken.None).ConfigureAwait(false);
 
             if (!configuration.Enabled)
                 return;
 
-            bool isExcluded = await store.IsExcludedAsync(guildId, channel.Id, CancellationToken.None).ConfigureAwait(false);
+            bool isExcluded = await loggingStore.IsExcludedAsync(guildId, channel.Id, CancellationToken.None).ConfigureAwait(false);
 
             if (isExcluded)
                 return;
@@ -114,13 +110,14 @@ public sealed class ModerationLoggingGatewayHandler(
                 .ConfigureAwait(false);
 
             if (logMessage is not null)
-                await store
+                await loggingStore
                     .RecordLogEntriesAsync(new[] { new MessageLogEntry(userMessage.Id, logMessage.Id, now) }, CancellationToken.None)
                     .ConfigureAwait(false);
 
-            await store
+            await loggingStore
                 .ObserveMessageAsync(new ObservedMessage(userMessage.Id, guildId, channel.Id, userMessage.Author.Id, now), CancellationToken.None)
                 .ConfigureAwait(false);
+
             evidenceCache.Put(after, now, configuration.EvidenceRetentionPeriod);
         }
         catch (Exception ex)
@@ -139,20 +136,18 @@ public sealed class ModerationLoggingGatewayHandler(
 
         try
         {
-            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-            ModerationLoggingStore store = scope.ServiceProvider.GetRequiredService<ModerationLoggingStore>();
-            LoggingConfiguration configuration = await store.GetConfigurationAsync(guildId, CancellationToken.None).ConfigureAwait(false);
+            LoggingConfiguration configuration = await loggingStore.GetConfigurationAsync(guildId, CancellationToken.None).ConfigureAwait(false);
 
             if (!configuration.Enabled)
                 return;
 
-            bool isExcluded = await store.IsExcludedAsync(guildId, channelValue.Id, CancellationToken.None).ConfigureAwait(false);
+            bool isExcluded = await loggingStore.IsExcludedAsync(guildId, channelValue.Id, CancellationToken.None).ConfigureAwait(false);
 
             if (isExcluded)
                 return;
 
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            ObservedMessage? observed = await store.FindObservedMessageAsync(message.Id, CancellationToken.None).ConfigureAwait(false);
+            ObservedMessage? observed = await loggingStore.FindObservedMessageAsync(message.Id, CancellationToken.None).ConfigureAwait(false);
             evidenceCache.TryGet(message.Id, now, out MessageEvidence evidence);
 
             IUserMessage? logMessage = await SendLogAsync(
@@ -164,7 +159,7 @@ public sealed class ModerationLoggingGatewayHandler(
                 .ConfigureAwait(false);
 
             if (logMessage is not null)
-                await store
+                await loggingStore
                     .RecordLogEntriesAsync(new[] { new MessageLogEntry(message.Id, logMessage.Id, now) }, CancellationToken.None)
                     .ConfigureAwait(false);
 
@@ -188,21 +183,19 @@ public sealed class ModerationLoggingGatewayHandler(
 
         try
         {
-            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-            ModerationLoggingStore store = scope.ServiceProvider.GetRequiredService<ModerationLoggingStore>();
-            LoggingConfiguration configuration = await store.GetConfigurationAsync(guildId, CancellationToken.None).ConfigureAwait(false);
+            LoggingConfiguration configuration = await loggingStore.GetConfigurationAsync(guildId, CancellationToken.None).ConfigureAwait(false);
 
             if (!configuration.Enabled)
                 return;
 
-            bool isExcluded = await store.IsExcludedAsync(guildId, channelValue.Id, CancellationToken.None).ConfigureAwait(false);
+            bool isExcluded = await loggingStore.IsExcludedAsync(guildId, channelValue.Id, CancellationToken.None).ConfigureAwait(false);
 
             if (isExcluded)
                 return;
 
             DateTimeOffset now = DateTimeOffset.UtcNow;
             ImmutableArray<ulong> messageIds = messages.Select(message => message.Id).Distinct().ToImmutableArray();
-            IReadOnlyDictionary<ulong, ObservedMessage> observed = await store
+            IReadOnlyDictionary<ulong, ObservedMessage> observed = await loggingStore
                 .FindObservedMessagesAsync(messageIds, CancellationToken.None)
                 .ConfigureAwait(false);
             IReadOnlyDictionary<ulong, MessageEvidence> evidence = evidenceCache.GetMany(messageIds, now);
@@ -219,7 +212,7 @@ public sealed class ModerationLoggingGatewayHandler(
             {
                 MessageLogEntry[] entries = messageIds.Select(messageId => new MessageLogEntry(messageId, logMessage.Id, now)).ToArray();
 
-                await store.RecordLogEntriesAsync(entries, CancellationToken.None).ConfigureAwait(false);
+                await loggingStore.RecordLogEntriesAsync(entries, CancellationToken.None).ConfigureAwait(false);
             }
 
             foreach (ulong messageId in messageIds)
@@ -382,9 +375,9 @@ public sealed class ModerationLoggingGatewayHandler(
         string sanitized = value.ReplaceLineEndings(" ").Trim();
 
         if (sanitized.Length > 140)
-            sanitized = string.Concat(sanitized.AsSpan(0, 137), "...");
+            sanitized = $"{sanitized.AsSpan(0, 137)}...";
 
-        return $"`{sanitized.Replace("`", "'", StringComparison.Ordinal)}`";
+        return $"`{sanitized.Replace('`', '\'')}`";
     }
 
     private static bool TryGetGuildId(IChannel channel, out ulong guildId)

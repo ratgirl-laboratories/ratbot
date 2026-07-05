@@ -21,11 +21,13 @@ public sealed class LoggingInteractionTests
     [Test]
     public async Task ExcludeAsync_WhenChannelOmitted_UsesCurrentChannel()
     {
-        await using BotDbContext db = CreateDbContext(nameof(ExcludeAsync_WhenChannelOmitted_UsesCurrentChannel));
-        LoggingInteractionFixture fixture = new LoggingInteractionFixture(db);
+        using ServiceProvider services = CreateServices(nameof(ExcludeAsync_WhenChannelOmitted_UsesCurrentChannel));
+        IDbContextFactory<BotDbContext> contextFactory = services.GetRequiredService<IDbContextFactory<BotDbContext>>();
+        LoggingInteractionFixture fixture = new LoggingInteractionFixture(contextFactory);
 
         await fixture.Module.ExcludeAsync();
 
+        await using BotDbContext db = await contextFactory.CreateDbContextAsync();
         (await db.LoggingExcludedChannels.SingleAsync()).ChannelId.ShouldBe(ChannelId);
         await fixture.Interaction.Received(1).RespondAsync($"Logging is now excluded in <#{ChannelId}>.", ephemeral: true);
     }
@@ -33,13 +35,15 @@ public sealed class LoggingInteractionTests
     [Test]
     public async Task IncludeAsync_RemovesExclusion()
     {
-        await using BotDbContext db = CreateDbContext(nameof(IncludeAsync_RemovesExclusion));
-        LoggingInteractionFixture fixture = new LoggingInteractionFixture(db);
+        using ServiceProvider services = CreateServices(nameof(IncludeAsync_RemovesExclusion));
+        IDbContextFactory<BotDbContext> contextFactory = services.GetRequiredService<IDbContextFactory<BotDbContext>>();
+        LoggingInteractionFixture fixture = new LoggingInteractionFixture(contextFactory);
         await fixture.Module.ExcludeAsync();
         fixture.Interaction.ClearReceivedCalls();
 
         await fixture.Module.IncludeAsync();
 
+        await using BotDbContext db = await contextFactory.CreateDbContextAsync();
         (await db.LoggingExcludedChannels.CountAsync()).ShouldBe(0);
         await fixture.Interaction.Received(1).RespondAsync($"Logging is enabled again in <#{ChannelId}>.", ephemeral: true);
     }
@@ -47,8 +51,9 @@ public sealed class LoggingInteractionTests
     [Test]
     public async Task ExclusionsAsync_ListsPersistedExclusions()
     {
-        await using BotDbContext db = CreateDbContext(nameof(ExclusionsAsync_ListsPersistedExclusions));
-        LoggingInteractionFixture fixture = new LoggingInteractionFixture(db);
+        using ServiceProvider services = CreateServices(nameof(ExclusionsAsync_ListsPersistedExclusions));
+        IDbContextFactory<BotDbContext> contextFactory = services.GetRequiredService<IDbContextFactory<BotDbContext>>();
+        LoggingInteractionFixture fixture = new LoggingInteractionFixture(contextFactory);
         await fixture.Module.ExcludeAsync();
         fixture.Interaction.ClearReceivedCalls();
 
@@ -60,14 +65,16 @@ public sealed class LoggingInteractionTests
     [Test]
     public async Task ConfigAsync_PartialUpdatePreservesOmittedValues()
     {
-        await using BotDbContext db = CreateDbContext(nameof(ConfigAsync_PartialUpdatePreservesOmittedValues));
-        LoggingInteractionFixture fixture = new LoggingInteractionFixture(db);
+        using ServiceProvider services = CreateServices(nameof(ConfigAsync_PartialUpdatePreservesOmittedValues));
+        IDbContextFactory<BotDbContext> contextFactory = services.GetRequiredService<IDbContextFactory<BotDbContext>>();
+        LoggingInteractionFixture fixture = new LoggingInteractionFixture(contextFactory);
 
         await fixture.Module.ConfigAsync(enabled: true, deleteLogChannel: fixture.DeleteLogChannel, retentionPeriod: 600);
         fixture.Interaction.ClearReceivedCalls();
 
         await fixture.Module.ConfigAsync(editLogChannel: fixture.EditLogChannel);
 
+        await using BotDbContext db = await contextFactory.CreateDbContextAsync();
         RatBot.Domain.Features.Logging.LoggingConfiguration configuration = await db.LoggingConfigurations.SingleAsync();
         configuration.Enabled.ShouldBeTrue();
         configuration.DeleteLogChannelId.ShouldBe(DeleteLogChannelId);
@@ -88,11 +95,13 @@ public sealed class LoggingInteractionTests
     [Test]
     public async Task ConfigAsync_WhenEnablingWithoutEitherChannel_Fails()
     {
-        await using BotDbContext db = CreateDbContext(nameof(ConfigAsync_WhenEnablingWithoutEitherChannel_Fails));
-        LoggingInteractionFixture fixture = new LoggingInteractionFixture(db);
+        using ServiceProvider services = CreateServices(nameof(ConfigAsync_WhenEnablingWithoutEitherChannel_Fails));
+        IDbContextFactory<BotDbContext> contextFactory = services.GetRequiredService<IDbContextFactory<BotDbContext>>();
+        LoggingInteractionFixture fixture = new LoggingInteractionFixture(contextFactory);
 
         await fixture.Module.ConfigAsync(enabled: true);
 
+        await using BotDbContext db = await contextFactory.CreateDbContextAsync();
         (await db.LoggingConfigurations.CountAsync()).ShouldBe(0);
         await fixture.Interaction.Received(1).RespondAsync("Enable logging only after setting a delete or edit log channel.", ephemeral: true);
     }
@@ -100,8 +109,7 @@ public sealed class LoggingInteractionTests
     [Test]
     public async Task LoggingModule_RegistersConfigCommandWithFourOptionalParameters()
     {
-        await using BotDbContext db = CreateDbContext(nameof(LoggingModule_RegistersConfigCommandWithFourOptionalParameters));
-        using ServiceProvider services = new ServiceCollection().AddSingleton(db).BuildServiceProvider();
+        using ServiceProvider services = CreateServices(nameof(LoggingModule_RegistersConfigCommandWithFourOptionalParameters));
         InteractionService interactionService = new InteractionService(
             new DiscordSocketClient(),
             new InteractionServiceConfig { AutoServiceScopes = true }
@@ -114,17 +122,14 @@ public sealed class LoggingInteractionTests
         command.Parameters.Select(parameter => parameter.IsRequired).ShouldBe([false, false, false, false]);
     }
 
-    private static BotDbContext CreateDbContext(string name)
-    {
-        DbContextOptions<BotDbContext> options = new DbContextOptionsBuilder<BotDbContext>().UseInMemoryDatabase(name).Options;
-        return new BotDbContext(options);
-    }
+    private static ServiceProvider CreateServices(string name) =>
+        new ServiceCollection().AddDbContextFactory<BotDbContext>(options => options.UseInMemoryDatabase(name)).BuildServiceProvider();
 
     private sealed class LoggingInteractionFixture
     {
         private readonly IInteractionContext _context = Substitute.For<IInteractionContext>();
 
-        public LoggingInteractionFixture(BotDbContext db)
+        public LoggingInteractionFixture(IDbContextFactory<BotDbContext> contextFactory)
         {
             Guild.Id.Returns(GuildId);
             User.GuildPermissions.Returns(new GuildPermissions(administrator: true));
@@ -139,7 +144,7 @@ public sealed class LoggingInteractionTests
             _context.User.Returns(User);
             _context.Interaction.Returns(Interaction);
 
-            Module = new LoggingModule(db);
+            Module = new LoggingModule(contextFactory);
             ((IInteractionModuleBase)Module).SetContext(_context);
         }
 

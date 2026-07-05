@@ -14,8 +14,7 @@ public sealed class ModerationLoggingStoreTests
     [Test]
     public async Task ExcludeAsync_AndIncludeAsync_TogglePersistedExclusion()
     {
-        await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = CreateStore();
 
         ExcludeChannelResult firstExclude = await store.ExcludeAsync(1, 2, DateTimeOffset.UtcNow, CancellationToken.None);
         ExcludeChannelResult secondExclude = await store.ExcludeAsync(1, 2, DateTimeOffset.UtcNow, CancellationToken.None);
@@ -33,8 +32,7 @@ public sealed class ModerationLoggingStoreTests
     [Test]
     public async Task UpdateConfigurationAsync_PartialUpdatePreservesOmittedValues()
     {
-        await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = CreateStore();
 
         ErrorOr<LoggingConfiguration> first = await store
             .UpdateConfigurationAsync(1, true, 10, null, TimeSpan.FromMinutes(30), CancellationToken.None)
@@ -55,7 +53,7 @@ public sealed class ModerationLoggingStoreTests
     public async Task UpdateConfigurationAsync_WhenEnablingWithoutEitherChannel_ReturnsError()
     {
         await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = CreateStore();
 
         ErrorOr<LoggingConfiguration> result = await store
             .UpdateConfigurationAsync(1, true, null, null, null, CancellationToken.None)
@@ -69,8 +67,7 @@ public sealed class ModerationLoggingStoreTests
     [Test]
     public async Task GetConfigurationAsync_ReturnsCurrentPersistedStatePerGuild()
     {
-        await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = CreateStore();
         await store.UpdateConfigurationAsync(1, true, 10, null, null, CancellationToken.None).ConfigureAwait(false);
         await store.UpdateConfigurationAsync(2, false, 20, null, null, CancellationToken.None).ConfigureAwait(false);
 
@@ -88,7 +85,7 @@ public sealed class ModerationLoggingStoreTests
     public async Task ExcludedChannelGate_PreventsObservationAndLogEntryPersistence()
     {
         await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = CreateStore();
         await store.ExcludeAsync(1, 2, DateTimeOffset.UtcNow, CancellationToken.None);
 
         if (!await store.IsExcludedAsync(1, 2, CancellationToken.None))
@@ -105,8 +102,7 @@ public sealed class ModerationLoggingStoreTests
     public async Task ObserveMessageAsync_PersistsMetadataOnly_AndSupportsDeleteAttribution()
     {
         DateTimeOffset observedAt = DateTimeOffset.UtcNow;
-        await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = CreateStore();
 
         await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, observedAt), CancellationToken.None);
 
@@ -126,7 +122,7 @@ public sealed class ModerationLoggingStoreTests
         DateTimeOffset firstObservedAt = new DateTimeOffset(2026, 7, 4, 10, 0, 0, TimeSpan.Zero);
         DateTimeOffset secondObservedAt = firstObservedAt.AddMinutes(5);
         await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = CreateStore();
 
         await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, firstObservedAt), CancellationToken.None);
         await store.ObserveMessageAsync(new ObservedMessage(10, 1, 4, 5, secondObservedAt), CancellationToken.None);
@@ -143,7 +139,7 @@ public sealed class ModerationLoggingStoreTests
     public async Task RecordLogEntriesAsync_AllowsBulkDeleteRowsPointingAtSameLogMessage()
     {
         await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = CreateStore();
         DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
 
         await store.RecordLogEntriesAsync(
@@ -162,7 +158,7 @@ public sealed class ModerationLoggingStoreTests
     {
         DateTimeOffset cutoff = new DateTimeOffset(2026, 7, 4, 10, 0, 0, TimeSpan.Zero);
         await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
-        ModerationLoggingStore store = new ModerationLoggingStore(db);
+        ModerationLoggingStore store = CreateStore();
 
         await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, cutoff.AddSeconds(-1)), CancellationToken.None);
         await store.ObserveMessageAsync(new ObservedMessage(11, 1, 2, 3, cutoff), CancellationToken.None);
@@ -206,5 +202,12 @@ public sealed class ModerationLoggingStoreTests
 
         foreach (string column in loggingColumns)
             forbiddenFragments.Any(fragment => column.Contains(fragment, StringComparison.OrdinalIgnoreCase)).ShouldBeFalse(column);
+    }
+
+    private static ModerationLoggingStore CreateStore() => new ModerationLoggingStore(new PostgresBotDbContextFactory());
+
+    private sealed class PostgresBotDbContextFactory : IDbContextFactory<BotDbContext>
+    {
+        public BotDbContext CreateDbContext() => PostgresDatabaseFixture.CreateDbContext();
     }
 }

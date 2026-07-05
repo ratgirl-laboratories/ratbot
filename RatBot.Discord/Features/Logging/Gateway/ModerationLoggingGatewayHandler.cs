@@ -95,21 +95,27 @@ public sealed class ModerationLoggingGatewayHandler(
                 return;
 
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            evidenceCache.TryGet(userMessage.Id, now, out MessageEvidence before);
-
+            bool hasBefore = evidenceCache.TryGet(userMessage.Id, now, out MessageEvidence before);
             MessageEvidence after = await CreateEvidenceAsync(guildId, userMessage, now, CancellationToken.None).ConfigureAwait(false);
-            IUserMessage? logMessage = await SendLogAsync(
-                    configuration,
-                    LoggingEventKind.Edit,
-                    BuildEditText(userMessage, before, after),
-                    before.Attachments
-                )
-                .ConfigureAwait(false);
 
-            if (logMessage is not null)
-                await loggingStore
-                    .RecordLogEntriesAsync(new[] { new MessageLogEntry(userMessage.Id, logMessage.Id, now) }, CancellationToken.None)
+            if (
+                TryGetPreviousContent(cachedMessage, before, hasBefore, out string? beforeContent)
+                && !string.Equals(beforeContent, after.Content, StringComparison.Ordinal)
+            )
+            {
+                IUserMessage? logMessage = await SendLogAsync(
+                        configuration,
+                        LoggingEventKind.Edit,
+                        BuildEditText(userMessage, beforeContent, after.Content),
+                        hasBefore ? before.Attachments : ImmutableArray<CachedAttachmentEvidence>.Empty
+                    )
                     .ConfigureAwait(false);
+
+                if (logMessage is not null)
+                    await loggingStore
+                        .RecordLogEntriesAsync(new[] { new MessageLogEntry(userMessage.Id, logMessage.Id, now) }, CancellationToken.None)
+                        .ConfigureAwait(false);
+            }
 
             await loggingStore
                 .ObserveMessageAsync(new ObservedMessage(userMessage.Id, guildId, channel.Id, userMessage.Author.Id, now), CancellationToken.None)
@@ -207,6 +213,7 @@ public sealed class ModerationLoggingGatewayHandler(
             IReadOnlyDictionary<ulong, ObservedMessage> observed = await loggingStore
                 .FindObservedMessagesAsync(messageIds, CancellationToken.None)
                 .ConfigureAwait(false);
+
             IReadOnlyDictionary<ulong, MessageEvidence> evidence = evidenceCache.GetMany(messageIds, now);
             ImmutableArray<ulong> qualifyingMessageIds = GetQualifyingBulkDeletedMessageIds(messageIds, messages, observed, evidence);
 
@@ -318,10 +325,10 @@ public sealed class ModerationLoggingGatewayHandler(
         }
     }
 
-    private static string BuildEditText(SocketUserMessage message, MessageEvidence before, MessageEvidence after)
+    private static string BuildEditText(SocketUserMessage message, string? beforeContentValue, string? afterContentValue)
     {
-        string beforeContent = before.Content is null ? "unavailable" : CodeBlock(before.Content);
-        string afterContent = after.Content is null ? "unavailable" : CodeBlock(after.Content);
+        string beforeContent = beforeContentValue is null ? "unavailable" : CodeBlock(beforeContentValue);
+        string afterContent = afterContentValue is null ? "unavailable" : CodeBlock(afterContentValue);
 
         return $"Message edited in <#{message.Channel.Id}> by <@{message.Author.Id}> (`{message.Author.Id}`), message `{message.Id}`.\n"
             + $"Before: {beforeContent}\n"
@@ -455,6 +462,24 @@ public sealed class ModerationLoggingGatewayHandler(
         IReadOnlyDictionary<ulong, MessageEvidence> evidence,
         HashSet<ulong> messageIds
     ) => evidence.Where(pair => messageIds.Contains(pair.Key)).ToDictionary(pair => pair.Key, pair => pair.Value);
+
+    private static bool TryGetPreviousContent(Cacheable<IMessage, ulong> cachedMessage, MessageEvidence before, bool hasBefore, out string? content)
+    {
+        if (hasBefore)
+        {
+            content = before.Content;
+            return true;
+        }
+
+        if (cachedMessage.HasValue)
+        {
+            content = NullIfEmpty(cachedMessage.Value.Content);
+            return true;
+        }
+
+        content = null;
+        return false;
+    }
 
     private static bool IsQualifyingUserMessage(IMessage message) =>
         message.Source == MessageSource.User && !message.Author.IsBot && !message.Author.IsWebhook;

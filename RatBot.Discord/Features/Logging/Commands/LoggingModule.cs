@@ -48,7 +48,15 @@ public sealed class LoggingModule(IDbContextFactory<BotDbContext> contextFactory
     [SlashCommand("exclude", "Exclude a channel from moderation logging.")]
     public async Task ExcludeAsync(
         [Summary("channel", "Channel to exclude.")]
-        [ChannelTypes(ChannelType.Text, ChannelType.NewsThread, ChannelType.PublicThread, ChannelType.PrivateThread)]
+        [ChannelTypes(
+            ChannelType.Text,
+            ChannelType.News,
+            ChannelType.Forum,
+            ChannelType.Category,
+            ChannelType.NewsThread,
+            ChannelType.PublicThread,
+            ChannelType.PrivateThread
+        )]
             IChannel? channel = null
     )
     {
@@ -72,7 +80,15 @@ public sealed class LoggingModule(IDbContextFactory<BotDbContext> contextFactory
     [SlashCommand("include", "Enable moderation logging again for a channel.")]
     public async Task IncludeAsync(
         [Summary("channel", "Channel to include.")]
-        [ChannelTypes(ChannelType.Text, ChannelType.NewsThread, ChannelType.PublicThread, ChannelType.PrivateThread)]
+        [ChannelTypes(
+            ChannelType.Text,
+            ChannelType.News,
+            ChannelType.Forum,
+            ChannelType.Category,
+            ChannelType.NewsThread,
+            ChannelType.PublicThread,
+            ChannelType.PrivateThread
+        )]
             IChannel? channel = null
     )
     {

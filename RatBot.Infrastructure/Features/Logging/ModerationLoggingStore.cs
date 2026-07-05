@@ -96,6 +96,20 @@ public sealed class ModerationLoggingStore(IDbContextFactory<BotDbContext> dbCon
             .ConfigureAwait(false);
     }
 
+    public async Task<bool> IsAnyExcludedAsync(ulong guildId, IEnumerable<ulong> channelIds, CancellationToken ct)
+    {
+        BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
+        ulong[] ids = channelIds.Distinct().ToArray();
+
+        if (ids.Length == 0)
+            return false;
+
+        return await db
+            .LoggingExcludedChannels.AsNoTracking()
+            .AnyAsync(channel => channel.GuildId == guildId && ids.Contains(channel.ChannelId), ct)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<LoggingExcludedChannel>> ListExclusionsAsync(ulong guildId, CancellationToken ct)
     {
         BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);

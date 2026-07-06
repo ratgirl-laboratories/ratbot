@@ -16,6 +16,10 @@ public sealed class ModerationLoggingGatewayHandler(
     ILogger logger
 ) : IDiscordGatewayHandler
 {
+    private const MessageFlags ComponentLogMessageFlags = MessageFlags.ComponentsV2 | MessageFlags.SuppressNotification;
+
+    private static readonly AllowedMentions NoMentions = AllowedMentions.None;
+
     private readonly ILogger _logger = logger.ForContext<ModerationLoggingGatewayHandler>();
     private readonly LoggingOptions _options = options.Value;
 
@@ -98,18 +102,20 @@ public sealed class ModerationLoggingGatewayHandler(
             bool hasBefore = evidenceCache.TryGet(userMessage.Id, now, out MessageEvidence before);
             MessageEvidence after = await CreateEvidenceAsync(guildId, userMessage, now, CancellationToken.None).ConfigureAwait(false);
 
-            if (
-                TryGetPreviousContent(cachedMessage, before, hasBefore, out string? beforeContent)
-                && !string.Equals(beforeContent, after.Content, StringComparison.Ordinal)
-            )
+            bool hasPreviousContent = TryGetPreviousContent(cachedMessage, before, hasBefore, out string? beforeContent);
+
+            if (!hasPreviousContent || !string.Equals(beforeContent, after.Content, StringComparison.Ordinal))
             {
-                IUserMessage? logMessage = await SendLogAsync(
-                        configuration,
-                        LoggingEventKind.Edit,
-                        BuildEditText(userMessage, beforeContent, after.Content),
-                        hasBefore ? before.Attachments : ImmutableArray<CachedAttachmentEvidence>.Empty
-                    )
-                    .ConfigureAwait(false);
+                ModerationLogComponents.ModerationLogMessage componentLog = ModerationLogComponents.BuildEditLog(
+                    ModerationLogComponents.GetJumpUrl(userMessage),
+                    userMessage.Author.Id,
+                    userMessage.EditedTimestamp ?? now,
+                    beforeContent,
+                    after.Content,
+                    hasBefore ? before.Attachments : ImmutableArray<CachedAttachmentEvidence>.Empty
+                );
+
+                IUserMessage? logMessage = await SendComponentLogAsync(configuration, LoggingEventKind.Edit, componentLog).ConfigureAwait(false);
 
                 if (logMessage is not null)
                     await loggingStore
@@ -165,13 +171,19 @@ public sealed class ModerationLoggingGatewayHandler(
                 return;
             }
 
-            IUserMessage? logMessage = await SendLogAsync(
-                    configuration,
-                    LoggingEventKind.Delete,
-                    BuildDeleteText(message.Id, channelValue.Id, observed, evidence, now),
-                    evidence.Attachments
-                )
-                .ConfigureAwait(false);
+            ulong authorId = observed?.AuthorId ?? evidence.AuthorId;
+            string? precedingMessageJumpUrl = await TryGetPrecedingMessageJumpUrlAsync(channelValue, message.Id).ConfigureAwait(false);
+            ModerationLogComponents.ModerationLogMessage componentLog = ModerationLogComponents.BuildDeleteLog(
+                channelValue.Id,
+                authorId,
+                observed?.ObservedAtUtc,
+                now,
+                precedingMessageJumpUrl,
+                hasEvidence ? evidence.Content : null,
+                hasEvidence ? evidence.Attachments : ImmutableArray<CachedAttachmentEvidence>.Empty
+            );
+
+            IUserMessage? logMessage = await SendComponentLogAsync(configuration, LoggingEventKind.Delete, componentLog).ConfigureAwait(false);
 
             if (logMessage is not null)
                 await loggingStore
@@ -302,7 +314,7 @@ public sealed class ModerationLoggingGatewayHandler(
             return null;
 
         if (attachments.Count == 0)
-            return await logChannel.SendMessageAsync(text).ConfigureAwait(false);
+            return await logChannel.SendMessageAsync(text, allowedMentions: NoMentions).ConfigureAwait(false);
 
         Queue<FileAttachment> files = new Queue<FileAttachment>();
         Queue<MemoryStream> streams = new Queue<MemoryStream>();
@@ -316,7 +328,7 @@ public sealed class ModerationLoggingGatewayHandler(
                 files.Enqueue(new FileAttachment(stream, $"evidence-{attachment.Index}.bin"));
             }
 
-            return await logChannel.SendFilesAsync(files, text).ConfigureAwait(false);
+            return await logChannel.SendFilesAsync(files, text, allowedMentions: NoMentions).ConfigureAwait(false);
         }
         finally
         {
@@ -325,33 +337,43 @@ public sealed class ModerationLoggingGatewayHandler(
         }
     }
 
-    private static string BuildEditText(SocketUserMessage message, string? beforeContentValue, string? afterContentValue)
-    {
-        string beforeContent = beforeContentValue is null ? "unavailable" : CodeBlock(beforeContentValue);
-        string afterContent = afterContentValue is null ? "unavailable" : CodeBlock(afterContentValue);
-
-        return $"Message edited in <#{message.Channel.Id}> by <@{message.Author.Id}> (`{message.Author.Id}`), message `{message.Id}`.\n"
-            + $"Before: {beforeContent}\n"
-            + $"After: {afterContent}";
-    }
-
-    private static string BuildDeleteText(
-        ulong messageId,
-        ulong channelId,
-        ObservedMessage? observed,
-        MessageEvidence evidence,
-        DateTimeOffset deletedAtUtc
+    private async Task<IUserMessage?> SendComponentLogAsync(
+        LoggingConfiguration configuration,
+        LoggingEventKind eventKind,
+        ModerationLogComponents.ModerationLogMessage message
     )
     {
-        string author =
-            observed is not null ? $"<@{observed.AuthorId}> (`{observed.AuthorId}`)"
-            : evidence.AuthorId == 0 ? "unknown"
-            : $"<@{evidence.AuthorId}> (`{evidence.AuthorId}`)";
-        string observedAt = observed is null ? "unknown" : observed.ObservedAtUtc.ToString("O");
-        string content = evidence.Content is null ? "unavailable" : CodeBlock(evidence.Content);
+        ulong? destinationChannelId = configuration.GetDestinationChannelId(eventKind);
 
-        return $"Message deleted in <#{channelId}>. Author: {author}. Message: `{messageId}`. Observed: {observedAt}. Deleted: {deletedAtUtc:O}.\n"
-            + $"Cached content: {content}";
+        if (destinationChannelId is null || discordClient.GetChannel(destinationChannelId.Value) is not IMessageChannel logChannel)
+            return null;
+
+        if (message.Attachments.Length == 0)
+            return await logChannel
+                .SendMessageAsync(components: message.Components, allowedMentions: NoMentions, flags: ComponentLogMessageFlags)
+                .ConfigureAwait(false);
+
+        Queue<FileAttachment> files = new Queue<FileAttachment>();
+        Queue<MemoryStream> streams = new Queue<MemoryStream>();
+
+        try
+        {
+            foreach (ModerationLogComponents.ModerationLogAttachment attachment in message.Attachments)
+            {
+                MemoryStream stream = new MemoryStream(attachment.Bytes);
+                streams.Enqueue(stream);
+                files.Enqueue(new FileAttachment(stream, attachment.FileName));
+            }
+
+            return await logChannel
+                .SendFilesAsync(files, components: message.Components, allowedMentions: NoMentions, flags: ComponentLogMessageFlags)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            foreach (MemoryStream stream in streams)
+                await stream.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     private static string BuildBulkDeleteText(
@@ -366,7 +388,7 @@ public sealed class ModerationLoggingGatewayHandler(
         int evidenceCount = messageIds.Count(evidence.ContainsKey);
         string details = BuildBulkDeleteDetails(messageIds, observed, evidence);
 
-        return $"Bulk delete in <#{channelId}> at {deletedAtUtc:O}. Messages: {messageIds.Length}. "
+        return $"Bulk delete in <#{channelId}> at {ModerationLogComponents.FormatTimestamp(deletedAtUtc)}. Messages: {messageIds.Length}. "
             + $"Attributed: {attributedCount}. Cached evidence: {evidenceCount}.\n"
             + details;
     }
@@ -481,16 +503,29 @@ public sealed class ModerationLoggingGatewayHandler(
         return false;
     }
 
+    private async Task<string?> TryGetPrecedingMessageJumpUrlAsync(IMessageChannel channel, ulong deletedMessageId)
+    {
+        try
+        {
+            IEnumerable<IMessage> messages = await channel
+                .GetMessagesAsync(deletedMessageId, Direction.Before, 1, CacheMode.AllowDownload)
+                .FlattenAsync()
+                .ConfigureAwait(false);
+            IMessage? precedingMessage = messages.FirstOrDefault();
+
+            return precedingMessage is null ? null : ModerationLogComponents.GetJumpUrl(precedingMessage);
+        }
+        catch (Exception ex)
+        {
+            _logger.Debug(ex, "Failed to fetch preceding message for deleted message {MessageId}.", deletedMessageId);
+            return null;
+        }
+    }
+
     private static bool IsQualifyingUserMessage(IMessage message) =>
         message.Source == MessageSource.User && !message.Author.IsBot && !message.Author.IsWebhook;
 
     private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
-
-    private static string CodeBlock(string value)
-    {
-        string sanitized = value.Replace("```", "`\u200b``", StringComparison.Ordinal);
-        return $"```{sanitized}```";
-    }
 
     private static string SingleLineSnippet(string value)
     {

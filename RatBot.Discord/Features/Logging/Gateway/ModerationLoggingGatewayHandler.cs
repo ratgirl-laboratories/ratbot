@@ -508,7 +508,7 @@ public sealed class ModerationLoggingGatewayHandler(
         try
         {
             IEnumerable<IMessage> messages = await channel
-                .GetMessagesAsync(deletedMessageId, Direction.Before, 1, CacheMode.AllowDownload)
+                .GetMessagesAsync(deletedMessageId, Direction.Before, 1)
                 .FlattenAsync()
                 .ConfigureAwait(false);
             IMessage? precedingMessage = messages.FirstOrDefault();

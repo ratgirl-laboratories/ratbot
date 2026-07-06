@@ -29,8 +29,8 @@ public sealed class ModerationLogComponentsTests
             "https://discord.com/channels/1/2/3",
             4,
             new DateTimeOffset(2026, 7, 6, 12, 34, 56, TimeSpan.FromHours(1)),
-            null,
-            null,
+            beforeContent: null,
+            afterContent: null,
             Array.Empty<CachedAttachmentEvidence>()
         );
 
@@ -55,7 +55,7 @@ public sealed class ModerationLogComponentsTests
 
         string content = GetTextContent(log).Single(value => value.StartsWith("```ansi", StringComparison.Ordinal));
 
-        content.ShouldBe("```ansi\n" + "Before: \e[31mH\e[0ma\e[31my\e[0mes\n" + "After:  \e[32mh\e[0ma\e[32mt\e[0mes\n" + "```");
+        content.ShouldBe("```ansi\nBefore: \e[1;31mH\e[0ma\e[1;31my\e[0mes\n" + "After:  \e[1;32mh\e[0ma\e[1;32mt\e[0mes\n" + "```");
     }
 
     [Test]
@@ -150,10 +150,10 @@ public sealed class ModerationLogComponentsTests
         ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildDeleteLog(
             2,
             4,
-            null,
+            observedAt: null,
             DateTimeOffset.UtcNow,
-            null,
-            null,
+            precedingMessageJumpUrl: null,
+            content: null,
             new[] { video, file }
         );
 
@@ -169,9 +169,9 @@ public sealed class ModerationLogComponentsTests
         ModerationLogComponents.BuildDeleteLog(
             2,
             4,
-            null,
+            observedAt: null,
             new DateTimeOffset(2026, 7, 6, 11, 0, 0, TimeSpan.Zero),
-            null,
+            precedingMessageJumpUrl: null,
             "cached",
             Array.Empty<CachedAttachmentEvidence>()
         );

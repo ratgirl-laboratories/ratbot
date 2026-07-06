@@ -29,11 +29,8 @@ internal static class ModerationLogComponents
                 )
             )
             .WithSeparator(new SeparatorBuilder())
-            .WithTextDisplay(new TextDisplayBuilder().WithContent("### Before"))
-            .WithTextDisplay(new TextDisplayBuilder().WithContent(ContentBlock(beforeContent)))
-            .WithSeparator(new SeparatorBuilder())
-            .WithTextDisplay(new TextDisplayBuilder().WithContent("### After"))
-            .WithTextDisplay(new TextDisplayBuilder().WithContent(ContentBlock(afterContent)));
+            .WithTextDisplay(new TextDisplayBuilder().WithContent("### Content"))
+            .WithTextDisplay(new TextDisplayBuilder().WithContent(EditContentBlock(beforeContent, afterContent)));
 
         AddAttachmentComponents(container, attachmentModels);
 
@@ -146,10 +143,25 @@ internal static class ModerationLogComponents
 
     private static string ContentBlock(string? value) => value is null ? "*Unavailable*" : CodeBlock(value);
 
+    private static string EditContentBlock(string? beforeContent, string? afterContent)
+    {
+        if (beforeContent is null || afterContent is null)
+            return AnsiCodeBlock($"Before: {beforeContent ?? "*Unavailable*"}\nAfter:  {afterContent ?? "*Unavailable*"}");
+
+        MessageEditDiff diff = new MessageEditDiffer().BuildDiff(beforeContent, afterContent);
+        return AnsiCodeBlock(MessageEditDiffAnsiRenderer.Render(diff));
+    }
+
     private static string CodeBlock(string value)
     {
         string sanitized = value.Replace("```", "`\u200b``", StringComparison.Ordinal);
         return $"```{sanitized}```";
+    }
+
+    private static string AnsiCodeBlock(string value)
+    {
+        string sanitized = value.Replace("```", "`\u200b``", StringComparison.Ordinal);
+        return $"```ansi\n{sanitized}\n```";
     }
 
     internal sealed record ModerationLogMessage(MessageComponent Components, ImmutableArray<ModerationLogAttachment> Attachments);

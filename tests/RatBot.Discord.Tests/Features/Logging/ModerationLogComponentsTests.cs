@@ -36,11 +36,26 @@ public sealed class ModerationLogComponentsTests
 
         string[] text = GetTextContent(log);
 
-        text.ShouldContain("### Before");
-        text.ShouldContain("*Unavailable*");
-        text.ShouldContain("### After");
-        text.Count(value => string.Equals(value, "*Unavailable*", StringComparison.Ordinal)).ShouldBe(2);
+        text.ShouldContain("### Content");
+        text.ShouldContain("```ansi\nBefore: *Unavailable*\nAfter:  *Unavailable*\n```");
         text.Single(value => value.Contains("**Edited**", StringComparison.Ordinal)).ShouldContain("2026-07-06 11:34:56Z");
+    }
+
+    [Test]
+    public void BuildEditLog_RendersMessageDiffAsAnsiBlock()
+    {
+        ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildEditLog(
+            "https://discord.com/channels/1/2/3",
+            4,
+            DateTimeOffset.UtcNow,
+            "Hayes",
+            "hates",
+            Array.Empty<CachedAttachmentEvidence>()
+        );
+
+        string content = GetTextContent(log).Single(value => value.StartsWith("```ansi", StringComparison.Ordinal));
+
+        content.ShouldBe("```ansi\n" + "Before: \e[31mH\e[0ma\e[31my\e[0mes\n" + "After:  \e[32mh\e[0ma\e[32mt\e[0mes\n" + "```");
     }
 
     [Test]

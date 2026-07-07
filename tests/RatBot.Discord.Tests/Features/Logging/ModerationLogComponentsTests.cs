@@ -27,18 +27,19 @@ public sealed class ModerationLogComponentsTests
     {
         ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildEditLog(
             "https://discord.com/channels/1/2/3",
+            2,
             4,
-            new DateTimeOffset(2026, 7, 6, 12, 34, 56, TimeSpan.FromHours(1)),
             beforeContent: null,
             afterContent: null,
             Array.Empty<CachedAttachmentEvidence>()
         );
 
-        string[] text = GetTextContent(log);
-
-        text.ShouldContain("### Content");
-        text.ShouldContain("```ansi\nBefore: *Unavailable*\nAfter:  *Unavailable*\n```");
-        text.Single(value => value.Contains("**Edited**", StringComparison.Ordinal)).ShouldContain("2026-07-06 11:34:56Z");
+        log.Embed.Title.ShouldBeNull();
+        log.Embed.Timestamp.ShouldBeNull();
+        log.Embed.Description.ShouldBe("```ansi\n*Unavailable*\n```\n```ansi\n*Unavailable*\n```");
+        log.Embed.Description.ShouldNotContain("Content");
+        log.Embed.Description.ShouldNotContain("Before:");
+        log.Embed.Description.ShouldNotContain("After:");
     }
 
     [Test]
@@ -46,103 +47,114 @@ public sealed class ModerationLogComponentsTests
     {
         ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildEditLog(
             "https://discord.com/channels/1/2/3",
+            2,
             4,
-            DateTimeOffset.UtcNow,
             "Hayes",
             "hates",
             Array.Empty<CachedAttachmentEvidence>()
         );
 
-        string content = GetTextContent(log).Single(value => value.StartsWith("```ansi", StringComparison.Ordinal));
-
-        content.ShouldBe("```ansi\nBefore: \e[1;31mH\e[0ma\e[1;31my\e[0mes\n" + "After:  \e[1;32mh\e[0ma\e[1;32mt\e[0mes\n" + "```");
+        log.Embed.Description.ShouldBe("```ansi\n\e[1;31mH\e[0ma\e[1;31my\e[0mes\n```\n```ansi\n\e[1;32mh\e[0ma\e[1;32mt\e[0mes\n```");
+        log.Embed.Description.ShouldNotContain("Before:");
+        log.Embed.Description.ShouldNotContain("After:");
     }
 
     [Test]
-    public void BuildDeleteLog_IncludesPrecedingMessageLinkWhenProvided()
+    public void BuildEditLog_RendersContextFieldsInline()
+    {
+        ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildEditLog(
+            "https://discord.com/channels/1/2/3",
+            2,
+            4,
+            "Hayes",
+            "hates",
+            Array.Empty<CachedAttachmentEvidence>()
+        );
+
+        EmbedField[] fields = log.Embed.Fields.ToArray();
+
+        log.Embed.Color.ShouldBe(new Color(14399750));
+        fields.Select(field => field.Name).ShouldBe(new[] { "Author", "Message", "Channel" });
+        fields.Select(field => field.Value).ShouldBe(new[] { "<@4> (`4`)", "[Link](https://discord.com/channels/1/2/3)", "<#2>" });
+        fields.ShouldAllBe(field => field.Inline);
+    }
+
+    [Test]
+    public void BuildDeleteLog_UsesPrecedingMessageLinkWhenProvided()
     {
         ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildDeleteLog(
             2,
             4,
-            new DateTimeOffset(2026, 7, 6, 10, 0, 0, TimeSpan.Zero),
-            new DateTimeOffset(2026, 7, 6, 11, 0, 0, TimeSpan.Zero),
             "https://discord.com/channels/1/2/3",
             "cached",
             Array.Empty<CachedAttachmentEvidence>()
         );
 
-        string metadata = GetTextContent(log).Single(value => value.Contains("**Preceding Message**", StringComparison.Ordinal));
+        EmbedField[] fields = log.Embed.Fields.ToArray();
 
-        metadata.ShouldContain("**Preceding Message**: [Jump to message](https://discord.com/channels/1/2/3)");
+        log.Embed.Color.ShouldBe(new Color(0xFF0000));
+        log.Embed.Timestamp.ShouldBeNull();
+        fields.Select(field => field.Name).ShouldBe(new[] { "Author", "Message", "Channel" });
+        fields.Select(field => field.Value).ShouldBe(new[] { "<@4> (`4`)", "[Link](https://discord.com/channels/1/2/3)", "<#2>" });
+        fields.ShouldAllBe(field => field.Inline);
     }
 
     [Test]
-    public void BuildDeleteLog_StillBuildsWhenPrecedingLookupReturnsNoResult()
+    public void BuildDeleteLog_UsesUnavailableMessageFieldWhenNoPrecedingMessageExists()
     {
         ModerationLogComponents.ModerationLogMessage log = BuildDeleteLogWithoutPrecedingMessage();
-        string[] text = GetTextContent(log);
 
-        text.ShouldContain("## Message Delete");
-        text.ShouldNotContain(value => value.Contains("**Preceding Message**", StringComparison.Ordinal));
+        log.Embed.Fields.Single(field => string.Equals(field.Name, "Message", StringComparison.Ordinal)).Value.ShouldBe("Unavailable");
     }
 
     [Test]
-    public void BuildDeleteLog_StillBuildsWhenPrecedingLookupFails()
+    public void BuildDeleteLog_RendersCachedContentInPlainCodeBlock()
     {
         ModerationLogComponents.ModerationLogMessage log = BuildDeleteLogWithoutPrecedingMessage();
-        string[] text = GetTextContent(log);
 
-        text.ShouldContain("## Message Delete");
-        text.ShouldContain("```cached```");
+        log.Embed.Title.ShouldBeNull();
+        log.Embed.Timestamp.ShouldBeNull();
+        log.Embed.Description.ShouldBe("```cached```");
+        log.Embed.Description.ShouldNotContain("Observed");
+        log.Embed.Description.ShouldNotContain("Deleted");
     }
 
     [Test]
-    public void BuildEditLog_OmitsAttachmentComponentsWhenEvidenceIsAbsent()
+    public void BuildDeleteLog_RendersUnavailableWhenContentIsMissing()
     {
-        ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildEditLog(
-            "https://discord.com/channels/1/2/3",
+        ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildDeleteLog(
+            2,
             4,
-            DateTimeOffset.UtcNow,
-            "before",
-            "after",
+            precedingMessageJumpUrl: null,
+            content: null,
             Array.Empty<CachedAttachmentEvidence>()
         );
 
-        ContainerComponent container = GetContainer(log);
-
-        log.Attachments.ShouldBeEmpty();
-        GetTextContent(log).ShouldNotContain("### Attachments");
-        container.Components.OfType<MediaGalleryComponent>().ShouldBeEmpty();
-        container.Components.OfType<FileComponent>().ShouldBeEmpty();
+        log.Embed.Description.ShouldBe("*Unavailable*");
     }
 
     [Test]
-    public void BuildEditLog_IncludesGalleryAndFileComponentsWhenEvidenceIsPresent()
+    public void BuildEditLog_KeepsEvidenceAttachmentsForUploadOnly()
     {
         CachedAttachmentEvidence image = new CachedAttachmentEvidence(1, new byte[] { 1, 2, 3 }, "image/png");
         CachedAttachmentEvidence file = new CachedAttachmentEvidence(2, new byte[] { 4, 5, 6 }, "application/pdf");
 
         ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildEditLog(
             "https://discord.com/channels/1/2/3",
+            2,
             4,
-            DateTimeOffset.UtcNow,
             "before",
             "after",
             new[] { image, file }
         );
 
-        ContainerComponent container = GetContainer(log);
-        MediaGalleryComponent gallery = container.Components.OfType<MediaGalleryComponent>().Single();
-        FileComponent fileComponent = container.Components.OfType<FileComponent>().Single();
-
-        GetTextContent(log).ShouldContain("### Attachments");
         log.Attachments.Select(attachment => attachment.FileName).ShouldBe(new[] { "evidence-1.png", "evidence-2.bin" });
-        gallery.Items.Single().Media.Url.ShouldBe("attachment://evidence-1.png");
-        fileComponent.File.Url.ShouldBe("attachment://evidence-2.bin");
+        log.Attachments.Select(attachment => attachment.AttachmentUrl)
+            .ShouldBe(new[] { "attachment://evidence-1.png", "attachment://evidence-2.bin" });
     }
 
     [Test]
-    public void BuildDeleteLog_ReferencesEvidenceAttachmentsInComponentModels()
+    public void BuildDeleteLog_KeepsEvidenceAttachmentsForUploadOnly()
     {
         CachedAttachmentEvidence video = new CachedAttachmentEvidence(3, new byte[] { 1 }, "video/mp4");
         CachedAttachmentEvidence file = new CachedAttachmentEvidence(4, new byte[] { 2 }, "text/plain");
@@ -150,35 +162,16 @@ public sealed class ModerationLogComponentsTests
         ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildDeleteLog(
             2,
             4,
-            observedAt: null,
-            DateTimeOffset.UtcNow,
             precedingMessageJumpUrl: null,
             content: null,
             new[] { video, file }
         );
 
-        ContainerComponent container = GetContainer(log);
-
+        log.Attachments.Select(attachment => attachment.FileName).ShouldBe(new[] { "evidence-3.mp4", "evidence-4.bin" });
         log.Attachments.Select(attachment => attachment.AttachmentUrl)
             .ShouldBe(new[] { "attachment://evidence-3.mp4", "attachment://evidence-4.bin" });
-        container.Components.OfType<MediaGalleryComponent>().Single().Items.Single().Media.Url.ShouldBe("attachment://evidence-3.mp4");
-        container.Components.OfType<FileComponent>().Single().File.Url.ShouldBe("attachment://evidence-4.bin");
     }
 
     private static ModerationLogComponents.ModerationLogMessage BuildDeleteLogWithoutPrecedingMessage() =>
-        ModerationLogComponents.BuildDeleteLog(
-            2,
-            4,
-            observedAt: null,
-            new DateTimeOffset(2026, 7, 6, 11, 0, 0, TimeSpan.Zero),
-            precedingMessageJumpUrl: null,
-            "cached",
-            Array.Empty<CachedAttachmentEvidence>()
-        );
-
-    private static ContainerComponent GetContainer(ModerationLogComponents.ModerationLogMessage log) =>
-        log.Components.Components.Single().ShouldBeOfType<ContainerComponent>();
-
-    private static string[] GetTextContent(ModerationLogComponents.ModerationLogMessage log) =>
-        GetContainer(log).Components.OfType<TextDisplayComponent>().Select(component => component.Content).ToArray();
+        ModerationLogComponents.BuildDeleteLog(2, 4, precedingMessageJumpUrl: null, "cached", Array.Empty<CachedAttachmentEvidence>());
 }

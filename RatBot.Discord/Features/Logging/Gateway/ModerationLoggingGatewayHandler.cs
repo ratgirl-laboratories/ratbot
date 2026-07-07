@@ -16,7 +16,7 @@ public sealed class ModerationLoggingGatewayHandler(
     ILogger logger
 ) : IDiscordGatewayHandler
 {
-    private const MessageFlags ComponentLogMessageFlags = MessageFlags.ComponentsV2 | MessageFlags.SuppressNotification;
+    private const MessageFlags CompactLogMessageFlags = MessageFlags.SuppressNotification;
 
     private static readonly AllowedMentions NoMentions = AllowedMentions.None;
 
@@ -106,16 +106,16 @@ public sealed class ModerationLoggingGatewayHandler(
 
             if (!hasPreviousContent || !string.Equals(beforeContent, after.Content, StringComparison.Ordinal))
             {
-                ModerationLogComponents.ModerationLogMessage componentLog = ModerationLogComponents.BuildEditLog(
+                ModerationLogComponents.ModerationLogMessage compactLog = ModerationLogComponents.BuildEditLog(
                     ModerationLogComponents.GetJumpUrl(userMessage),
+                    channel.Id,
                     userMessage.Author.Id,
-                    userMessage.EditedTimestamp ?? now,
                     beforeContent,
                     after.Content,
                     hasBefore ? before.Attachments : ImmutableArray<CachedAttachmentEvidence>.Empty
                 );
 
-                IUserMessage? logMessage = await SendComponentLogAsync(configuration, LoggingEventKind.Edit, componentLog).ConfigureAwait(false);
+                IUserMessage? logMessage = await SendCompactLogAsync(configuration, LoggingEventKind.Edit, compactLog).ConfigureAwait(false);
 
                 if (logMessage is not null)
                     await loggingStore
@@ -173,17 +173,15 @@ public sealed class ModerationLoggingGatewayHandler(
 
             ulong authorId = observed?.AuthorId ?? evidence.AuthorId;
             string? precedingMessageJumpUrl = await TryGetPrecedingMessageJumpUrlAsync(channelValue, message.Id).ConfigureAwait(false);
-            ModerationLogComponents.ModerationLogMessage componentLog = ModerationLogComponents.BuildDeleteLog(
+            ModerationLogComponents.ModerationLogMessage compactLog = ModerationLogComponents.BuildDeleteLog(
                 channelValue.Id,
                 authorId,
-                observed?.ObservedAtUtc,
-                now,
                 precedingMessageJumpUrl,
                 hasEvidence ? evidence.Content : null,
                 hasEvidence ? evidence.Attachments : ImmutableArray<CachedAttachmentEvidence>.Empty
             );
 
-            IUserMessage? logMessage = await SendComponentLogAsync(configuration, LoggingEventKind.Delete, componentLog).ConfigureAwait(false);
+            IUserMessage? logMessage = await SendCompactLogAsync(configuration, LoggingEventKind.Delete, compactLog).ConfigureAwait(false);
 
             if (logMessage is not null)
                 await loggingStore
@@ -337,7 +335,7 @@ public sealed class ModerationLoggingGatewayHandler(
         }
     }
 
-    private async Task<IUserMessage?> SendComponentLogAsync(
+    private async Task<IUserMessage?> SendCompactLogAsync(
         LoggingConfiguration configuration,
         LoggingEventKind eventKind,
         ModerationLogComponents.ModerationLogMessage message
@@ -350,7 +348,7 @@ public sealed class ModerationLoggingGatewayHandler(
 
         if (message.Attachments.Length == 0)
             return await logChannel
-                .SendMessageAsync(components: message.Components, allowedMentions: NoMentions, flags: ComponentLogMessageFlags)
+                .SendMessageAsync(embed: message.Embed, allowedMentions: NoMentions, flags: CompactLogMessageFlags)
                 .ConfigureAwait(false);
 
         Queue<FileAttachment> files = new Queue<FileAttachment>();
@@ -366,7 +364,7 @@ public sealed class ModerationLoggingGatewayHandler(
             }
 
             return await logChannel
-                .SendFilesAsync(files, components: message.Components, allowedMentions: NoMentions, flags: ComponentLogMessageFlags)
+                .SendFilesAsync(files, embed: message.Embed, allowedMentions: NoMentions, flags: CompactLogMessageFlags)
                 .ConfigureAwait(false);
         }
         finally

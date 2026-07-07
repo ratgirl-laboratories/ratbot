@@ -9,14 +9,14 @@ internal static class MessageEditDiffAnsiRenderer
     private const string Red = "\e[1;31m";
     private const string Green = "\e[1;32m";
 
-    public static string Render(MessageEditDiff diff)
+    public static string RenderBefore(MessageEditDiff diff) => RenderSegments(diff.Before);
+
+    public static string RenderAfter(MessageEditDiff diff) => RenderSegments(diff.After);
+
+    private static string RenderSegments(IReadOnlyList<MessageEditDiffSegment> segments)
     {
         StringBuilder builder = new StringBuilder();
-        builder.Append("Before: ");
-        AppendSegments(builder, diff.Before);
-        builder.AppendLine();
-        builder.Append("After:  ");
-        AppendSegments(builder, diff.After);
+        AppendSegments(builder, segments);
         return builder.ToString();
     }
 

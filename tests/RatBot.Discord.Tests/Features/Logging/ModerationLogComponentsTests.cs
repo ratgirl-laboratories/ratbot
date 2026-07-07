@@ -30,16 +30,13 @@ public sealed class ModerationLogComponentsTests
             2,
             4,
             beforeContent: null,
-            afterContent: null,
-            Array.Empty<CachedAttachmentEvidence>()
+            afterContent: null
         );
 
-        log.Embed.Title.ShouldBeNull();
-        log.Embed.Timestamp.ShouldBeNull();
-        log.Embed.Description.ShouldBe("```ansi\n*Unavailable*\n```\n```ansi\n*Unavailable*\n```");
-        log.Embed.Description.ShouldNotContain("Content");
-        log.Embed.Description.ShouldNotContain("Before:");
-        log.Embed.Description.ShouldNotContain("After:");
+        TextDisplays(log).Last().Content.ShouldBe("```ansi\n*Unavailable*\n```\n```ansi\n*Unavailable*\n```");
+        TextDisplays(log).Last().Content.ShouldNotContain("Content");
+        TextDisplays(log).Last().Content.ShouldNotContain("Before:");
+        TextDisplays(log).Last().Content.ShouldNotContain("After:");
     }
 
     [Test]
@@ -50,37 +47,30 @@ public sealed class ModerationLogComponentsTests
             2,
             4,
             "Hayes",
-            "hates",
-            Array.Empty<CachedAttachmentEvidence>()
+            "hates"
         );
 
-        log.Embed.Description.ShouldBe("```ansi\n\e[1;31mH\e[0ma\e[1;31my\e[0mes\n```\n```ansi\n\e[1;32mh\e[0ma\e[1;32mt\e[0mes\n```");
-        log.Embed.Description.ShouldNotContain("Before:");
-        log.Embed.Description.ShouldNotContain("After:");
+        TextDisplays(log).Last().Content.ShouldBe("```ansi\n\e[1;31mH\e[0ma\e[1;31my\e[0mes\n```\n```ansi\n\e[1;32mh\e[0ma\e[1;32mt\e[0mes\n```");
+        TextDisplays(log).Last().Content.ShouldNotContain("Before:");
+        TextDisplays(log).Last().Content.ShouldNotContain("After:");
     }
 
     [Test]
-    public void BuildEditLog_RendersContextFieldsInline()
+    public void BuildEditLog_RendersExactInlineHeader()
     {
         ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildEditLog(
             "https://discord.com/channels/1/2/3",
             2,
             4,
             "Hayes",
-            "hates",
-            Array.Empty<CachedAttachmentEvidence>()
+            "hates"
         );
 
-        EmbedField[] fields = log.Embed.Fields.ToArray();
-
-        log.Embed.Color.ShouldBe(new Color(14399750));
-        fields.Select(field => field.Name).ShouldBe(new[] { "Author", "Message", "Channel" });
-        fields.Select(field => field.Value).ShouldBe(new[] { "<@4> (`4`)", "[Link](https://discord.com/channels/1/2/3)", "<#2>" });
-        fields.ShouldAllBe(field => field.Inline);
+        TextDisplays(log).First().Content.ShouldBe("**Message Edit:** [Message](https://discord.com/channels/1/2/3) by <@4> (`4`) in <#2>");
     }
 
     [Test]
-    public void BuildDeleteLog_UsesPrecedingMessageLinkWhenProvided()
+    public void BuildDeleteLog_RendersExactInlineHeaderWithPrecedingMessage()
     {
         ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildDeleteLog(
             2,
@@ -90,21 +80,17 @@ public sealed class ModerationLogComponentsTests
             Array.Empty<CachedAttachmentEvidence>()
         );
 
-        EmbedField[] fields = log.Embed.Fields.ToArray();
-
-        log.Embed.Color.ShouldBe(new Color(0xFF0000));
-        log.Embed.Timestamp.ShouldBeNull();
-        fields.Select(field => field.Name).ShouldBe(new[] { "Author", "Message", "Channel" });
-        fields.Select(field => field.Value).ShouldBe(new[] { "<@4> (`4`)", "[Link](https://discord.com/channels/1/2/3)", "<#2>" });
-        fields.ShouldAllBe(field => field.Inline);
+        TextDisplays(log)
+            .First()
+            .Content.ShouldBe("**Message Delete:** <@4> (`4`) in <#2> • [Preceding message](https://discord.com/channels/1/2/3)");
     }
 
     [Test]
-    public void BuildDeleteLog_UsesUnavailableMessageFieldWhenNoPrecedingMessageExists()
+    public void BuildDeleteLog_RendersExactInlineHeaderWithoutPrecedingMessage()
     {
         ModerationLogComponents.ModerationLogMessage log = BuildDeleteLogWithoutPrecedingMessage();
 
-        log.Embed.Fields.Single(field => string.Equals(field.Name, "Message", StringComparison.Ordinal)).Value.ShouldBe("Unavailable");
+        TextDisplays(log).First().Content.ShouldBe("**Message Delete:** <@4> (`4`) in <#2>");
     }
 
     [Test]
@@ -112,11 +98,9 @@ public sealed class ModerationLogComponentsTests
     {
         ModerationLogComponents.ModerationLogMessage log = BuildDeleteLogWithoutPrecedingMessage();
 
-        log.Embed.Title.ShouldBeNull();
-        log.Embed.Timestamp.ShouldBeNull();
-        log.Embed.Description.ShouldBe("```cached```");
-        log.Embed.Description.ShouldNotContain("Observed");
-        log.Embed.Description.ShouldNotContain("Deleted");
+        TextDisplays(log).Last().Content.ShouldBe("```cached```");
+        TextDisplays(log).Last().Content.ShouldNotContain("Observed");
+        TextDisplays(log).Last().Content.ShouldNotContain("Deleted");
     }
 
     [Test]
@@ -130,33 +114,52 @@ public sealed class ModerationLogComponentsTests
             Array.Empty<CachedAttachmentEvidence>()
         );
 
-        log.Embed.Description.ShouldBe("*Unavailable*");
+        TextDisplays(log).Last().Content.ShouldBe("*Unavailable*");
     }
 
     [Test]
-    public void BuildEditLog_KeepsEvidenceAttachmentsForUploadOnly()
+    public void BuildDeleteLog_OmitsAttachmentComponentsWhenEvidenceIsAbsent()
     {
-        CachedAttachmentEvidence image = new CachedAttachmentEvidence(1, new byte[] { 1, 2, 3 }, "image/png");
-        CachedAttachmentEvidence file = new CachedAttachmentEvidence(2, new byte[] { 4, 5, 6 }, "application/pdf");
-
-        ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildEditLog(
-            "https://discord.com/channels/1/2/3",
+        ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildDeleteLog(
             2,
             4,
-            "before",
-            "after",
-            new[] { image, file }
+            precedingMessageJumpUrl: null,
+            content: null,
+            Array.Empty<CachedAttachmentEvidence>()
         );
 
-        log.Attachments.Select(attachment => attachment.FileName).ShouldBe(new[] { "evidence-1.png", "evidence-2.bin" });
-        log.Attachments.Select(attachment => attachment.AttachmentUrl)
-            .ShouldBe(new[] { "attachment://evidence-1.png", "attachment://evidence-2.bin" });
+        log.Attachments.ShouldBeEmpty();
+        ContainerComponents(log).OfType<MediaGalleryComponent>().ShouldBeEmpty();
+        ContainerComponents(log).OfType<FileComponent>().ShouldBeEmpty();
+        ContainerComponents(log).OfType<SeparatorComponent>().Count().ShouldBe(1);
     }
 
     [Test]
-    public void BuildDeleteLog_KeepsEvidenceAttachmentsForUploadOnly()
+    public void BuildDeleteLog_RendersMediaAttachmentsAsGalleryItems()
     {
-        CachedAttachmentEvidence video = new CachedAttachmentEvidence(3, new byte[] { 1 }, "video/mp4");
+        CachedAttachmentEvidence image = new CachedAttachmentEvidence(3, new byte[] { 1 }, "image/png");
+        CachedAttachmentEvidence video = new CachedAttachmentEvidence(4, new byte[] { 2 }, "video/mp4");
+
+        ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildDeleteLog(
+            2,
+            4,
+            precedingMessageJumpUrl: null,
+            content: null,
+            new[] { image, video }
+        );
+
+        MediaGalleryComponent gallery = ContainerComponents(log).OfType<MediaGalleryComponent>().Single();
+
+        log.Attachments.Select(attachment => attachment.FileName).ShouldBe(new[] { "evidence-3.png", "evidence-4.mp4" });
+        log.Attachments.Select(attachment => attachment.AttachmentUrl)
+            .ShouldBe(new[] { "attachment://evidence-3.png", "attachment://evidence-4.mp4" });
+        gallery.Items.Select(item => item.Media.Url).ShouldBe(new[] { "attachment://evidence-3.png", "attachment://evidence-4.mp4" });
+        ContainerComponents(log).OfType<FileComponent>().ShouldBeEmpty();
+    }
+
+    [Test]
+    public void BuildDeleteLog_RendersNonMediaAttachmentsAsFileComponents()
+    {
         CachedAttachmentEvidence file = new CachedAttachmentEvidence(4, new byte[] { 2 }, "text/plain");
 
         ModerationLogComponents.ModerationLogMessage log = ModerationLogComponents.BuildDeleteLog(
@@ -164,14 +167,27 @@ public sealed class ModerationLogComponentsTests
             4,
             precedingMessageJumpUrl: null,
             content: null,
-            new[] { video, file }
+            new[] { file }
         );
 
-        log.Attachments.Select(attachment => attachment.FileName).ShouldBe(new[] { "evidence-3.mp4", "evidence-4.bin" });
-        log.Attachments.Select(attachment => attachment.AttachmentUrl)
-            .ShouldBe(new[] { "attachment://evidence-3.mp4", "attachment://evidence-4.bin" });
+        FileComponent fileComponent = ContainerComponents(log).OfType<FileComponent>().Single();
+
+        log.Attachments.Select(attachment => attachment.FileName).ShouldBe(new[] { "evidence-4.bin" });
+        log.Attachments.Select(attachment => attachment.AttachmentUrl).ShouldBe(new[] { "attachment://evidence-4.bin" });
+        fileComponent.File.Url.ShouldBe("attachment://evidence-4.bin");
+        ContainerComponents(log).OfType<MediaGalleryComponent>().ShouldBeEmpty();
     }
 
     private static ModerationLogComponents.ModerationLogMessage BuildDeleteLogWithoutPrecedingMessage() =>
         ModerationLogComponents.BuildDeleteLog(2, 4, precedingMessageJumpUrl: null, "cached", Array.Empty<CachedAttachmentEvidence>());
+
+    private static IReadOnlyCollection<IMessageComponent> ContainerComponents(ModerationLogComponents.ModerationLogMessage log)
+    {
+        ContainerComponent container = log.Components.Components.ShouldHaveSingleItem().ShouldBeOfType<ContainerComponent>();
+
+        return container.Components;
+    }
+
+    private static IReadOnlyCollection<TextDisplayComponent> TextDisplays(ModerationLogComponents.ModerationLogMessage log) =>
+        ContainerComponents(log).OfType<TextDisplayComponent>().ToArray();
 }

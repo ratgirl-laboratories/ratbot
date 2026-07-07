@@ -7,27 +7,23 @@ namespace RatBot.Discord.Features.Logging.Gateway;
 internal static class ModerationLogComponents
 {
     public const string TimestampFormat = "yyyy-MM-dd HH:mm:ss'Z'";
-    private const int EditColor = 14399750;
 
     public static ModerationLogMessage BuildEditLog(
         string messageJumpUrl,
         ulong channelId,
         ulong authorId,
         string? beforeContent,
-        string? afterContent,
-        IReadOnlyCollection<CachedAttachmentEvidence> attachments
+        string? afterContent
     )
     {
-        ImmutableArray<ModerationLogAttachment> attachmentModels = BuildAttachmentModels(attachments);
-        Embed embed = new EmbedBuilder()
-            .WithDescription(EditContentBlock(beforeContent, afterContent))
-            .WithColor(new Color(EditColor))
-            .AddField("Author", $"<@{authorId}> (`{authorId}`)", true)
-            .AddField("Message", $"[Link]({messageJumpUrl})", true)
-            .AddField("Channel", $"<#{channelId}>", true)
-            .Build();
+        MessageComponent components = new ComponentBuilderV2(
+            new ContainerBuilder()
+                .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildEditHeader(messageJumpUrl, channelId, authorId)))
+                .WithSeparator(new SeparatorBuilder())
+                .WithTextDisplay(new TextDisplayBuilder().WithContent(EditContentBlock(beforeContent, afterContent)))
+        ).Build();
 
-        return new ModerationLogMessage(embed, attachmentModels);
+        return new ModerationLogMessage(components, ImmutableArray<ModerationLogAttachment>.Empty);
     }
 
     public static ModerationLogMessage BuildDeleteLog(
@@ -39,15 +35,15 @@ internal static class ModerationLogComponents
     )
     {
         ImmutableArray<ModerationLogAttachment> attachmentModels = BuildAttachmentModels(attachments);
-        Embed embed = new EmbedBuilder()
-            .WithDescription(ContentBlock(content))
-            .WithColor(new Color(0xFF0000))
-            .AddField("Author", $"<@{authorId}> (`{authorId}`)", true)
-            .AddField("Message", BuildDeleteMessageFieldValue(precedingMessageJumpUrl), true)
-            .AddField("Channel", $"<#{channelId}>", true)
-            .Build();
+        ContainerBuilder container = new ContainerBuilder()
+            .WithTextDisplay(new TextDisplayBuilder().WithContent(BuildDeleteHeader(channelId, authorId, precedingMessageJumpUrl)))
+            .WithSeparator(new SeparatorBuilder())
+            .WithTextDisplay(new TextDisplayBuilder().WithContent(ContentBlock(content)));
 
-        return new ModerationLogMessage(embed, attachmentModels);
+        if (attachmentModels.Length > 0)
+            AddAttachmentComponents(container, attachmentModels);
+
+        return new ModerationLogMessage(new ComponentBuilderV2(container).Build(), attachmentModels);
     }
 
     public static string FormatTimestamp(DateTimeOffset timestamp) =>
@@ -55,8 +51,42 @@ internal static class ModerationLogComponents
 
     public static string GetJumpUrl(IMessage message) => message.GetJumpUrl();
 
-    private static string BuildDeleteMessageFieldValue(string? precedingMessageJumpUrl) =>
-        string.IsNullOrWhiteSpace(precedingMessageJumpUrl) ? "Unavailable" : $"[Link]({precedingMessageJumpUrl})";
+    private static string BuildEditHeader(string messageJumpUrl, ulong channelId, ulong authorId) =>
+        $"**Message Edit:** [Message]({messageJumpUrl}) by <@{authorId}> (`{authorId}`) in <#{channelId}>";
+
+    private static string BuildDeleteHeader(ulong channelId, ulong authorId, string? precedingMessageJumpUrl)
+    {
+        string header = $"**Message Delete:** <@{authorId}> (`{authorId}`) in <#{channelId}>";
+
+        if (!string.IsNullOrWhiteSpace(precedingMessageJumpUrl))
+            header += $" • [Preceding message]({precedingMessageJumpUrl})";
+
+        return header;
+    }
+
+    private static void AddAttachmentComponents(ContainerBuilder container, ImmutableArray<ModerationLogAttachment> attachments)
+    {
+        container.WithSeparator(new SeparatorBuilder());
+
+        ImmutableArray<ModerationLogAttachment> mediaAttachments = attachments.Where(IsMediaAttachment).ToImmutableArray();
+
+        if (mediaAttachments.Length > 0)
+        {
+            MediaGalleryBuilder gallery = new MediaGalleryBuilder();
+
+            foreach (ModerationLogAttachment attachment in mediaAttachments)
+                gallery.AddItem(attachment.AttachmentUrl, string.Empty, false);
+
+            container.WithMediaGallery(gallery);
+        }
+
+        foreach (ModerationLogAttachment attachment in attachments.Where(attachment => !IsMediaAttachment(attachment)))
+            container.WithFile(new FileComponentBuilder().WithFile(new UnfurledMediaItemProperties(attachment.AttachmentUrl)));
+    }
+
+    private static bool IsMediaAttachment(ModerationLogAttachment attachment) =>
+        attachment.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+        || attachment.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
 
     private static ImmutableArray<ModerationLogAttachment> BuildAttachmentModels(IReadOnlyCollection<CachedAttachmentEvidence> attachments) =>
         attachments.Select(BuildAttachmentModel).ToImmutableArray();
@@ -103,7 +133,7 @@ internal static class ModerationLogComponents
         return $"```ansi\n{sanitized}\n```";
     }
 
-    internal sealed record ModerationLogMessage(Embed Embed, ImmutableArray<ModerationLogAttachment> Attachments);
+    internal sealed record ModerationLogMessage(MessageComponent Components, ImmutableArray<ModerationLogAttachment> Attachments);
 
     internal sealed record ModerationLogAttachment(string FileName, string ContentType, byte[] Bytes)
     {

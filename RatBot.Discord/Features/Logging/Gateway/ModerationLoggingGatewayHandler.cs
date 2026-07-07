@@ -16,7 +16,7 @@ public sealed class ModerationLoggingGatewayHandler(
     ILogger logger
 ) : IDiscordGatewayHandler
 {
-    private const MessageFlags CompactLogMessageFlags = MessageFlags.SuppressNotification;
+    private const MessageFlags CompactLogMessageFlags = MessageFlags.ComponentsV2 | MessageFlags.SuppressNotification;
 
     private static readonly AllowedMentions NoMentions = AllowedMentions.None;
 
@@ -111,8 +111,7 @@ public sealed class ModerationLoggingGatewayHandler(
                     channel.Id,
                     userMessage.Author.Id,
                     beforeContent,
-                    after.Content,
-                    hasBefore ? before.Attachments : ImmutableArray<CachedAttachmentEvidence>.Empty
+                    after.Content
                 );
 
                 IUserMessage? logMessage = await SendCompactLogAsync(configuration, LoggingEventKind.Edit, compactLog).ConfigureAwait(false);
@@ -348,7 +347,7 @@ public sealed class ModerationLoggingGatewayHandler(
 
         if (message.Attachments.Length == 0)
             return await logChannel
-                .SendMessageAsync(embed: message.Embed, allowedMentions: NoMentions, flags: CompactLogMessageFlags)
+                .SendMessageAsync(components: message.Components, allowedMentions: NoMentions, flags: CompactLogMessageFlags)
                 .ConfigureAwait(false);
 
         Queue<FileAttachment> files = new Queue<FileAttachment>();
@@ -364,7 +363,7 @@ public sealed class ModerationLoggingGatewayHandler(
             }
 
             return await logChannel
-                .SendFilesAsync(files, embed: message.Embed, allowedMentions: NoMentions, flags: CompactLogMessageFlags)
+                .SendFilesAsync(files, components: message.Components, allowedMentions: NoMentions, flags: CompactLogMessageFlags)
                 .ConfigureAwait(false);
         }
         finally

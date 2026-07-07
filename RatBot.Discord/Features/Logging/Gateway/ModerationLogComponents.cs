@@ -75,7 +75,7 @@ internal static class ModerationLogComponents
             MediaGalleryBuilder gallery = new MediaGalleryBuilder();
 
             foreach (ModerationLogAttachment attachment in mediaAttachments)
-                gallery.AddItem(attachment.AttachmentUrl, string.Empty, false);
+                gallery.AddItem(new MediaGalleryItemProperties { Media = new UnfurledMediaItemProperties(attachment.AttachmentUrl) });
 
             container.WithMediaGallery(gallery);
         }

@@ -172,22 +172,36 @@ public sealed class ModerationLoggingGatewayHandler(
 
             ulong authorId = observed?.AuthorId ?? evidence.AuthorId;
             string? precedingMessageJumpUrl = await TryGetPrecedingMessageJumpUrlAsync(channelValue, message.Id).ConfigureAwait(false);
-            ModerationLogComponents.ModerationLogMessage compactLog = ModerationLogComponents.BuildDeleteLog(
-                channelValue.Id,
-                authorId,
-                precedingMessageJumpUrl,
-                hasEvidence ? evidence.Content : null,
-                hasEvidence ? evidence.Attachments : ImmutableArray<CachedAttachmentEvidence>.Empty
-            );
+            try
+            {
+                ModerationLogComponents.ModerationLogMessage compactLog = ModerationLogComponents.BuildDeleteLog(
+                    channelValue.Id,
+                    authorId,
+                    precedingMessageJumpUrl,
+                    hasEvidence ? evidence.Content : null,
+                    hasEvidence ? evidence.Attachments : ImmutableArray<CachedAttachmentEvidence>.Empty
+                );
 
-            IUserMessage? logMessage = await SendCompactLogAsync(configuration, LoggingEventKind.Delete, compactLog).ConfigureAwait(false);
-
-            if (logMessage is not null)
-                await loggingStore
-                    .RecordLogEntriesAsync(new[] { new MessageLogEntry(message.Id, logMessage.Id, now) }, CancellationToken.None)
+                IUserMessage? logMessage = await SendDeleteLogAsync(
+                        configuration,
+                        message.Id,
+                        channelValue.Id,
+                        authorId,
+                        precedingMessageJumpUrl,
+                        hasEvidence ? evidence.Content : null,
+                        compactLog
+                    )
                     .ConfigureAwait(false);
 
-            evidenceCache.Remove(message.Id);
+                if (logMessage is not null)
+                    await loggingStore
+                        .RecordLogEntriesAsync(new[] { new MessageLogEntry(message.Id, logMessage.Id, now) }, CancellationToken.None)
+                        .ConfigureAwait(false);
+            }
+            finally
+            {
+                evidenceCache.Remove(message.Id);
+            }
         }
         catch (Exception ex)
         {
@@ -345,6 +359,69 @@ public sealed class ModerationLoggingGatewayHandler(
         if (destinationChannelId is null || discordClient.GetChannel(destinationChannelId.Value) is not IMessageChannel logChannel)
             return null;
 
+        return await SendCompactLogAsync(logChannel, message).ConfigureAwait(false);
+    }
+
+    private async Task<IUserMessage?> SendDeleteLogAsync(
+        LoggingConfiguration configuration,
+        ulong messageId,
+        ulong channelId,
+        ulong authorId,
+        string? precedingMessageJumpUrl,
+        string? content,
+        ModerationLogComponents.ModerationLogMessage message
+    )
+    {
+        ulong? destinationChannelId = configuration.GetDestinationChannelId(LoggingEventKind.Delete);
+
+        if (destinationChannelId is null || discordClient.GetChannel(destinationChannelId.Value) is not IMessageChannel logChannel)
+            return null;
+
+        return await SendDeleteLogAsync(logChannel, messageId, channelId, authorId, precedingMessageJumpUrl, content, message, _logger)
+            .ConfigureAwait(false);
+    }
+
+    internal static async Task<IUserMessage?> SendDeleteLogAsync(
+        IMessageChannel logChannel,
+        ulong messageId,
+        ulong channelId,
+        ulong authorId,
+        string? precedingMessageJumpUrl,
+        string? content,
+        ModerationLogComponents.ModerationLogMessage message,
+        ILogger logger
+    )
+    {
+        if (message.Attachments.Length == 0)
+            return await SendCompactLogAsync(logChannel, message).ConfigureAwait(false);
+
+        try
+        {
+            return await SendCompactLogAsync(logChannel, message).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.Warning(
+                ex,
+                "Failed to send attachment evidence for delete log for message {MessageId} in channel {ChannelId}. Retrying without attachment evidence.",
+                messageId,
+                channelId
+            );
+
+            ModerationLogComponents.ModerationLogMessage fallback = ModerationLogComponents.BuildDeleteLog(
+                channelId,
+                authorId,
+                precedingMessageJumpUrl,
+                content,
+                ImmutableArray<CachedAttachmentEvidence>.Empty
+            );
+
+            return await SendCompactLogAsync(logChannel, fallback).ConfigureAwait(false);
+        }
+    }
+
+    internal static async Task<IUserMessage?> SendCompactLogAsync(IMessageChannel logChannel, ModerationLogComponents.ModerationLogMessage message)
+    {
         if (message.Attachments.Length == 0)
             return await logChannel
                 .SendMessageAsync(components: message.Components, allowedMentions: NoMentions, flags: CompactLogMessageFlags)

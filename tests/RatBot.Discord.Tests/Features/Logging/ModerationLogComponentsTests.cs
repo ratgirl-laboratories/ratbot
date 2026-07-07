@@ -145,15 +145,16 @@ public sealed class ModerationLogComponentsTests
             4,
             precedingMessageJumpUrl: null,
             content: null,
-            new[] { image, video }
+            [image, video]
         );
 
         MediaGalleryComponent gallery = ContainerComponents(log).OfType<MediaGalleryComponent>().Single();
 
-        log.Attachments.Select(attachment => attachment.FileName).ShouldBe(new[] { "evidence-3.png", "evidence-4.mp4" });
-        log.Attachments.Select(attachment => attachment.AttachmentUrl)
-            .ShouldBe(new[] { "attachment://evidence-3.png", "attachment://evidence-4.mp4" });
-        gallery.Items.Select(item => item.Media.Url).ShouldBe(new[] { "attachment://evidence-3.png", "attachment://evidence-4.mp4" });
+        log.Attachments.Select(attachment => attachment.FileName).ShouldBe(["evidence-3.png", "evidence-4.mp4"]);
+        log.Attachments.Select(attachment => attachment.AttachmentUrl).ShouldBe(["attachment://evidence-3.png", "attachment://evidence-4.mp4"]);
+        gallery.Items.Select(item => item.Media.Url).ShouldBe(["attachment://evidence-3.png", "attachment://evidence-4.mp4"]);
+        gallery.Items.Select(item => item.Description).ShouldBe([null, null]);
+        gallery.Items.Select(item => item.Media.Url).ShouldBe(log.Attachments.Select(attachment => $"attachment://{attachment.FileName}"));
         ContainerComponents(log).OfType<FileComponent>().ShouldBeEmpty();
     }
 
@@ -167,14 +168,15 @@ public sealed class ModerationLogComponentsTests
             4,
             precedingMessageJumpUrl: null,
             content: null,
-            new[] { file }
+            [file]
         );
 
         FileComponent fileComponent = ContainerComponents(log).OfType<FileComponent>().Single();
 
-        log.Attachments.Select(attachment => attachment.FileName).ShouldBe(new[] { "evidence-4.bin" });
-        log.Attachments.Select(attachment => attachment.AttachmentUrl).ShouldBe(new[] { "attachment://evidence-4.bin" });
+        log.Attachments.Select(attachment => attachment.FileName).ShouldBe(["evidence-4.bin"]);
+        log.Attachments.Select(attachment => attachment.AttachmentUrl).ShouldBe(["attachment://evidence-4.bin"]);
         fileComponent.File.Url.ShouldBe("attachment://evidence-4.bin");
+        fileComponent.File.Url.ShouldBe($"attachment://{log.Attachments.Single().FileName}");
         ContainerComponents(log).OfType<MediaGalleryComponent>().ShouldBeEmpty();
     }
 

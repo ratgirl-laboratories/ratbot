@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using RatBot.Infrastructure.Features.Logging;
 
 namespace RatBot.Discord.Features.Logging.BackgroundWorkers;

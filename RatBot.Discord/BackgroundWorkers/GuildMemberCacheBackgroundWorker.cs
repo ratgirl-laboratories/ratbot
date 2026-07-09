@@ -1,7 +1,3 @@
-using Microsoft.Extensions.Options;
-using RatBot.Discord.Configuration;
-using RatBot.Discord.Gateway;
-
 namespace RatBot.Discord.BackgroundWorkers;
 
 public sealed class GuildMemberCacheBackgroundWorker(

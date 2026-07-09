@@ -1,8 +1,6 @@
-using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Discord.Rest;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using RatBot.Infrastructure.Data;
 
 namespace RatBot.Discord.Commands.AdventureLeaderboard;

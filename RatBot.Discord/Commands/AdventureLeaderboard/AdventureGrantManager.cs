@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-
 namespace RatBot.Discord.Commands.AdventureLeaderboard;
 
 public static class AdventureGrantManager

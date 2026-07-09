@@ -2,10 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using Discord.Net;
-using Microsoft.Extensions.Options;
 using RatBot.Discord.Commands.Hello;
-using RatBot.Discord.Configuration;
-using RatBot.Discord.Gateway;
 using RatBot.Discord.Logging;
 using IResult = Discord.Interactions.IResult;
 

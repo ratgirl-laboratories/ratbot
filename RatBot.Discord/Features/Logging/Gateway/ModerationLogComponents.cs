@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Globalization;
 using RatBot.Application.Features.Logging;
 

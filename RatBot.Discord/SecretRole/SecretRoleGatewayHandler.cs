@@ -1,5 +1,4 @@
 using Discord.Net;
-using RatBot.Discord.Gateway;
 using RatBot.Domain.SecretRole;
 
 namespace RatBot.Discord.SecretRole;

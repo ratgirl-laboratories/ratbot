@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using RatBot.Application.Features.Quorum;
 using RatBot.Domain.Features.Quorum;
 

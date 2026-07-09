@@ -1,5 +1,4 @@
 using RatBot.Discord.Features.Meta.BackgroundWorkers;
-using RatBot.Discord.Gateway;
 using RatBot.Infrastructure.Features.Meta;
 
 namespace RatBot.Discord.Features.Meta.Gateway;

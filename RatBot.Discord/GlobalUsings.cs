@@ -1,5 +1,6 @@
 ﻿// Global using directives
 
+global using System.Collections.Immutable;
 global using Discord;
 global using Discord.Interactions;
 global using Discord.WebSocket;
@@ -8,7 +9,10 @@ global using JetBrains.Annotations;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Options;
 global using RatBot.Discord.Commands;
+global using RatBot.Discord.Configuration;
+global using RatBot.Discord.Gateway;
 global using RatBot.Domain.Adventure;
 global using RatBot.Domain.Features.Meta;
 global using RatBot.Domain.RoleColours;

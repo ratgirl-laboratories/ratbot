@@ -18,4 +18,8 @@
         <ProjectReference Include="..\RatBot.Infrastructure\RatBot.Infrastructure.csproj" />
         <ProjectReference Include="..\RatBot.Domain\RatBot.Domain.csproj" />
     </ItemGroup>
+    <ItemGroup>
+        <Folder Include="Features\Joy\BackgroundWorkers\" />
+        <Folder Include="Features\Joy\Commands\" />
+    </ItemGroup>
 </Project>

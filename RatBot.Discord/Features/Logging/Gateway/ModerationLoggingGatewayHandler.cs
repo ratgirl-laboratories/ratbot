@@ -1,7 +1,4 @@
-using System.Collections.Immutable;
-using Microsoft.Extensions.Options;
 using RatBot.Application.Features.Logging;
-using RatBot.Discord.Gateway;
 using RatBot.Domain.Features.Logging;
 using RatBot.Infrastructure.Features.Logging;
 

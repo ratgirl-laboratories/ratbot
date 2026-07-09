@@ -1,6 +1,3 @@
-using System.Collections.Immutable;
-using RatBot.Discord.Gateway;
-
 namespace RatBot.Discord.Features.Quorum;
 
 public sealed class DiscordQuorumMemberIndex(DiscordSocketClient client, ILogger logger) : IDiscordGatewayHandler

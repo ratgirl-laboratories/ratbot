@@ -1,6 +1,4 @@
-using Microsoft.Extensions.Options;
 using RatBot.Application.Moderation;
-using RatBot.Discord.Configuration;
 
 namespace RatBot.Discord.Gateway;
 

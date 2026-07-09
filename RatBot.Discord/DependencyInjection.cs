@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using RatBot.Application.Common.Forums;
 using RatBot.Application.Common.Interfaces;
 using RatBot.Application.Features.Logging;
@@ -6,7 +5,6 @@ using RatBot.Application.Features.Quorum;
 using RatBot.Discord.BackgroundWorkers;
 using RatBot.Discord.Commands.AdventureLeaderboard;
 using RatBot.Discord.Commands.Emoji;
-using RatBot.Discord.Configuration;
 using RatBot.Discord.Features.Logging;
 using RatBot.Discord.Features.Logging.BackgroundWorkers;
 using RatBot.Discord.Features.Logging.Gateway;
@@ -15,7 +13,6 @@ using RatBot.Discord.Features.Meta.BackgroundWorkers;
 using RatBot.Discord.Features.Meta.Gateway;
 using RatBot.Discord.Features.Quorum;
 using RatBot.Discord.Forum;
-using RatBot.Discord.Gateway;
 using RatBot.Discord.Handlers;
 using RatBot.Discord.Hosting;
 using RatBot.Discord.SecretRole;
@@ -120,6 +117,7 @@ public static class DependencyInjection
             services.AddHostedService<MetaProposalPollBackgroundWorker>();
             services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardManager>());
             services.AddHostedService<LoggingMetadataCleanupBackgroundWorker>();
+            services.AddHostedService<SerilogBackgroundWorker>();
 
             // Quorum Module
             services.AddSingleton<DiscordQuorumMemberIndex>();

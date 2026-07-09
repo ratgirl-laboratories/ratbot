@@ -1,6 +1,4 @@
-using Microsoft.Extensions.Options;
 using RatBot.Application.Common.Interfaces;
-using RatBot.Discord.Configuration;
 
 namespace RatBot.Discord.Commands.Emoji;
 

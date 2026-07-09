@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Text;
 
 namespace RatBot.Discord.Commands.AdventureLeaderboard;

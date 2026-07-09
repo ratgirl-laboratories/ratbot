@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RatBot.Discord.BackgroundWorkers;

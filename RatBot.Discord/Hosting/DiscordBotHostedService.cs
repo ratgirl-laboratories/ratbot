@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Options;
-using RatBot.Discord.Configuration;
-using RatBot.Discord.Gateway;
 using Serilog.Events;
 
 namespace RatBot.Discord.Hosting;

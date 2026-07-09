@@ -8,9 +8,9 @@
         <PackageVersion Include="Discord.Net" Version="3.19.1" />
         <PackageVersion Include="Discord.Net.Commands" Version="3.19.1" />
         <PackageVersion Include="Discord.Net.Core" Version="3.19.1" />
-        <PackageVersion Include="Discord.Net.Interactions" Version="3.19.1" />
+        <PackageVersion Include="Discord.Net.Interactions" Version="3.20.1" />
         <PackageVersion Include="Discord.Net.Webhook" Version="3.19.1" />
-        <PackageVersion Include="Discord.Net.WebSocket" Version="3.19.1" />
+        <PackageVersion Include="Discord.Net.WebSocket" Version="3.20.1" />
         <PackageVersion Include="Dapper" Version="2.1.79" />
         <PackageVersion Include="DotNetEnv" Version="3.1.1" />
         <PackageVersion Include="ErrorOr" Version="2.0.1" />

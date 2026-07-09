@@ -5,5 +5,5 @@ public sealed class SerilogTelemetryHandler : InteractionModuleBase<IInteraction
     public const string Id = "accept-joy";
 
     [ComponentInteraction(Id)]
-    public async Task Respond() => await RespondAsync($"Thank you for enjoying, <@{Context.User.Id}> ☺️", ephemeral: true);
+    public async Task Respond() => await RespondAsync($"May joye befall thee, by this Robynes passyng, <@{Context.User.Id}> ☺️", ephemeral: true);
 }

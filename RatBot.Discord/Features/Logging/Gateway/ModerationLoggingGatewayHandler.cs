@@ -621,9 +621,15 @@ public sealed class ModerationLoggingGatewayHandler(
         }
     }
 
+    private Task DispatchMessageReceivedAsync(SocketMessage message)
+    {
+        _ = Task.Run(() => HandleMessageReceivedAsync(message));
+        return Task.CompletedTask;
+    }
+
     private void Subscribe()
     {
-        discordClient.MessageReceived += HandleMessageReceivedAsync;
+        discordClient.MessageReceived += DispatchMessageReceivedAsync;
         discordClient.MessageUpdated += HandleMessageUpdatedAsync;
         discordClient.MessageDeleted += HandleMessageDeletedAsync;
         discordClient.MessagesBulkDeleted += HandleMessagesBulkDeletedAsync;

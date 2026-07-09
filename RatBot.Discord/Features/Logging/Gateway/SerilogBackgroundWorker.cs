@@ -41,7 +41,10 @@ public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, I
                 .WithMediaGallery(gallery)
                 .WithActionRow(
                     new ActionRowBuilder().WithComponents([
-                        new ButtonBuilder().WithStyle(ButtonStyle.Primary).WithLabel("Accept?").WithCustomId(SerilogTelemetryHandler.Id),
+                        new ButtonBuilder()
+                            .WithStyle(ButtonStyle.Primary)
+                            .WithLabel("Accept the proffered Joy?")
+                            .WithCustomId(SerilogTelemetryHandler.Id),
                     ])
                 )
         ).Build();
@@ -70,10 +73,10 @@ public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, I
 
             message = await channel
                 .SendMessageAsync(
-                    components: BuildComponents(),
-                    flags: Flags,
+                    options: new RequestOptions { CancelToken = ct },
                     allowedMentions: Mentions,
-                    options: new RequestOptions { CancelToken = ct }
+                    components: BuildComponents(),
+                    flags: Flags
                 )
                 .ConfigureAwait(false);
 

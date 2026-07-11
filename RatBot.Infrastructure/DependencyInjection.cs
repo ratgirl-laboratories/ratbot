@@ -4,7 +4,6 @@ using RatBot.Application.Common.Interfaces;
 using RatBot.Application.Features.Quorum;
 using RatBot.Application.Features.Timezone;
 using RatBot.Application.Moderation;
-using RatBot.Application.Quorum;
 using RatBot.Application.SecretRole;
 using RatBot.Infrastructure.Features.Logging;
 using RatBot.Infrastructure.Features.Meta;
@@ -30,7 +29,6 @@ public static class DependencyInjection
             services.AddScoped<IAutobannedUserRepository, AutobannedUserRepository>();
             services.AddScoped<IImageSpamSettingsStore, ImageSpamSettingsStore>();
             services.AddScoped<IQuorumConfigurationStore>(_ => new QuorumConfigurationStore(connectionString));
-            services.AddScoped<IQuorumSettingsRepository, QuorumSettingsRepository>();
             services.AddScoped<IUserTimezoneStore>(_ => new UserTimezoneStore(connectionString));
             services.AddScoped<IEmojiRepository>(sp => sp.GetRequiredService<BotDbContext>());
             services.AddScoped<ISecretRoleRepository, SecretRoleRepository>();

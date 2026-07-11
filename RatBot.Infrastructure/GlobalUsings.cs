@@ -9,6 +9,5 @@ global using RatBot.Domain.Emoji;
 global using RatBot.Domain.Features.Logging;
 global using RatBot.Domain.Features.Meta;
 global using RatBot.Domain.Moderation;
-global using RatBot.Domain.Quorum;
 global using RatBot.Domain.RoleColours;
 global using RatBot.Infrastructure.Data;

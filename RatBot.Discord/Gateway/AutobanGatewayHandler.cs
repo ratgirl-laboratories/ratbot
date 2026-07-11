@@ -3,12 +3,8 @@ using RatBot.Domain.Moderation;
 
 namespace RatBot.Discord.Gateway;
 
-public sealed class AutobanGatewayHandler(
-    DiscordSocketClient discordClient,
-    IServiceScopeFactory scopeFactory,
-    IModerationService moderationService,
-    ILogger logger
-) : IDiscordGatewayHandler
+public sealed class AutobanGatewayHandler(DiscordSocketClient discordClient, IServiceScopeFactory scopeFactory, ILogger logger)
+    : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<AutobanGatewayHandler>();
 
@@ -27,7 +23,8 @@ public sealed class AutobanGatewayHandler(
 
         try
         {
-            using IServiceScope scope = scopeFactory.CreateScope();
+            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+            IModerationService moderationService = scope.ServiceProvider.GetRequiredService<IModerationService>();
 
             AutobannedUser? autobannedUser = await moderationService.GetAutobanAsync(guildId, userId);
 

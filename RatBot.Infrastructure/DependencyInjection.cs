@@ -23,7 +23,6 @@ public static class DependencyInjection
         {
             string connectionString = PostgresConnectionStringBuilder.Build(configuration);
 
-            services.AddDbContext<BotDbContext>(options => options.UseNpgsql(connectionString));
             services.AddDbContextFactory<BotDbContext>(options => options.UseNpgsql(connectionString));
 
             services.AddScoped<IAutobannedUserRepository, AutobannedUserRepository>();
@@ -32,7 +31,7 @@ public static class DependencyInjection
             services.AddScoped<IUserTimezoneStore>(_ => new UserTimezoneStore(connectionString));
             services.AddScoped<IEmojiRepository>(sp => sp.GetRequiredService<BotDbContext>());
             services.AddScoped<ISecretRoleRepository, SecretRoleRepository>();
-            services.AddScoped<ModerationLoggingStore>();
+            services.AddSingleton<ModerationLoggingStore>();
             services.AddScoped<MetaProposalService>();
             services.AddScoped<MetaSuggestionSettingsService>();
         }

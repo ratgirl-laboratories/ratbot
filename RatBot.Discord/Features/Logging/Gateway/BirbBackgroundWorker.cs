@@ -1,6 +1,6 @@
 namespace RatBot.Discord.Features.Logging.Gateway;
 
-public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, ILogger logger) : BackgroundService
+public sealed class BirbBackgroundWorker(DiscordSocketClient discordClient, ILogger logger) : BackgroundService
 {
     private const ulong ChannelId = 268882317391429632;
     private const int MaxRetryCount = 5;
@@ -8,7 +8,7 @@ public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, I
     private static readonly AllowedMentions Mentions = new AllowedMentions(AllowedMentionTypes.None);
     private static readonly TimeSpan TtlSpan = TimeSpan.FromSeconds(30);
     private readonly string[] _imageUrls = LoadImageUrls();
-    private readonly ILogger _logger = logger.ForContext<SerilogBackgroundWorker>();
+    private readonly ILogger _logger = logger.ForContext<BirbBackgroundWorker>();
     private int _nextImageIndex;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -43,11 +43,11 @@ public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, I
                         new ButtonBuilder()
                             .WithStyle(ButtonStyle.Primary)
                             .WithLabel("Accept the proffered Joy?")
-                            .WithCustomId(SerilogTelemetryHandler.AcceptId),
+                            .WithCustomId(BirbResponseHandler.AcceptId),
                         new ButtonBuilder()
                             .WithStyle(ButtonStyle.Danger)
                             .WithLabel("Decline the Invitation")
-                            .WithCustomId(SerilogTelemetryHandler.DeclineId),
+                            .WithCustomId(BirbResponseHandler.DeclineId),
                     ])
                 )
         ).Build();

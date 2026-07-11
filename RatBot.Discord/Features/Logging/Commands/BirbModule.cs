@@ -3,7 +3,7 @@ using RatBot.Discord.Features.Logging.Gateway;
 namespace RatBot.Discord.Features.Logging.Commands;
 
 [DefaultMemberPermissions(GuildPermission.ManageRoles)]
-public sealed class BirbModule(SerilogBackgroundWorker worker) : InteractionModuleBase<IInteractionContext>
+public sealed class BirbModule(BirbBackgroundWorker worker) : InteractionModuleBase<IInteractionContext>
 {
     [SlashCommand("birb", "Summon the robin to a channel.")]
     [RequireUserPermission(GuildPermission.ManageRoles)]

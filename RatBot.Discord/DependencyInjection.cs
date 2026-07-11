@@ -105,7 +105,7 @@ public static class DependencyInjection
             services.AddSingleton<AdventureLeaderboardComponentBuilder>();
             services.AddSingleton<AdventureAccessController>();
             services.AddSingleton<AdventureLeaderboardManager>();
-            services.AddSingleton<SerilogBackgroundWorker>();
+            services.AddSingleton<BirbBackgroundWorker>();
             services.AddSingleton<IRoleColourReconciler, RoleColourReconciler>();
 
             // Role-colour sync queue and background worker
@@ -118,7 +118,7 @@ public static class DependencyInjection
             services.AddHostedService<MetaProposalPollBackgroundWorker>();
             services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardManager>());
             services.AddHostedService<LoggingMetadataCleanupBackgroundWorker>();
-            services.AddHostedService(sp => sp.GetRequiredService<SerilogBackgroundWorker>());
+            services.AddHostedService(sp => sp.GetRequiredService<BirbBackgroundWorker>());
 
             // Quorum Module
             services.AddSingleton<DiscordQuorumMemberIndex>();

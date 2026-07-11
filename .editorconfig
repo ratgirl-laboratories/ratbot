@@ -7,10 +7,11 @@ csharp_style_expression_bodied_constructors = false:none
 csharp_style_expression_bodied_methods = true:none
 csharp_style_expression_bodied_properties = true:suggestion
 
-# RatBot runs under the .NET generic host without a synchronization context.
 dotnet_diagnostic.ma0004.severity = none
+dotnet_diagnostic.IDE0036.severity = none
 
 # ReSharper properties
+resharper_arrange_modifiers_order_highlighting = none
 resharper_blank_lines_after_multiline_statements = 1
 resharper_blank_lines_before_multiline_statements = 1
 resharper_continuous_indent_multiplier = 1

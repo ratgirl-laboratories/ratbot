@@ -1,14 +1,15 @@
 namespace RatBot.Discord.Features.Logging.Gateway;
 
-public sealed class SerilogTelemetryHandler(ILogger logger) : InteractionModuleBase<IInteractionContext>
+// ReSharper disable once ClassNeverInstantiated.Global
+public sealed class BirbResponseHandler(ILogger logger) : InteractionModuleBase<IInteractionContext>
 {
-    private readonly ILogger _logger = logger.ForContext<SerilogTelemetryHandler>();
+    private readonly ILogger _logger = logger.ForContext<BirbResponseHandler>();
 
     public const string AcceptId = "accept-joy";
     public const string DeclineId = "decline-joy";
 
     [ComponentInteraction(AcceptId)]
-    public async Task Respond()
+    public async Task Accept()
     {
         await RespondAsync($"May joye befall thee, by this Robynes passyng, <@{Context.User.Id}> ☺️", ephemeral: true);
         _logger.Information("responded to {UserId}", Context.User.Id);

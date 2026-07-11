@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace RatBot.Infrastructure.RoleColours;
 
 /// <summary>
@@ -5,17 +7,18 @@ namespace RatBot.Infrastructure.RoleColours;
 /// </summary>
 public static class ListEligibleRoleColourOptions
 {
-    public static Task<IReadOnlyList<RoleColourOption>> ExecuteAsync(BotDbContext db, Query query, CancellationToken ct)
+    public static async Task<IReadOnlyList<RoleColourOption>> ExecuteAsync(BotDbContext db, Query query, CancellationToken ct)
     {
         IReadOnlyCollection<ulong> roleIds = query.CurrentMemberRoleIds;
 
-        IQueryable<RoleColourOption> q = db
+        RoleColourOption[] options = await db
             .RoleColourOptions.AsNoTracking()
             .Where(o => o.IsEnabled && roleIds.Contains(o.SourceRoleId))
             .OrderBy(o => o.Label)
-            .ThenBy(o => o.NormalisedKey);
+            .ThenBy(o => o.NormalisedKey)
+            .ToArrayAsync(ct);
 
-        return q.ToListAsync(ct).ContinueWith<IReadOnlyList<RoleColourOption>>(t => t.Result, ct);
+        return options.ToImmutableArray();
     }
 
     public sealed record Query(IReadOnlyCollection<ulong> CurrentMemberRoleIds);

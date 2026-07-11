@@ -67,7 +67,10 @@ public static class Program
             .Enrich.WithProperty("service_name", config["OTEL:Resource:ServiceName"] ?? "ratbot")
             .Enrich.WithProperty("service_instance_id", serviceInstanceId)
             .Enrich.WithProperty("environment", config["OTEL:Resource:Environment"] ?? config["ASPNETCORE_ENVIRONMENT"] ?? "production")
-            .WriteTo.Console(LogEventLevel.Debug)
+            .WriteTo.Console(
+                restrictedToMinimumLevel: LogEventLevel.Debug,
+                outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff'Z'} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}"
+            )
             .WriteTo.File("logs/verbose-.log", LogEventLevel.Verbose, rollingInterval: RollingInterval.Day)
             .WriteTo.File("logs/debug-.log", LogEventLevel.Debug, rollingInterval: RollingInterval.Day)
             .WriteTo.File("logs/info-.log", LogEventLevel.Information, rollingInterval: RollingInterval.Day)

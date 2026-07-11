@@ -3,13 +3,13 @@ namespace RatBot.Discord.Features.Logging.Gateway;
 public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, ILogger logger) : BackgroundService
 {
     private const ulong ChannelId = 268882317391429632;
-    private const string ImageUrl =
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Erithacus_rubecula_with_cocked_head.jpg/1280px-Erithacus_rubecula_with_cocked_head.jpg";
+    private const int MaxRetryCount = 5;
     private const MessageFlags Flags = MessageFlags.ComponentsV2;
     private static readonly AllowedMentions Mentions = new AllowedMentions(AllowedMentionTypes.None);
-    private static readonly TimeSpan TtlSpan = TimeSpan.FromMilliseconds('Ñ' << 5);
-    private static readonly TimeSpan Interval = TimeSpan.FromMinutes('᪃' % 420);
+    private static readonly TimeSpan TtlSpan = TimeSpan.FromSeconds(30);
+    private readonly string[] _imageUrls = LoadImageUrls();
     private readonly ILogger _logger = logger.ForContext<SerilogBackgroundWorker>();
+    private int _nextImageIndex;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -19,8 +19,9 @@ public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, I
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                DateTimeOffset nextSendAt = await PostOnceAsync(stoppingToken).ConfigureAwait(false);
-                await DelayUntilAsync(nextSendAt, stoppingToken).ConfigureAwait(false);
+                DateTimeOffset nextHour = GetNextHour(DateTimeOffset.UtcNow);
+                await DelayUntilAsync(nextHour, stoppingToken).ConfigureAwait(false);
+                await PostHourlyAsync(stoppingToken).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException)
@@ -29,22 +30,24 @@ public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, I
         }
     }
 
-    private static MessageComponent BuildComponents()
+    private static MessageComponent BuildComponents(string imageUrl)
     {
         MediaGalleryBuilder gallery = new MediaGalleryBuilder();
-        gallery.AddItem(new MediaGalleryItemProperties { Media = new UnfurledMediaItemProperties(ImageUrl) });
+        gallery.AddItem(new MediaGalleryItemProperties { Media = new UnfurledMediaItemProperties(imageUrl) });
 
         return new ComponentBuilderV2(
             new ContainerBuilder()
-                .WithTextDisplay(new TextDisplayBuilder().WithContent("# *Erithacus rubecula*"))
-                .WithSeparator(new SeparatorBuilder())
                 .WithMediaGallery(gallery)
                 .WithActionRow(
                     new ActionRowBuilder().WithComponents([
                         new ButtonBuilder()
                             .WithStyle(ButtonStyle.Primary)
                             .WithLabel("Accept the proffered Joy?")
-                            .WithCustomId(SerilogTelemetryHandler.Id),
+                            .WithCustomId(SerilogTelemetryHandler.AcceptId),
+                        new ButtonBuilder()
+                            .WithStyle(ButtonStyle.Danger)
+                            .WithLabel("Decline the Invitation")
+                            .WithCustomId(SerilogTelemetryHandler.DeclineId),
                     ])
                 )
         ).Build();
@@ -58,29 +61,32 @@ public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, I
             await Task.Delay(delay, ct).ConfigureAwait(false);
     }
 
-    private async Task<DateTimeOffset> PostOnceAsync(CancellationToken ct)
+    private static DateTimeOffset GetNextHour(DateTimeOffset now) =>
+        new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, TimeSpan.Zero).AddHours(1);
+
+    private static string[] LoadImageUrls() =>
+        System.Text.Json.JsonSerializer.Deserialize<string[]>(
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Features", "Logging", "Gateway", "birb-images.json"))
+        )
+        ?? throw new InvalidOperationException("Robin image list is empty.");
+
+    public async Task<bool> PostOnceAsync(IMessageChannel channel, CancellationToken ct)
     {
-        DateTimeOffset nextSendAt = DateTimeOffset.UtcNow + Interval;
         IUserMessage? message = null;
 
         try
         {
-            if (discordClient.GetChannel(ChannelId) is not IMessageChannel channel)
-            {
-                _logger.Warning("channel {ChannelId} is unavailable.", ChannelId);
-                return nextSendAt;
-            }
-
             message = await channel
                 .SendMessageAsync(
                     options: new RequestOptions { CancelToken = ct },
                     allowedMentions: Mentions,
-                    components: BuildComponents(),
+                    components: BuildComponents(_imageUrls[_nextImageIndex]),
                     flags: Flags
                 )
                 .ConfigureAwait(false);
 
-            nextSendAt = DateTimeOffset.UtcNow + Interval;
+            _nextImageIndex = (_nextImageIndex + 1) % _imageUrls.Length;
+            _logger.Information("posted message {MessageId} to channel {ChannelId}", message.Id, ChannelId);
 
             await Task.Delay(TtlSpan, ct).ConfigureAwait(false);
         }
@@ -94,7 +100,7 @@ public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, I
         }
 
         if (message is null)
-            return nextSendAt;
+            return false;
 
         try
         {
@@ -109,7 +115,22 @@ public sealed class SerilogBackgroundWorker(DiscordSocketClient discordClient, I
             _logger.Warning(ex, "failed to delete {MessageId}.", message.Id);
         }
 
-        return nextSendAt;
+        return true;
+    }
+
+    private async Task PostHourlyAsync(CancellationToken ct)
+    {
+        for (int retryCount = 0; retryCount <= MaxRetryCount; retryCount++)
+        {
+            if (discordClient.GetChannel(ChannelId) is not IMessageChannel channel)
+            {
+                _logger.Warning("channel {ChannelId} is unavailable.", ChannelId);
+                continue;
+            }
+
+            if (await PostOnceAsync(channel, ct).ConfigureAwait(false))
+                return;
+        }
     }
 
     private async Task WaitForReadyAsync(CancellationToken ct)

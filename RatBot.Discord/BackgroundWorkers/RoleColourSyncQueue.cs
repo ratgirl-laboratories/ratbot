@@ -5,14 +5,23 @@ namespace RatBot.Discord.BackgroundWorkers;
 
 public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
 {
-    private readonly Channel<IRoleColourSyncQueue.WorkItem> _channel = Channel.CreateBounded<IRoleColourSyncQueue.WorkItem>(
-        new BoundedChannelOptions(50_000)
-        {
-            SingleReader = false,
-            SingleWriter = false,
-            FullMode = BoundedChannelFullMode.DropOldest,
-        }
-    );
+    private const int DefaultCapacity = 50_000;
+    private readonly Channel<IRoleColourSyncQueue.WorkItem> _channel;
+
+    public RoleColourSyncQueue()
+        : this(DefaultCapacity) { }
+
+    internal RoleColourSyncQueue(int capacity)
+    {
+        _channel = Channel.CreateBounded<IRoleColourSyncQueue.WorkItem>(
+            new BoundedChannelOptions(capacity)
+            {
+                SingleReader = false,
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.Wait,
+            }
+        );
+    }
 
     private readonly ConcurrentQueue<DateTimeOffset> _completedTimestamps = new ConcurrentQueue<DateTimeOffset>();
 
@@ -36,29 +45,40 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
         IRoleColourSyncQueue.WorkItem item = new IRoleColourSyncQueue.WorkItem(guildId, userId);
         bool ok = _channel.Writer.TryWrite(item);
 
-        if (!ok)
-            // Fallback to async write; shouldn't normally happen
-            _ = _channel.Writer.WriteAsync(item).AsTask();
+        if (ok)
+            return true;
 
-        return true;
+        RollBackEnqueue(key);
+        return false;
     }
 
-    public async ValueTask EnqueueAsync(ulong guildId, ulong userId, CancellationToken ct)
+    public async ValueTask<bool> EnqueueAsync(ulong guildId, ulong userId, CancellationToken ct)
     {
         (ulong, ulong) key = (guildId, userId);
 
         if (!_dedupe.TryAdd(key, 0))
-            return; // already queued or in-flight
+            return false; // already queued or in-flight
 
         Interlocked.Increment(ref _pending);
-        await _channel.Writer.WriteAsync(new IRoleColourSyncQueue.WorkItem(guildId, userId), ct);
+
+        try
+        {
+            await _channel.Writer.WriteAsync(new IRoleColourSyncQueue.WorkItem(guildId, userId), ct);
+        }
+        catch
+        {
+            RollBackEnqueue(key);
+            throw;
+        }
+
+        return true;
     }
 
     public IRoleColourSyncQueue.Status GetStatus()
     {
         (double? perSec, TimeSpan? eta) = ComputeThroughputAndEta();
 
-        return new IRoleColourSyncQueue.Status(Volatile.Read(ref _pending), Volatile.Read(ref _inFlight), perSec, eta);
+        return new IRoleColourSyncQueue.Status(Volatile.Read(ref _pending), Volatile.Read(ref _inFlight), eta);
     }
 
     public void OnWorkCompleted(IRoleColourSyncQueue.WorkItem item)
@@ -78,10 +98,16 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
             _completedTimestamps.TryDequeue(out _);
     }
 
-    public void OnWorkStarted(IRoleColourSyncQueue.WorkItem item)
+    public void OnWorkStarted()
     {
         Interlocked.Decrement(ref _pending);
         Interlocked.Increment(ref _inFlight);
+    }
+
+    private void RollBackEnqueue((ulong GuildId, ulong UserId) key)
+    {
+        Interlocked.Decrement(ref _pending);
+        _dedupe.TryRemove(key, out _);
     }
 
     private (double? perSec, TimeSpan? eta) ComputeThroughputAndEta()

@@ -3,11 +3,16 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${DB__PORT:-5432}:5432"
     environment:
-      POSTGRES_DB: ${DB__Database:-ratbot}
-      POSTGRES_USER: ${DB__User:-postgres}
-      POSTGRES_PASSWORD: ${DB__Password:-postgres}
+      POSTGRES_DB: ${DB__DATABASE:-ratbot}
+      POSTGRES_USER: ${DB__USER:-postgres}
+      POSTGRES_PASSWORD: ${DB__PASSWORD:-postgres}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB__USER:-postgres} -d ${DB__DATABASE:-ratbot}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

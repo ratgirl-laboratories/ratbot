@@ -8,60 +8,44 @@ A Discord bot built with .NET 10.0 and Discord.Net, featuring a modular architec
 - [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/install/)
 - A Discord Bot Token (from the [Discord Developer Portal](https://discord.com/developers/applications))
 
-## Configuration
+## Local development
 
-The bot is configured via environment variables. For local development, you can create a `.env` file in the root directory.
-
-### Required Configuration
-
-| Variable | Description |
-|----------|-------------|
-| `Discord__Token` | Your Discord Bot Token |
-| `Discord__GuildId` | The ID of the primary guild for slash commands |
-
-### Optional Database Configuration
-
-The `docker-compose.yml` provides a PostgreSQL instance with the following defaults. You only need to change these if you want to use a different setup.
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DB__Host` | PostgreSQL host | `localhost` |
-| `DB__Database` | PostgreSQL database name | `ratbot` |
-| `DB__User` | PostgreSQL username | `postgres` |
-| `DB__Password` | PostgreSQL password | `postgres` |
-
-## Running Locally
-
-### 1. Start the Database
-
-Run the following command to start the PostgreSQL database in the background:
+### 1. Create the local configuration
 
 ```bash
-docker compose up db -d
+cp env/local.env.example .env
 ```
 
-### 2. Run the Bot
+Set `DISCORD__TOKEN` and `DISCORD__GUILDID` in `.env`.
 
-#### Option A: Running with .NET SDK (Recommended for development)
+### 2. Start PostgreSQL
 
 ```bash
-dotnet run --project RatBot.Host
+docker compose --env-file .env up -d --wait db
 ```
 
-The bot will automatically apply database migrations on startup.
+The database is exposed at `localhost:5432` using the `DB__*` values in `.env`. RatBot applies pending EF migrations when it starts. To stop it later, run `docker compose down`
 
-#### Option B: Running via Docker
+### 3. Run or debug the bot
 
 ```bash
-docker build -t ratbot .
-docker run --env-file .env ratbot
+dotnet run --project RatBot.Host --launch-profile RatBot.Local
 ```
+
+### Troubleshooting
+
+```bash
+docker compose --env-file .env ps
+docker compose --env-file .env logs db
+```
+
+PostgreSQL only uses `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` when its data volume is first created. If you change those settings after initial startup, either change them inside PostgreSQL or intentionally recreate the local volume with `docker compose down --volumes`.
 
 ## Optional: Observability
 
 The project includes an optional observability stack (Grafana, Loki, OpenTelemetry) for monitoring and logging.
 
-### 1. Configuration
+### Configuration
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -71,10 +55,10 @@ The project includes an optional observability stack (Grafana, Loki, OpenTelemet
 
 To enable logs export, set `OTEL__Logs__Endpoint` to `http://localhost:4317` (if running bot locally) or `http://otel-collector:4317` (if running bot in docker).
 
-### 2. Start Observability Stack
+### Start Observability Stack
 
 ```bash
-docker compose up loki grafana otel-collector -d
+docker compose --env-file .env up loki grafana otel-collector -d
 ```
 
 Grafana will be accessible at `http://localhost:3000` (Default: `admin`/`admin`).

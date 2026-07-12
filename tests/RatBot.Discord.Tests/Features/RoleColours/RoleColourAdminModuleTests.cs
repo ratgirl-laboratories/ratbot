@@ -1,0 +1,31 @@
+using System.Reflection;
+using Discord;
+using Discord.Interactions;
+using RatBot.Discord.Features.RoleColours.Commands;
+using Shouldly;
+
+namespace RatBot.Discord.Tests.Features.RoleColours;
+
+[TestFixture]
+public sealed class RoleColourAdminModuleTests
+{
+    [Test]
+    public void RoleColourAdminModule_HasExpectedCommandMetadata()
+    {
+        Type moduleType = typeof(RoleColourAdminModule);
+        GroupAttribute group = moduleType.GetCustomAttribute<GroupAttribute>() ?? throw new InvalidOperationException("Expected group attribute.");
+        DefaultMemberPermissionsAttribute permissions =
+            moduleType.GetCustomAttribute<DefaultMemberPermissionsAttribute>()
+            ?? throw new InvalidOperationException("Expected default permissions attribute.");
+        string[] commandNames = moduleType
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+            .Select(method => method.GetCustomAttribute<SlashCommandAttribute>())
+            .Where(attribute => attribute is not null)
+            .Select(attribute => attribute!.Name)
+            .ToArray();
+
+        group.Name.ShouldBe("colour-admin");
+        commandNames.ShouldBe(["add", "upsert", "delete", "list", "sync"], ignoreOrder: true);
+        permissions.Permissions.ShouldBe(GuildPermission.Administrator);
+    }
+}

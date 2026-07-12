@@ -10,6 +10,7 @@ using RatBot.Infrastructure.Features.Meta;
 using RatBot.Infrastructure.Features.Quorum.Persistence;
 using RatBot.Infrastructure.Features.Timezone.Persistence;
 using RatBot.Infrastructure.Persistence.Repositories;
+using RatBot.Infrastructure.RoleColours;
 using RatBot.Infrastructure.SecretRole;
 using RatBot.Infrastructure.Stores;
 
@@ -34,6 +35,7 @@ public static class DependencyInjection
             services.AddSingleton<ModerationLoggingStore>();
             services.AddScoped<MetaProposalService>();
             services.AddScoped<MetaSuggestionSettingsService>();
+            services.AddScoped<RoleColourOperations>();
         }
     }
 }

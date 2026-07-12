@@ -105,22 +105,19 @@ public static class DependencyInjection
             services.AddSingleton<AdventureLeaderboardComponentBuilder>();
             services.AddSingleton<AdventureAccessController>();
             services.AddSingleton<AdventureLeaderboardManager>();
-            services.AddSingleton<BirbBackgroundWorker>();
-            services.AddSingleton<IRoleColourReconciler, RoleColourReconciler>();
-
-            // Role-colour sync queue and background worker
-            services.AddSingleton<IRoleColourSyncQueue, RoleColourSyncQueue>();
+            services.AddSingleton<RoleColourReconciler>();
 
             services.AddHostedService<DiscordBotHostedService>();
             services.AddHostedService<GuildMemberCacheBackgroundWorker>();
             services.AddHostedService<EmojiAnalyticsBackgroundWorker>();
-            services.AddHostedService<RoleColourSyncBackgroundWorker>();
+            services.AddHostedService<RoleColourReconciliationBackgroundWorker>();
             services.AddHostedService<MetaProposalPollBackgroundWorker>();
-            services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardManager>());
             services.AddHostedService<LoggingMetadataCleanupBackgroundWorker>();
-            services.AddHostedService(sp => sp.GetRequiredService<BirbBackgroundWorker>());
+            services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardManager>());
 
-            // Quorum Module
+            // services.AddSingleton<BirbBackgroundWorker>();
+            // services.AddHostedService(sp => sp.GetRequiredService<BirbBackgroundWorker>());
+
             services.AddSingleton<DiscordQuorumMemberIndex>();
             services.AddSingleton<IQuorumMemberSource, DiscordQuorumMemberSource>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<DiscordQuorumMemberIndex>());

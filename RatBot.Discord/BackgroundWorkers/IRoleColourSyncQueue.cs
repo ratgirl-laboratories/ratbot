@@ -9,8 +9,6 @@ public interface IRoleColourSyncQueue
 
     bool Enqueue(ulong guildId, ulong userId);
 
-    ValueTask<bool> EnqueueAsync(ulong guildId, ulong userId, CancellationToken ct);
-
     Status GetStatus();
 
     void OnWorkCompleted(WorkItem item);

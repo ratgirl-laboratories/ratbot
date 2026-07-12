@@ -52,34 +52,8 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
         return false;
     }
 
-    public async ValueTask<bool> EnqueueAsync(ulong guildId, ulong userId, CancellationToken ct)
-    {
-        (ulong, ulong) key = (guildId, userId);
-
-        if (!_dedupe.TryAdd(key, 0))
-            return false; // already queued or in-flight
-
-        Interlocked.Increment(ref _pending);
-
-        try
-        {
-            await _channel.Writer.WriteAsync(new IRoleColourSyncQueue.WorkItem(guildId, userId), ct);
-        }
-        catch
-        {
-            RollBackEnqueue(key);
-            throw;
-        }
-
-        return true;
-    }
-
-    public IRoleColourSyncQueue.Status GetStatus()
-    {
-        (double? perSec, TimeSpan? eta) = ComputeThroughputAndEta();
-
-        return new IRoleColourSyncQueue.Status(Volatile.Read(ref _pending), Volatile.Read(ref _inFlight), eta);
-    }
+    public IRoleColourSyncQueue.Status GetStatus() =>
+        new IRoleColourSyncQueue.Status(Volatile.Read(ref _pending), Volatile.Read(ref _inFlight), ComputeThroughputAndEta());
 
     public void OnWorkCompleted(IRoleColourSyncQueue.WorkItem item)
     {
@@ -110,12 +84,12 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
         _dedupe.TryRemove(key, out _);
     }
 
-    private (double? perSec, TimeSpan? eta) ComputeThroughputAndEta()
+    private TimeSpan? ComputeThroughputAndEta()
     {
         DateTimeOffset[] points = _completedTimestamps.ToArray();
 
         if (points.Length < 2)
-            return (null, null);
+            return null;
 
         Array.Sort(points);
         DateTimeOffset first = points[0];
@@ -123,13 +97,13 @@ public sealed class RoleColourSyncQueue : IRoleColourSyncQueue
         double seconds = (last - first).TotalSeconds;
 
         if (seconds <= 0.001)
-            return (null, null);
+            return null;
 
         double rate = (points.Length - 1) / seconds; // items per second
         int remaining = Math.Max(0, Volatile.Read(ref _pending) + Volatile.Read(ref _inFlight));
 
         TimeSpan eta = rate > 0 ? TimeSpan.FromSeconds(remaining / rate) : TimeSpan.Zero;
 
-        return (rate, eta);
+        return eta;
     }
 }

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using RatBot.Discord.Handlers;
 using RatBot.Infrastructure.Data;
@@ -11,10 +10,8 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
 {
     private const string SwapPrefix = "colour-swap";
 
-    private static readonly ConcurrentDictionary<string, Session> Sessions = new ConcurrentDictionary<string, Session>();
-
     [ComponentInteraction($"{SwapPrefix}:apply:*:*", true)]
-    public async Task OnSwapApplyAsync(ulong ownerUserId, string nonce)
+    public async Task OnSwapApplyAsync(ulong ownerUserId, string optionId)
     {
         if (Context.Guild is null)
         {
@@ -28,15 +25,10 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
             return;
         }
 
-        if (!Sessions.TryGetValue(nonce, out Session? session) || session.IsExpired)
+        if (!Guid.TryParse(optionId, out Guid selectedOptionId))
         {
-            await UpdateOrRespondExpiredAsync();
-            return;
-        }
-
-        if (session.Selected is null)
-        {
-            await RespondAsync("Please choose a colour.", ephemeral: true);
+            await DisableComponentsAsync();
+            await RespondAsync("Invalid selection.", ephemeral: true);
             return;
         }
 
@@ -46,7 +38,7 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
 
         ApplyRoleColourSelection.Result res = await ApplyRoleColourSelection.ExecuteAsync(
             db,
-            new ApplyRoleColourSelection.Command(Context.User.Id, session.Selected.Value, roleIds),
+            new ApplyRoleColourSelection.Command(Context.User.Id, new RoleColourOption.Id(selectedOptionId), roleIds),
             CancellationToken.None
         );
 
@@ -61,14 +53,14 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
             "colour_swap apply_ok guild_id={GuildId} user_id={UserId} option_id={OptionId}",
             Context.Guild.Id,
             Context.User.Id,
-            session.Selected.Value.Value
+            selectedOptionId
         );
 
         await reconciler.ReconcileMemberAsync(Context.Guild, Context.User.Id, CancellationToken.None);
         Log.Debug("colour_swap reconciled guild_id={GuildId} user_id={UserId}", Context.Guild.Id, Context.User.Id);
 
         // Try to get the label to show success; reload option
-        RoleColourOption? option = await db.RoleColourOptions.SingleOrDefaultAsync(o => o.OptionId == session.Selected.Value);
+        RoleColourOption? option = await db.RoleColourOptions.SingleOrDefaultAsync(o => o.OptionId == new RoleColourOption.Id(selectedOptionId));
 
         string label = option?.Label ?? "your chosen colour";
 
@@ -80,22 +72,14 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
             });
         else
             await RespondAsync($"You are now wearing {label}.", ephemeral: true);
-
-        Sessions.TryRemove(nonce, out _);
     }
 
-    [ComponentInteraction($"{SwapPrefix}:select:*:*", true)]
-    public async Task OnSwapSelectAsync(ulong ownerUserId, string nonce, string[] values)
+    [ComponentInteraction($"{SwapPrefix}:select:*", true)]
+    public async Task OnSwapSelectAsync(ulong ownerUserId, string[] values)
     {
         if (Context.User.Id != ownerUserId)
         {
             await RespondAsync("This colour selection menu is not for you.", ephemeral: true);
-            return;
-        }
-
-        if (!Sessions.TryGetValue(nonce, out Session? session) || session.IsExpired)
-        {
-            await UpdateOrRespondExpiredAsync();
             return;
         }
 
@@ -111,12 +95,6 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
             return;
         }
 
-        // Update session with selected option
-        Sessions[nonce] = session with
-        {
-            Selected = new RoleColourOption.Id(optId),
-        };
-
         Log.Debug("colour_swap select guild_id={GuildId} user_id={UserId} option_id={OptionId}", Context.Guild?.Id, Context.User.Id, optId);
 
         // Rebuild components from fresh eligible list and mark selected as default
@@ -129,8 +107,8 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
             CancellationToken.None
         );
 
-        string applyId = $"{SwapPrefix}:apply:{ownerUserId}:{nonce}";
-        string selectId = $"{SwapPrefix}:select:{ownerUserId}:{nonce}";
+        string applyId = $"{SwapPrefix}:apply:{ownerUserId}:{optId}";
+        string selectId = $"{SwapPrefix}:select:{ownerUserId}";
 
         SelectMenuBuilder menu = new SelectMenuBuilder().WithCustomId(selectId).WithPlaceholder("Choose a colour…").WithMinValues(1).WithMaxValues(1);
 
@@ -218,12 +196,8 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
                 return;
         }
 
-        string nonce = Guid.NewGuid().ToString("N");
-        string selectId = $"{SwapPrefix}:select:{Context.User.Id}:{nonce}";
-        string applyId = $"{SwapPrefix}:apply:{Context.User.Id}:{nonce}";
-        DateTimeOffset expires = DateTimeOffset.UtcNow.AddMinutes(5);
-
-        Sessions[nonce] = new Session(Context.User.Id, Selected: null, expires);
+        string selectId = $"{SwapPrefix}:select:{Context.User.Id}";
+        string applyId = $"{SwapPrefix}:apply:{Context.User.Id}:{Guid.Empty}";
 
         SelectMenuBuilder menu = new SelectMenuBuilder().WithCustomId(selectId).WithPlaceholder("Choose a colour…");
 
@@ -249,17 +223,5 @@ public sealed class ColourModule(BotDbContext db, IRoleColourReconciler reconcil
         {
             // Don't care
         }
-    }
-
-    private async Task UpdateOrRespondExpiredAsync()
-    {
-        // Disable components if we can
-        await DisableComponentsAsync();
-        await RespondAsync("This colour selection menu has expired. Run `/colour swap` again.", ephemeral: true);
-    }
-
-    private sealed record Session(ulong OwnerUserId, RoleColourOption.Id? Selected, DateTimeOffset ExpiresAtUtc)
-    {
-        public bool IsExpired => DateTimeOffset.UtcNow >= ExpiresAtUtc;
     }
 }

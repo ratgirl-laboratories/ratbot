@@ -2,32 +2,36 @@ namespace RatBot.Domain.Moderation;
 
 public sealed class ImageSpamSettings
 {
-    public const int SingletonId = 1;
-
     private ImageSpamSettings() { }
 
-    private ImageSpamSettings(int id, int requiredChannelCount, int requiredAttachmentCount, int burstDurationSeconds)
+    private ImageSpamSettings(ulong guildId, int requiredChannelCount, int requiredAttachmentCount, int burstDurationSeconds)
     {
-        Id = id;
+        GuildId = guildId;
         RequiredChannelCount = requiredChannelCount;
         RequiredAttachmentCount = requiredAttachmentCount;
         BurstDurationSeconds = burstDurationSeconds;
+        IsEnabled = true;
     }
 
     public int BurstDurationSeconds { get; private set; }
 
-    public int Id { get; private set; } = SingletonId;
+    public ulong GuildId { get; private set; }
+
+    public bool IsEnabled { get; private set; }
 
     public int RequiredAttachmentCount { get; private set; }
 
     public int RequiredChannelCount { get; private set; }
 
-    public static ImageSpamSettings CreateDefault() => new ImageSpamSettings(SingletonId, 4, 2, 45);
+    public static ImageSpamSettings CreateDefault(ulong guildId) => new ImageSpamSettings(guildId, 4, 2, 45);
+
+    public void Disable() => IsEnabled = false;
 
     public void Update(int? requiredChannelCount, int? requiredAttachmentCount, int? burstDurationSeconds)
     {
         RequiredChannelCount = requiredChannelCount ?? RequiredChannelCount;
         RequiredAttachmentCount = requiredAttachmentCount ?? RequiredAttachmentCount;
         BurstDurationSeconds = burstDurationSeconds ?? BurstDurationSeconds;
+        IsEnabled = true;
     }
 }

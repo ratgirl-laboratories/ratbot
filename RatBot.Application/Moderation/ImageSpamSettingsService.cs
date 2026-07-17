@@ -12,20 +12,32 @@ public sealed class ImageSpamSettingsService(IImageSpamSettingsStore store, Imag
             RequiredAttachmentCount = settings.RequiredAttachmentCount,
         };
 
-    public async Task<ImageBurstSpamDetectorOptions> GetCurrentAsync(CancellationToken ct)
+    public async Task<ImageBurstSpamDetectorOptions?> GetCurrentAsync(ulong guildId, CancellationToken ct)
     {
-        ImageSpamSettings? settings = await store.GetAsync(ct).ConfigureAwait(false);
+        ImageSpamSettings? settings = await store.GetAsync(guildId, ct).ConfigureAwait(false);
 
-        if (settings is null)
-            return detectorSettings.Current;
+        if (settings is not { IsEnabled: true })
+        {
+            detectorSettings.Remove(guildId);
+            return null;
+        }
 
         ImageBurstSpamDetectorOptions options = ToOptions(settings);
-        detectorSettings.Update(options);
+        detectorSettings.Update(guildId, options);
 
         return options;
     }
 
+    public async Task LoadEnabledSettingsAsync(CancellationToken ct)
+    {
+        IReadOnlyList<ImageSpamSettings> settings = await store.ListEnabledAsync(ct).ConfigureAwait(false);
+
+        foreach (ImageSpamSettings setting in settings)
+            detectorSettings.Update(setting.GuildId, ToOptions(setting));
+    }
+
     public async Task<ImageBurstSpamDetectorOptions> UpsertAsync(
+        ulong guildId,
         int? requiredChannelCount,
         int? requiredAttachmentCount,
         int? burstDurationSeconds,
@@ -33,11 +45,11 @@ public sealed class ImageSpamSettingsService(IImageSpamSettingsStore store, Imag
     )
     {
         ImageSpamSettings settings = await store
-            .UpsertAsync(requiredChannelCount, requiredAttachmentCount, burstDurationSeconds, ct)
+            .UpsertAsync(guildId, requiredChannelCount, requiredAttachmentCount, burstDurationSeconds, ct)
             .ConfigureAwait(false);
 
         ImageBurstSpamDetectorOptions options = ToOptions(settings);
-        detectorSettings.Update(options);
+        detectorSettings.Update(guildId, options);
 
         return options;
     }

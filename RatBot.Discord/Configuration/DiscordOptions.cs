@@ -6,8 +6,7 @@ public sealed class DiscordOptions
 {
     public const string SectionName = "Discord";
 
-    [Range(1, ulong.MaxValue)]
-    public ulong GuildId { get; init; }
+    public ulong[] DevelopmentCommandRegistrationGuildIds { get; init; } = [];
 
     public ulong[] ImageBurstSpamAllowlistedRoleIds { get; init; } = [];
 

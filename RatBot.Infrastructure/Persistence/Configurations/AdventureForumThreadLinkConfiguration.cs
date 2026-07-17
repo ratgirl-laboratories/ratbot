@@ -12,12 +12,13 @@ public sealed class AdventureForumThreadLinkConfiguration : IEntityTypeConfigura
             }
         );
 
-        builder.HasKey(x => x.ScorePartIndex);
+        builder.HasKey(x => new { x.GuildId, x.ScorePartIndex });
 
+        builder.Property(x => x.GuildId).IsRequired().HasConversion<long>().HasColumnType("bigint").ValueGeneratedNever();
         builder.Property(x => x.ScorePartIndex).ValueGeneratedNever();
         builder.Property(x => x.ThreadId).IsRequired().HasConversion<long>().HasColumnType("bigint");
 
-        builder.HasIndex(x => x.ScorePartIndex).IsUnique();
-        builder.HasIndex(x => x.ThreadId).IsUnique();
+        builder.HasIndex(x => new { x.GuildId, x.ScorePartIndex }).IsUnique();
+        builder.HasIndex(x => new { x.GuildId, x.ThreadId }).IsUnique();
     }
 }

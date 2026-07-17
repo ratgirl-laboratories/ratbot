@@ -96,7 +96,7 @@ public sealed class ModerationLoggingGatewayHandler(
                 return;
 
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            bool hasBefore = evidenceCache.TryGet(userMessage.Id, now, out MessageEvidence before);
+            bool hasBefore = evidenceCache.TryGet(guildId, userMessage.Id, now, out MessageEvidence before);
             MessageEvidence after = await CreateEvidenceAsync(guildId, userMessage, now, CancellationToken.None).ConfigureAwait(false);
 
             bool hasPreviousContent = TryGetPreviousContent(cachedMessage, before, hasBefore, out string? beforeContent);
@@ -115,7 +115,7 @@ public sealed class ModerationLoggingGatewayHandler(
 
                 if (logMessage is not null)
                     await loggingStore
-                        .RecordLogEntriesAsync(new[] { new MessageLogEntry(userMessage.Id, logMessage.Id, now) }, CancellationToken.None)
+                        .RecordLogEntriesAsync(new[] { new MessageLogEntry(guildId, userMessage.Id, logMessage.Id, now) }, CancellationToken.None)
                         .ConfigureAwait(false);
             }
 
@@ -153,17 +153,19 @@ public sealed class ModerationLoggingGatewayHandler(
 
             if (message.HasValue && !IsQualifyingUserMessage(message.Value))
             {
-                evidenceCache.Remove(message.Id);
+                evidenceCache.Remove(guildId, message.Id);
                 return;
             }
 
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            ObservedMessage? observed = await loggingStore.FindObservedMessageAsync(message.Id, CancellationToken.None).ConfigureAwait(false);
-            bool hasEvidence = evidenceCache.TryGet(message.Id, now, out MessageEvidence evidence) && evidence.AuthorId != 0;
+            ObservedMessage? observed = await loggingStore
+                .FindObservedMessageAsync(guildId, message.Id, CancellationToken.None)
+                .ConfigureAwait(false);
+            bool hasEvidence = evidenceCache.TryGet(guildId, message.Id, now, out MessageEvidence evidence) && evidence.AuthorId != 0;
 
             if (observed is null && !hasEvidence)
             {
-                evidenceCache.Remove(message.Id);
+                evidenceCache.Remove(guildId, message.Id);
                 return;
             }
 
@@ -192,12 +194,12 @@ public sealed class ModerationLoggingGatewayHandler(
 
                 if (logMessage is not null)
                     await loggingStore
-                        .RecordLogEntriesAsync(new[] { new MessageLogEntry(message.Id, logMessage.Id, now) }, CancellationToken.None)
+                        .RecordLogEntriesAsync(new[] { new MessageLogEntry(guildId, message.Id, logMessage.Id, now) }, CancellationToken.None)
                         .ConfigureAwait(false);
             }
             finally
             {
-                evidenceCache.Remove(message.Id);
+                evidenceCache.Remove(guildId, message.Id);
             }
         }
         catch (Exception ex)
@@ -231,15 +233,15 @@ public sealed class ModerationLoggingGatewayHandler(
             DateTimeOffset now = DateTimeOffset.UtcNow;
             ImmutableArray<ulong> messageIds = messages.Select(message => message.Id).Distinct().ToImmutableArray();
             IReadOnlyDictionary<ulong, ObservedMessage> observed = await loggingStore
-                .FindObservedMessagesAsync(messageIds, CancellationToken.None)
+                .FindObservedMessagesAsync(guildId, messageIds, CancellationToken.None)
                 .ConfigureAwait(false);
 
-            IReadOnlyDictionary<ulong, MessageEvidence> evidence = evidenceCache.GetMany(messageIds, now);
+            IReadOnlyDictionary<ulong, MessageEvidence> evidence = evidenceCache.GetMany(guildId, messageIds, now);
             ImmutableArray<ulong> qualifyingMessageIds = GetQualifyingBulkDeletedMessageIds(messageIds, messages, observed, evidence);
 
             if (qualifyingMessageIds.Length == 0)
             {
-                RemoveEvidence(messageIds);
+                RemoveEvidence(guildId, messageIds);
                 return;
             }
 
@@ -257,12 +259,14 @@ public sealed class ModerationLoggingGatewayHandler(
 
             if (logMessage is not null)
             {
-                MessageLogEntry[] entries = qualifyingMessageIds.Select(messageId => new MessageLogEntry(messageId, logMessage.Id, now)).ToArray();
+                MessageLogEntry[] entries = qualifyingMessageIds
+                    .Select(messageId => new MessageLogEntry(guildId, messageId, logMessage.Id, now))
+                    .ToArray();
 
                 await loggingStore.RecordLogEntriesAsync(entries, CancellationToken.None).ConfigureAwait(false);
             }
 
-            RemoveEvidence(messageIds);
+            RemoveEvidence(guildId, messageIds);
         }
         catch (Exception ex)
         {
@@ -303,10 +307,10 @@ public sealed class ModerationLoggingGatewayHandler(
         return await loggingStore.IsAnyExcludedAsync(guildId, scopeIds, ct).ConfigureAwait(false);
     }
 
-    private void RemoveEvidence(IEnumerable<ulong> messageIds)
+    private void RemoveEvidence(ulong guildId, IEnumerable<ulong> messageIds)
     {
         foreach (ulong messageId in messageIds)
-            evidenceCache.Remove(messageId);
+            evidenceCache.Remove(guildId, messageId);
     }
 
     private async Task<IUserMessage?> SendLogAsync(

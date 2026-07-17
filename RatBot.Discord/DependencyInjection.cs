@@ -29,14 +29,26 @@ public static class DependencyInjection
                 .AddOptions<DiscordOptions>()
                 .Bind(configuration.GetSection(DiscordOptions.SectionName))
                 .Validate(options => !string.IsNullOrWhiteSpace(options.Token), "Discord token is required.")
-                .Validate(options => options.GuildId != 0, "Discord guild id is required.")
+                .Validate(
+                    options => options.DevelopmentCommandRegistrationGuildIds.All(guildId => guildId != 0),
+                    "Development command registration guild ids must be non-zero."
+                )
                 .Validate(options => options.MessageCacheSize >= 1000, "Discord message cache size must be at least 1000.")
                 .ValidateOnStart();
 
             services
                 .AddOptions<AdventureLeaderboardOptions>()
                 .Bind(configuration.GetSection(AdventureLeaderboardOptions.SectionName))
-                .Validate(options => options.AdventurerRoleId != 0, "Adventure role id is required.")
+                .Validate(
+                    options => options.Guilds.All(pair => pair.Key != 0 && pair.Value.AdventurerRoleId != 0),
+                    "Adventure guild ids and role ids must be non-zero."
+                )
+                .ValidateOnStart();
+
+            services
+                .AddOptions<EmojiAnalyticsOptions>()
+                .Bind(configuration.GetSection(EmojiAnalyticsOptions.SectionName))
+                .Validate(options => options.EnabledGuildIds.All(guildId => guildId != 0), "Emoji analytics guild ids must be non-zero.")
                 .ValidateOnStart();
 
             services

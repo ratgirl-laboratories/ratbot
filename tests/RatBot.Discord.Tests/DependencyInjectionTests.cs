@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using RatBot.Application;
+using RatBot.Discord.Configuration;
 using RatBot.Discord.Features.Logging.Gateway;
 using RatBot.Discord.Gateway;
 using RatBot.Infrastructure;
@@ -20,9 +22,8 @@ public sealed class DependencyInjectionTests
                 {
                     ["DB:ConnectionString"] = "Host=localhost;Database=ratbot_di_test;Username=ratbot;Password=unused",
                     ["Discord:Token"] = "inert-test-token",
-                    ["Discord:GuildId"] = "1",
                     ["Discord:MessageCacheSize"] = "1000",
-                    ["AdventureLeaderboard:AdventurerRoleId"] = "1",
+                    ["AdventureLeaderboard:Guilds:1:AdventurerRoleId"] = "1",
                 }
             )
             .Build();
@@ -44,5 +45,29 @@ public sealed class DependencyInjectionTests
         gatewayHandlers.ShouldContain(handler => handler is ModerationLoggingGatewayHandler);
         provider.GetRequiredService<AutobanGatewayHandler>().ShouldNotBeNull();
         provider.GetRequiredService<ModerationLoggingGatewayHandler>().ShouldNotBeNull();
+    }
+
+    [Test]
+    public void DiscordOptions_DoNotRequireOrExposeARuntimeGuildAllowlist()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(
+                new Dictionary<string, string?>(StringComparer.Ordinal)
+                {
+                    ["Discord:Token"] = "inert-test-token",
+                    ["Discord:MessageCacheSize"] = "1000",
+                    ["Discord:DevelopmentCommandRegistrationGuildIds:0"] = "10",
+                    ["Discord:DevelopmentCommandRegistrationGuildIds:1"] = "20",
+                }
+            )
+            .Build();
+        ServiceCollection services = new ServiceCollection();
+        services.AddOptions<DiscordOptions>().Bind(configuration.GetSection(DiscordOptions.SectionName));
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        DiscordOptions options = provider.GetRequiredService<IOptions<DiscordOptions>>().Value;
+
+        options.DevelopmentCommandRegistrationGuildIds.ShouldBe([10UL, 20UL]);
+        typeof(DiscordOptions).GetProperty("GuildId").ShouldBeNull();
     }
 }

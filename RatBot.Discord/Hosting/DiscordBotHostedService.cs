@@ -108,9 +108,6 @@ public sealed class DiscordBotHostedService : IHostedService
 
     private Task OnGuildAvailableAsync(SocketGuild guild)
     {
-        if (guild.Id != _options.GuildId)
-            return Task.CompletedTask;
-
         _ = _guildMemberCacheService.EnsureGuildMembersDownloadedAsync(guild, "guild_available");
 
         return Task.CompletedTask;
@@ -118,9 +115,6 @@ public sealed class DiscordBotHostedService : IHostedService
 
     private Task OnGuildMembersDownloadedAsync(SocketGuild guild)
     {
-        if (guild.Id != _options.GuildId)
-            return Task.CompletedTask;
-
         _logger.Information(
             "Guild member cache populated. GuildId={GuildId}, DownloadedMemberCount={DownloadedMemberCount}, MemberCount={MemberCount}, HasAllMembers={HasAllMembers}",
             guild.Id,

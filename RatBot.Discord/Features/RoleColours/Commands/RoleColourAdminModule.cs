@@ -33,7 +33,14 @@ public sealed class RoleColourAdminModule(RoleColourOperations operations, RoleC
         }
 
         await DeferAsync(ephemeral: true);
-        ErrorOr<RoleColourOption> result = await operations.AddMappingAsync(name, name, source.Id, display.Id, CancellationToken.None);
+        ErrorOr<RoleColourOption> result = await operations.AddMappingAsync(
+            Context.Guild.Id,
+            name,
+            name,
+            source.Id,
+            display.Id,
+            CancellationToken.None
+        );
 
         await result.SwitchFirstAsync(
             async option =>
@@ -72,6 +79,7 @@ public sealed class RoleColourAdminModule(RoleColourOperations operations, RoleC
 
         await DeferAsync(ephemeral: true);
         ErrorOr<(RoleColourOption Option, bool Created)> result = await operations.UpsertMappingAsync(
+            Context.Guild.Id,
             name,
             name,
             source.Id,
@@ -104,7 +112,7 @@ public sealed class RoleColourAdminModule(RoleColourOperations operations, RoleC
         }
 
         await DeferAsync(ephemeral: true);
-        ErrorOr<RoleColourOption> result = await operations.DeleteMappingAsync(name, CancellationToken.None);
+        ErrorOr<RoleColourOption> result = await operations.DeleteMappingAsync(Context.Guild.Id, name, CancellationToken.None);
 
         await result.SwitchFirstAsync(
             async option =>
@@ -126,7 +134,11 @@ public sealed class RoleColourAdminModule(RoleColourOperations operations, RoleC
             return;
         }
 
-        ErrorOr<ImmutableArray<RoleColourOption>> result = await operations.ListConfiguredOptionsAsync(includeDisabled, CancellationToken.None);
+        ErrorOr<ImmutableArray<RoleColourOption>> result = await operations.ListConfiguredOptionsAsync(
+            Context.Guild.Id,
+            includeDisabled,
+            CancellationToken.None
+        );
         ImmutableArray<RoleColourOption> options = result.Value;
 
         if (options.IsEmpty)
@@ -149,7 +161,11 @@ public sealed class RoleColourAdminModule(RoleColourOperations operations, RoleC
         }
 
         await DeferAsync(ephemeral: true);
-        ErrorOr<ImmutableArray<RoleColourOption>> optionsResult = await operations.ListConfiguredOptionsAsync(false, CancellationToken.None);
+        ErrorOr<ImmutableArray<RoleColourOption>> optionsResult = await operations.ListConfiguredOptionsAsync(
+            Context.Guild.Id,
+            false,
+            CancellationToken.None
+        );
         ImmutableArray<RoleColourOption> enabled = optionsResult.Value;
 
         if (enabled.IsEmpty)

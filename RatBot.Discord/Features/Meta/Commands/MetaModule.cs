@@ -36,7 +36,7 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
             return;
         }
 
-        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(thread.Id);
+        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(Context.Guild.Id, thread.Id);
 
         if (stateResult.IsError)
         {
@@ -82,6 +82,7 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
         ErrorOr<MetaProposalState> startResult = await metaProposalService.StartPollAsync(
+            Context.Guild.Id,
             thread.Id,
             Context.User.Id,
             modal.ProposalTitle,
@@ -108,7 +109,7 @@ public sealed class MetaModule(MetaProposalService metaProposalService, MetaProp
             return;
         }
 
-        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(thread.Id);
+        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(Context.Guild.Id, thread.Id);
 
         if (stateResult.IsError)
         {

@@ -5,10 +5,14 @@ namespace RatBot.Discord.SecretRole;
 
 public sealed class SecretRoleManager(IServiceScopeFactory scopeFactory)
 {
-    private SecretRoleSetting? _current;
+    private ImmutableDictionary<ulong, SecretRoleSetting> _current = ImmutableDictionary<ulong, SecretRoleSetting>.Empty;
     private readonly SemaphoreSlim _updateLock = new SemaphoreSlim(1, 1);
 
-    public SecretRoleSetting? Current => Volatile.Read(ref _current);
+    public SecretRoleSetting? GetCurrent(ulong guildId)
+    {
+        ImmutableDictionary<ulong, SecretRoleSetting> snapshot = Volatile.Read(ref _current);
+        return snapshot.GetValueOrDefault(guildId);
+    }
 
     public async Task InitializeAsync(CancellationToken ct)
     {
@@ -16,14 +20,14 @@ public sealed class SecretRoleManager(IServiceScopeFactory scopeFactory)
 
         try
         {
-            if (_current is not null)
+            if (!_current.IsEmpty)
                 return;
 
             using IServiceScope scope = scopeFactory.CreateScope();
             ISecretRoleRepository store = scope.ServiceProvider.GetRequiredService<ISecretRoleRepository>();
-            SecretRoleSetting? setting = await store.GetAsync(ct).ConfigureAwait(false);
+            IReadOnlyList<SecretRoleSetting> settings = await store.ListAsync(ct).ConfigureAwait(false);
 
-            Volatile.Write(ref _current, setting);
+            Volatile.Write(ref _current, settings.ToImmutableDictionary(setting => setting.GuildId));
         }
         finally
         {
@@ -41,7 +45,8 @@ public sealed class SecretRoleManager(IServiceScopeFactory scopeFactory)
             ISecretRoleRepository store = scope.ServiceProvider.GetRequiredService<ISecretRoleRepository>();
             SecretRoleSetting setting = await store.ReplaceAsync(guildId, roleId, ct).ConfigureAwait(false);
 
-            Volatile.Write(ref _current, setting);
+            ImmutableDictionary<ulong, SecretRoleSetting> snapshot = Volatile.Read(ref _current);
+            Volatile.Write(ref _current, snapshot.SetItem(guildId, setting));
         }
         finally
         {

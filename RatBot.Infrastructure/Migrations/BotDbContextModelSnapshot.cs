@@ -24,18 +24,21 @@ namespace RatBot.Infrastructure.Migrations
 
             modelBuilder.Entity("RatBot.Domain.Adventure.AdventureForumThreadLink", b =>
                 {
+                    b.Property<long>("GuildId")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("ScorePartIndex")
                         .HasColumnType("integer");
 
                     b.Property<long>("ThreadId")
                         .HasColumnType("bigint");
 
-                    b.HasKey("ScorePartIndex");
+                    b.HasKey("GuildId", "ScorePartIndex");
 
-                    b.HasIndex("ScorePartIndex")
+                    b.HasIndex("GuildId", "ScorePartIndex")
                         .IsUnique();
 
-                    b.HasIndex("ThreadId")
+                    b.HasIndex("GuildId", "ThreadId")
                         .IsUnique();
 
                     b.ToTable("AdventureForumThreadLinks", null, t =>
@@ -46,13 +49,13 @@ namespace RatBot.Infrastructure.Migrations
 
             modelBuilder.Entity("RatBot.Domain.Adventure.AdventureLeaderboardMessageState", b =>
                 {
+                    b.Property<long>("GuildId")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("Id")
                         .HasColumnType("integer");
 
                     b.Property<long>("ChannelId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("GuildId")
                         .HasColumnType("bigint");
 
                     b.Property<string>("LastRenderHash")
@@ -65,13 +68,19 @@ namespace RatBot.Infrastructure.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("integer");
 
-                    b.HasKey("Id");
+                    b.HasKey("GuildId", "Id");
+
+                    b.HasIndex("GuildId", "Id")
+                        .IsUnique();
 
                     b.ToTable("AdventureLeaderboardMessageState", (string)null);
                 });
 
             modelBuilder.Entity("RatBot.Domain.Emoji.EmojiUsageCount", b =>
                 {
+                    b.Property<long>("GuildId")
+                        .HasColumnType("bigint");
+
                     b.Property<long>("EmojiId")
                         .HasColumnType("bigint");
 
@@ -81,7 +90,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.Property<int>("ReactionUsageCount")
                         .HasColumnType("int");
 
-                    b.HasKey("EmojiId");
+                    b.HasKey("GuildId", "EmojiId");
 
                     b.ToTable("EmojiUsageCounts", (string)null);
                 });
@@ -134,6 +143,10 @@ namespace RatBot.Infrastructure.Migrations
 
             modelBuilder.Entity("RatBot.Domain.Features.Logging.MessageLogEntry", b =>
                 {
+                    b.Property<long>("GuildId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("guild_id");
+
                     b.Property<long>("OriginalMessageId")
                         .HasColumnType("bigint")
                         .HasColumnName("original_message_id");
@@ -146,15 +159,19 @@ namespace RatBot.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("captured_at_utc");
 
-                    b.HasKey("OriginalMessageId", "LogMessageId");
+                    b.HasKey("GuildId", "OriginalMessageId", "LogMessageId");
 
-                    b.HasIndex("LogMessageId");
+                    b.HasIndex("GuildId", "LogMessageId");
 
                     b.ToTable("message_log_entries", (string)null);
                 });
 
             modelBuilder.Entity("RatBot.Domain.Features.Logging.ObservedMessage", b =>
                 {
+                    b.Property<long>("GuildId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("guild_id");
+
                     b.Property<long>("OriginalMessageId")
                         .HasColumnType("bigint")
                         .HasColumnName("original_message_id");
@@ -167,15 +184,11 @@ namespace RatBot.Infrastructure.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("channel_id");
 
-                    b.Property<long>("GuildId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("guild_id");
-
                     b.Property<DateTimeOffset>("ObservedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("observed_at_utc");
 
-                    b.HasKey("OriginalMessageId");
+                    b.HasKey("GuildId", "OriginalMessageId");
 
                     b.HasIndex("AuthorId");
 
@@ -269,13 +282,13 @@ namespace RatBot.Infrastructure.Migrations
 
                     b.HasIndex("GuildId");
 
-                    b.HasIndex("PollMessageId");
-
-                    b.HasIndex("ProposalThreadChannelId");
+                    b.HasIndex("GuildId", "PollMessageId");
 
                     b.HasIndex("Status");
 
-                    b.HasIndex("SuggestionThreadChannelId")
+                    b.HasIndex("GuildId", "ProposalThreadChannelId");
+
+                    b.HasIndex("GuildId", "SuggestionThreadChannelId")
                         .IsUnique();
 
                     b.HasIndex("Status", "PollExpiresAtUtc");
@@ -335,11 +348,14 @@ namespace RatBot.Infrastructure.Migrations
 
             modelBuilder.Entity("RatBot.Domain.Moderation.ImageSpamSettings", b =>
                 {
-                    b.Property<int>("Id")
-                        .HasColumnType("integer");
+                    b.Property<long>("GuildId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("BurstDurationSeconds")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("RequiredAttachmentCount")
                         .HasColumnType("integer");
@@ -347,7 +363,7 @@ namespace RatBot.Infrastructure.Migrations
                     b.Property<int>("RequiredChannelCount")
                         .HasColumnType("integer");
 
-                    b.HasKey("Id");
+                    b.HasKey("GuildId");
 
                     b.ToTable("ImageSpamSettings", null, t =>
                         {
@@ -364,6 +380,9 @@ namespace RatBot.Infrastructure.Migrations
                     b.Property<Guid>("PreferenceId")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("GuildId")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("Kind")
                         .HasColumnType("integer");
 
@@ -375,9 +394,9 @@ namespace RatBot.Infrastructure.Migrations
 
                     b.HasKey("PreferenceId");
 
-                    b.HasIndex("SelectedOptionId");
+                    b.HasIndex("GuildId", "SelectedOptionId");
 
-                    b.HasIndex("UserId")
+                    b.HasIndex("GuildId", "UserId")
                         .IsUnique();
 
                     b.ToTable("MemberColourPreferences", null, t =>
@@ -397,6 +416,9 @@ namespace RatBot.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<long>("DisplayRoleId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("GuildId")
                         .HasColumnType("bigint");
 
                     b.Property<bool>("IsEnabled")
@@ -425,13 +447,16 @@ namespace RatBot.Infrastructure.Migrations
 
                     b.HasKey("OptionId");
 
-                    b.HasIndex("DisplayRoleId")
+                    b.HasIndex("GuildId", "DisplayRoleId")
                         .IsUnique();
 
-                    b.HasIndex("NormalisedKey")
+                    b.HasIndex("GuildId", "NormalisedKey")
                         .IsUnique();
 
-                    b.HasIndex("SourceRoleId", "DisplayRoleId")
+                    b.HasIndex("GuildId", "SourceRoleId")
+                        .IsUnique();
+
+                    b.HasIndex("GuildId", "SourceRoleId", "DisplayRoleId")
                         .IsUnique();
 
                     b.ToTable("RoleColourOptions", null, t =>
@@ -446,21 +471,15 @@ namespace RatBot.Infrastructure.Migrations
 
             modelBuilder.Entity("RatBot.Domain.SecretRole.SecretRoleSetting", b =>
                 {
-                    b.Property<int>("Id")
-                        .HasColumnType("integer");
-
                     b.Property<long>("GuildId")
                         .HasColumnType("bigint");
 
                     b.Property<long>("RoleId")
                         .HasColumnType("bigint");
 
-                    b.HasKey("Id");
+                    b.HasKey("GuildId");
 
-                    b.ToTable("TemporaryPingRoleSettings", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_TemporaryPingRoleSettings_SingletonId", "\"Id\" = 1");
-                        });
+                    b.ToTable("TemporaryPingRoleSettings", (string)null);
                 });
 
             modelBuilder.Entity("RatBot.Infrastructure.Features.Timezone.Persistence.UserTimezoneRow", b =>
@@ -487,11 +506,21 @@ namespace RatBot.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RatBot.Domain.Features.Logging.MessageLogEntry", b =>
+                {
+                    b.HasOne("RatBot.Domain.Features.Logging.ObservedMessage", null)
+                        .WithMany()
+                        .HasForeignKey("GuildId", "OriginalMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("RatBot.Domain.RoleColours.MemberColourPreference", b =>
                 {
                     b.HasOne("RatBot.Domain.RoleColours.RoleColourOption", null)
                         .WithMany()
-                        .HasForeignKey("SelectedOptionId")
+                        .HasForeignKey("GuildId", "SelectedOptionId")
+                        .HasPrincipalKey("GuildId", "OptionId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 #pragma warning restore 612, 618

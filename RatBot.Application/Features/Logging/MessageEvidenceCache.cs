@@ -5,7 +5,7 @@ namespace RatBot.Application.Features.Logging;
 
 public sealed class MessageEvidenceCache(EvidenceCacheSettings settings)
 {
-    private readonly Dictionary<ulong, CacheEntry> _entries = new Dictionary<ulong, CacheEntry>();
+    private readonly Dictionary<EvidenceKey, CacheEntry> _entries = new Dictionary<EvidenceKey, CacheEntry>();
     private readonly PriorityQueue<QueuedEntry, DateTimeOffset> _evictionQueue = new PriorityQueue<QueuedEntry, DateTimeOffset>();
     private readonly PriorityQueue<QueuedEntry, DateTimeOffset> _expiryQueue = new PriorityQueue<QueuedEntry, DateTimeOffset>();
     private readonly Lock _lock = new Lock();
@@ -23,12 +23,12 @@ public sealed class MessageEvidenceCache(EvidenceCacheSettings settings)
         }
     }
 
-    private static MessageEvidence Empty(ulong messageId) =>
-        new MessageEvidence(0, 0, messageId, 0, DateTimeOffset.MinValue, null, ImmutableArray<CachedAttachmentEvidence>.Empty);
+    private static MessageEvidence Empty(ulong guildId, ulong messageId) =>
+        new MessageEvidence(guildId, 0, messageId, 0, DateTimeOffset.MinValue, null, ImmutableArray<CachedAttachmentEvidence>.Empty);
 
     private static long TotalBytes(IEnumerable<CachedAttachmentEvidence> attachments) => attachments.Sum(attachment => attachment.Bytes.LongLength);
 
-    public IReadOnlyDictionary<ulong, MessageEvidence> GetMany(IEnumerable<ulong> messageIds, DateTimeOffset nowUtc)
+    public IReadOnlyDictionary<ulong, MessageEvidence> GetMany(ulong guildId, IEnumerable<ulong> messageIds, DateTimeOffset nowUtc)
     {
         Dictionary<ulong, MessageEvidence> results = new Dictionary<ulong, MessageEvidence>();
 
@@ -38,7 +38,9 @@ public sealed class MessageEvidenceCache(EvidenceCacheSettings settings)
 
             foreach (ulong messageId in messageIds)
             {
-                if (_entries.TryGetValue(messageId, out CacheEntry? entry))
+                EvidenceKey key = new EvidenceKey(guildId, messageId);
+
+                if (_entries.TryGetValue(key, out CacheEntry? entry))
                     results[messageId] = entry.Evidence;
             }
         }
@@ -66,35 +68,37 @@ public sealed class MessageEvidenceCache(EvidenceCacheSettings settings)
         {
             EvictExpired(nowUtc);
 
-            if (_entries.Remove(evidence.MessageId, out CacheEntry? previous))
+            EvidenceKey key = new EvidenceKey(evidence.GuildId, evidence.MessageId);
+
+            if (_entries.Remove(key, out CacheEntry? previous))
                 _totalAttachmentBytes -= previous.AttachmentBytes;
 
-            _entries[evidence.MessageId] = entry;
+            _entries[key] = entry;
             _totalAttachmentBytes += entry.AttachmentBytes;
-            Enqueue(evidence.MessageId, entry);
+            Enqueue(key, entry);
 
             EvictOverflow();
         }
     }
 
-    public void Remove(ulong messageId)
+    public void Remove(ulong guildId, ulong messageId)
     {
         lock (_lock)
         {
-            if (_entries.Remove(messageId, out CacheEntry? entry))
+            if (_entries.Remove(new EvidenceKey(guildId, messageId), out CacheEntry? entry))
                 _totalAttachmentBytes -= entry.AttachmentBytes;
         }
     }
 
-    public bool TryGet(ulong messageId, DateTimeOffset nowUtc, out MessageEvidence evidence)
+    public bool TryGet(ulong guildId, ulong messageId, DateTimeOffset nowUtc, out MessageEvidence evidence)
     {
         lock (_lock)
         {
             EvictExpired(nowUtc);
 
-            if (!_entries.TryGetValue(messageId, out CacheEntry? entry))
+            if (!_entries.TryGetValue(new EvidenceKey(guildId, messageId), out CacheEntry? entry))
             {
-                evidence = Empty(messageId);
+                evidence = Empty(guildId, messageId);
                 return false;
             }
 
@@ -103,9 +107,9 @@ public sealed class MessageEvidenceCache(EvidenceCacheSettings settings)
         }
     }
 
-    private void Enqueue(ulong messageId, CacheEntry entry)
+    private void Enqueue(EvidenceKey key, CacheEntry entry)
     {
-        QueuedEntry queued = new QueuedEntry(messageId, entry.LastTouchedAtUtc, entry.ExpiresAtUtc);
+        QueuedEntry queued = new QueuedEntry(key, entry.LastTouchedAtUtc, entry.ExpiresAtUtc);
         _evictionQueue.Enqueue(queued, entry.LastTouchedAtUtc);
         _expiryQueue.Enqueue(queued, entry.ExpiresAtUtc);
     }
@@ -119,7 +123,7 @@ public sealed class MessageEvidenceCache(EvidenceCacheSettings settings)
             if (!IsCurrent(queued, out CacheEntry? entry))
                 continue;
 
-            _entries.Remove(queued.MessageId);
+            _entries.Remove(queued.Key);
             _totalAttachmentBytes -= entry.AttachmentBytes;
         }
     }
@@ -134,20 +138,22 @@ public sealed class MessageEvidenceCache(EvidenceCacheSettings settings)
             if (!IsCurrent(queued, out CacheEntry? entry))
                 continue;
 
-            _entries.Remove(queued.MessageId);
+            _entries.Remove(queued.Key);
             _totalAttachmentBytes -= entry.AttachmentBytes;
         }
     }
 
     private bool IsCurrent(QueuedEntry queued, [NotNullWhen(true)] out CacheEntry? entry)
     {
-        if (!_entries.TryGetValue(queued.MessageId, out entry))
+        if (!_entries.TryGetValue(queued.Key, out entry))
             return false;
 
         return entry.LastTouchedAtUtc == queued.LastTouchedAtUtc && entry.ExpiresAtUtc == queued.ExpiresAtUtc;
     }
 
+    private readonly record struct EvidenceKey(ulong GuildId, ulong MessageId);
+
     private sealed record CacheEntry(MessageEvidence Evidence, DateTimeOffset LastTouchedAtUtc, DateTimeOffset ExpiresAtUtc, long AttachmentBytes);
 
-    private sealed record QueuedEntry(ulong MessageId, DateTimeOffset LastTouchedAtUtc, DateTimeOffset ExpiresAtUtc);
+    private sealed record QueuedEntry(EvidenceKey Key, DateTimeOffset LastTouchedAtUtc, DateTimeOffset ExpiresAtUtc);
 }

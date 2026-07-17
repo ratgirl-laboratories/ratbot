@@ -1,11 +1,17 @@
 using RatBot.Application.MessageContent;
+using RatBot.Discord.Commands.Emoji;
 
 namespace RatBot.Discord.Gateway;
 
-public sealed class MessageContentGatewayHandler(DiscordSocketClient discordClient, MessageContentQueue messageContentQueue, ILogger logger)
-    : IDiscordGatewayHandler
+public sealed class MessageContentGatewayHandler(
+    DiscordSocketClient discordClient,
+    MessageContentQueue messageContentQueue,
+    IOptions<EmojiAnalyticsOptions> options,
+    ILogger logger
+) : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<MessageContentGatewayHandler>();
+    private readonly EmojiAnalyticsOptions _options = options.Value;
 
     public Task InitializeAsync(CancellationToken ct)
     {
@@ -23,13 +29,23 @@ public sealed class MessageContentGatewayHandler(DiscordSocketClient discordClie
         if (userMessage.Source != MessageSource.User)
             return;
 
+        if (userMessage.Channel is not SocketGuildChannel guildChannel)
+            return;
+
         if (string.IsNullOrWhiteSpace(userMessage.Content))
             return;
 
-        if (!messageContentQueue.Writer.TryWrite(userMessage.Content))
-            await messageContentQueue.Writer.WriteAsync(userMessage.Content).ConfigureAwait(false);
+        ulong guildId = guildChannel.Guild.Id;
 
-        _logger.Debug("Queued message content for emoji analytics.");
+        if (!_options.IsEnabled(guildId))
+            return;
+
+        GuildMessageContent item = new GuildMessageContent(guildId, userMessage.Content);
+
+        if (!messageContentQueue.Writer.TryWrite(item))
+            await messageContentQueue.Writer.WriteAsync(item).ConfigureAwait(false);
+
+        _logger.Debug("Queued message content for emoji analytics in guild {GuildId}.", guildId);
     }
 
     private void Subscribe() => discordClient.MessageReceived += HandleMessageReceivedAsync;

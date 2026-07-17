@@ -11,8 +11,12 @@ public sealed class RoleColourReconciler(IDbContextFactory<BotDbContext> dbConte
     public async Task<bool> ReconcileMemberAsync(SocketGuild guild, ulong userId, CancellationToken ct)
     {
         await using BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
-        ImmutableArray<RoleColourOption> options = (await db.RoleColourOptions.AsNoTracking().ToArrayAsync(ct)).ToImmutableArray();
-        MemberColourPreference? preference = await db.MemberColourPreferences.AsNoTracking().SingleOrDefaultAsync(p => p.UserId == userId, ct);
+        ImmutableArray<RoleColourOption> options = (
+            await db.RoleColourOptions.AsNoTracking().Where(option => option.GuildId == guild.Id).ToArrayAsync(ct)
+        ).ToImmutableArray();
+        MemberColourPreference? preference = await db
+            .MemberColourPreferences.AsNoTracking()
+            .SingleOrDefaultAsync(p => p.GuildId == guild.Id && p.UserId == userId, ct);
         SocketGuildUser? member = guild.GetUser(userId);
 
         if (member is null)
@@ -27,9 +31,12 @@ public sealed class RoleColourReconciler(IDbContextFactory<BotDbContext> dbConte
     public async Task<int> ReconcileGuildAsync(SocketGuild guild, CancellationToken ct)
     {
         await using BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
-        ImmutableArray<RoleColourOption> options = (await db.RoleColourOptions.AsNoTracking().ToArrayAsync(ct)).ToImmutableArray();
+        ImmutableArray<RoleColourOption> options = (
+            await db.RoleColourOptions.AsNoTracking().Where(option => option.GuildId == guild.Id).ToArrayAsync(ct)
+        ).ToImmutableArray();
         Dictionary<ulong, MemberColourPreference> preferences = await db
             .MemberColourPreferences.AsNoTracking()
+            .Where(preference => preference.GuildId == guild.Id)
             .ToDictionaryAsync(preference => preference.UserId, ct);
 
         HashSet<ulong> configuredRoleIds = options.SelectMany(option => new[] { option.SourceRoleId, option.DisplayRoleId }).ToHashSet();

@@ -17,8 +17,12 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
     public ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurstSpamDetectorOptions options)
         : this(timeProvider, CreateSettings(options)) { }
 
-    private static ImageBurstSpamDetectorSettings CreateSettings(ImageBurstSpamDetectorOptions options) =>
-        new ImageBurstSpamDetectorSettings(options);
+    private static ImageBurstSpamDetectorSettings CreateSettings(ImageBurstSpamDetectorOptions options)
+    {
+        ImageBurstSpamDetectorSettings settings = new ImageBurstSpamDetectorSettings(options);
+        settings.Update(1, options);
+        return settings;
+    }
 
     private static void PruneOldMessages(Queue<ImageBurstMessage> buffer, DateTimeOffset cutoff)
     {
@@ -38,8 +42,10 @@ public sealed class ImageBurstSpamDetector(TimeProvider timeProvider, ImageBurst
             if (_handlingLocks.TryGetValue(key, out DateTimeOffset lockedUntil) && lockedUntil > now)
                 return null;
 
+            if (!settings.TryGet(message.GuildId, out ImageBurstSpamDetectorOptions options))
+                return null;
+
             Queue<ImageBurstMessage> buffer = GetBuffer(key);
-            ImageBurstSpamDetectorOptions options = settings.Current;
 
             buffer.Enqueue(message);
             PruneOldMessages(buffer, message.Timestamp - TimeSpan.FromSeconds(options.Window));

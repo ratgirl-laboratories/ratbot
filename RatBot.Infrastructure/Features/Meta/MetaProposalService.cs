@@ -25,9 +25,9 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         return state.Value;
     }
 
-    public async Task<ErrorOr<MetaProposalState>> ClearDeletedPollByMessageAsync(ulong pollMessageId, CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> ClearDeletedPollByMessageAsync(ulong guildId, ulong pollMessageId, CancellationToken ct = default)
     {
-        ErrorOr<MetaProposalState> state = await FindByPollMessageAsync(pollMessageId, asNoTracking: false, ct);
+        ErrorOr<MetaProposalState> state = await FindByPollMessageAsync(guildId, pollMessageId, asNoTracking: false, ct);
 
         if (state.IsError)
             return MetaProposalErrors.ThreadNotTracked;
@@ -76,9 +76,9 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
     public async Task<IReadOnlyList<MetaProposalState>> FindExpiredPollsAsync(DateTimeOffset nowUtc, int limit, CancellationToken ct = default) =>
         await _db.MetaProposalStates.AsNoTracking().PollExpiringBeforeOrAt(nowUtc).OrderBy(x => x.PollExpiresAtUtc).Take(limit).ToListAsync(ct);
 
-    public async Task ForgetDeletedUnsubmittedSuggestionAsync(ulong suggestionThreadChannelId, CancellationToken ct = default)
+    public async Task ForgetDeletedUnsubmittedSuggestionAsync(ulong guildId, ulong suggestionThreadChannelId, CancellationToken ct = default)
     {
-        MetaProposalState? state = await _db.MetaProposalStates.ForSuggestionThread(suggestionThreadChannelId).SingleOrDefaultAsync(ct);
+        MetaProposalState? state = await _db.MetaProposalStates.ForSuggestionThread(guildId, suggestionThreadChannelId).SingleOrDefaultAsync(ct);
 
         if (state is null)
             return;
@@ -112,16 +112,19 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         return await FindByIdAsync(stateId, asNoTracking: true, ct);
     }
 
-    public async Task<ErrorOr<MetaProposalState>> GetByPollMessageAsync(ulong pollMessageId, CancellationToken ct = default)
+    public async Task<ErrorOr<MetaProposalState>> GetByPollMessageAsync(ulong guildId, ulong pollMessageId, CancellationToken ct = default)
     {
-        return await FindByPollMessageAsync(pollMessageId, asNoTracking: true, ct);
+        return await FindByPollMessageAsync(guildId, pollMessageId, asNoTracking: true, ct);
     }
 
-    public async Task<ErrorOr<MetaProposalState>> GetForAnyThreadAsync(ulong threadChannelId, CancellationToken ct = default) =>
-        await FindByAnyThreadAsync(threadChannelId, asNoTracking: true, ct);
+    public async Task<ErrorOr<MetaProposalState>> GetForAnyThreadAsync(ulong guildId, ulong threadChannelId, CancellationToken ct = default) =>
+        await FindByAnyThreadAsync(guildId, threadChannelId, asNoTracking: true, ct);
 
-    public async Task<ErrorOr<MetaProposalState>> GetForSuggestionThreadAsync(ulong suggestionThreadChannelId, CancellationToken ct = default) =>
-        await FindBySuggestionThreadAsync(suggestionThreadChannelId, asNoTracking: true, ct);
+    public async Task<ErrorOr<MetaProposalState>> GetForSuggestionThreadAsync(
+        ulong guildId,
+        ulong suggestionThreadChannelId,
+        CancellationToken ct = default
+    ) => await FindBySuggestionThreadAsync(guildId, suggestionThreadChannelId, asNoTracking: true, ct);
 
     public async Task<ErrorOr<MetaSuggestionSettings>> GetSettingsAsync(ulong guildId, CancellationToken ct = default)
     {
@@ -227,6 +230,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
     }
 
     public async Task<ErrorOr<MetaProposalState>> StartPollAsync(
+        ulong guildId,
         ulong suggestionThreadChannelId,
         ulong proposalAuthorUserId,
         string title,
@@ -239,7 +243,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         CancellationToken ct = default
     )
     {
-        ErrorOr<MetaProposalState> state = await FindBySuggestionThreadAsync(suggestionThreadChannelId, asNoTracking: false, ct);
+        ErrorOr<MetaProposalState> state = await FindBySuggestionThreadAsync(guildId, suggestionThreadChannelId, asNoTracking: false, ct);
 
         if (state.IsError)
             return MetaProposalErrors.SuggestionNotTracked;
@@ -273,7 +277,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
     {
         MetaProposalState? existing = await _db
             .MetaProposalStates.AsNoTracking()
-            .ForSuggestionThread(suggestionThreadChannelId)
+            .ForSuggestionThread(guildId, suggestionThreadChannelId)
             .SingleOrDefaultAsync(ct);
 
         if (existing is not null)
@@ -298,6 +302,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
     }
 
     public async Task<ErrorOr<MetaProposalState>> VetoAsync(
+        ulong guildId,
         ulong threadChannelId,
         ulong vetoedByUserId,
         string reason,
@@ -305,7 +310,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         CancellationToken ct = default
     )
     {
-        ErrorOr<MetaProposalState> state = await FindByAnyThreadAsync(threadChannelId, asNoTracking: false, ct);
+        ErrorOr<MetaProposalState> state = await FindByAnyThreadAsync(guildId, threadChannelId, asNoTracking: false, ct);
 
         if (state.IsError)
             return MetaProposalErrors.ThreadNotTracked;
@@ -319,9 +324,9 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         return state;
     }
 
-    private async Task<ErrorOr<MetaProposalState>> FindByAnyThreadAsync(ulong threadChannelId, bool asNoTracking, CancellationToken ct)
+    private async Task<ErrorOr<MetaProposalState>> FindByAnyThreadAsync(ulong guildId, ulong threadChannelId, bool asNoTracking, CancellationToken ct)
     {
-        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForAnyThread(threadChannelId);
+        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForAnyThread(guildId, threadChannelId);
         MetaProposalState? state = await (asNoTracking ? query.AsNoTracking() : query).SingleOrDefaultAsync(ct);
         return state is null ? MetaProposalErrors.ThreadNotTracked : state;
     }
@@ -333,20 +338,21 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         return state is null ? MetaProposalErrors.ThreadNotTracked : state;
     }
 
-    private async Task<ErrorOr<MetaProposalState>> FindByPollMessageAsync(ulong pollMessageId, bool asNoTracking, CancellationToken ct)
+    private async Task<ErrorOr<MetaProposalState>> FindByPollMessageAsync(ulong guildId, ulong pollMessageId, bool asNoTracking, CancellationToken ct)
     {
-        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForPollMessage(pollMessageId);
+        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForPollMessage(guildId, pollMessageId);
         MetaProposalState? state = await (asNoTracking ? query.AsNoTracking() : query).SingleOrDefaultAsync(ct);
         return state is null ? MetaProposalErrors.ThreadNotTracked : state;
     }
 
     private async Task<ErrorOr<MetaProposalState>> FindBySuggestionThreadAsync(
+        ulong guildId,
         ulong suggestionThreadChannelId,
         bool asNoTracking,
         CancellationToken ct
     )
     {
-        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForSuggestionThread(suggestionThreadChannelId);
+        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForSuggestionThread(guildId, suggestionThreadChannelId);
         MetaProposalState? state = await (asNoTracking ? query.AsNoTracking() : query).SingleOrDefaultAsync(ct);
         return state is null ? MetaProposalErrors.SuggestionNotTracked : state;
     }

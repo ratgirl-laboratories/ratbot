@@ -16,11 +16,11 @@ public sealed class ImageSpamSettingsConfiguration : IEntityTypeConfiguration<Im
             }
         );
 
-        builder.HasKey(x => x.Id);
-
-        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.HasKey(x => x.GuildId);
+        builder.Property(x => x.GuildId).IsRequired().HasConversion<long>().HasColumnType("bigint").ValueGeneratedNever();
         builder.Property(x => x.RequiredChannelCount).IsRequired();
         builder.Property(x => x.RequiredAttachmentCount).IsRequired();
         builder.Property(x => x.BurstDurationSeconds).IsRequired();
+        builder.Property(x => x.IsEnabled).IsRequired();
     }
 }

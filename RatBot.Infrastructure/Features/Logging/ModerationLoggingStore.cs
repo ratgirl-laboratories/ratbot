@@ -31,28 +31,29 @@ public sealed class ModerationLoggingStore(IDbContextFactory<BotDbContext> dbCon
         return ExcludeChannelResult.Excluded;
     }
 
-    public async Task<ObservedMessage?> FindObservedMessageAsync(ulong originalMessageId, CancellationToken ct)
+    public async Task<ObservedMessage?> FindObservedMessageAsync(ulong guildId, ulong originalMessageId, CancellationToken ct)
     {
         await using BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
 
         return await db
             .ObservedMessages.AsNoTracking()
-            .SingleOrDefaultAsync(message => message.OriginalMessageId == originalMessageId, ct)
+            .SingleOrDefaultAsync(message => message.GuildId == guildId && message.OriginalMessageId == originalMessageId, ct)
             .ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyDictionary<ulong, ObservedMessage>> FindObservedMessagesAsync(
+        ulong guildId,
         IEnumerable<ulong> originalMessageIds,
         CancellationToken ct
     )
     {
         await using BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
 
-        IEnumerable<ulong> ids = originalMessageIds.Distinct();
+        ulong[] ids = originalMessageIds.Distinct().ToArray();
 
         return await db
             .ObservedMessages.AsNoTracking()
-            .Where(message => ids.Contains(message.OriginalMessageId))
+            .Where(message => message.GuildId == guildId && ids.Contains(message.OriginalMessageId))
             .ToDictionaryAsync(message => message.OriginalMessageId, ct)
             .ConfigureAwait(false);
     }
@@ -126,7 +127,9 @@ public sealed class ModerationLoggingStore(IDbContextFactory<BotDbContext> dbCon
     {
         await using BotDbContext db = await dbContextFactory.CreateDbContextAsync(ct);
 
-        ObservedMessage? existing = await db.ObservedMessages.FindAsync(new object[] { observedMessage.OriginalMessageId }, ct).ConfigureAwait(false);
+        ObservedMessage? existing = await db
+            .ObservedMessages.FindAsync(new object[] { observedMessage.GuildId, observedMessage.OriginalMessageId }, ct)
+            .ConfigureAwait(false);
 
         if (existing is null)
             db.ObservedMessages.Add(observedMessage);

@@ -27,14 +27,14 @@ public sealed class EmojiUsageTracker(IEmojiRepository emojiRepository, ITracked
     private static ulong? TryParseEmojiId(string id) =>
         ulong.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out ulong emojiId) ? emojiId : null;
 
-    public async Task RecordMessageBatchUsageAsync(IEnumerable<string> messageContents, CancellationToken ct = default)
+    public async Task RecordMessageBatchUsageAsync(ulong guildId, IEnumerable<string> messageContents, CancellationToken ct = default)
     {
-        if (!trackedEmojiCatalog.TryGetTrackedEmojiIds(out IReadOnlyCollection<ulong> trackedEmojiIds))
+        if (!trackedEmojiCatalog.TryGetTrackedEmojiIds(guildId, out IReadOnlyCollection<ulong> trackedEmojiIds))
             return;
 
         HashSet<ulong> trackedEmojiIdSet = trackedEmojiIds.ToHashSet();
 
-        await PruneUntrackedEmojiAsync(trackedEmojiIds, ct).ConfigureAwait(false);
+        await PruneUntrackedEmojiAsync(guildId, trackedEmojiIds, ct).ConfigureAwait(false);
 
         List<(ulong Id, int N)> usages = messageContents
             .SelectMany(ExtractEmojiIds)
@@ -46,7 +46,7 @@ public sealed class EmojiUsageTracker(IEmojiRepository emojiRepository, ITracked
         foreach ((ulong emojiId, int count) in usages)
         {
             int updatedRowCount = await emojiRepository
-                .EmojiUsageCounts.Where(x => x.EmojiId == emojiId)
+                .EmojiUsageCounts.Where(x => x.GuildId == guildId && x.EmojiId == emojiId)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.MessageUsageCount, x => x.MessageUsageCount + count), ct)
                 .ConfigureAwait(false);
 
@@ -56,6 +56,7 @@ public sealed class EmojiUsageTracker(IEmojiRepository emojiRepository, ITracked
             emojiRepository.EmojiUsageCounts.Add(
                 new EmojiUsageCount
                 {
+                    GuildId = guildId,
                     EmojiId = emojiId,
                     ReactionUsageCount = 0,
                     MessageUsageCount = count,
@@ -69,6 +70,6 @@ public sealed class EmojiUsageTracker(IEmojiRepository emojiRepository, ITracked
             _logger.Verbose("Recorded {EmojiUsageCount} message usages for emoji {EmojiId}.", usage.N, usage.Id);
     }
 
-    private Task<int> PruneUntrackedEmojiAsync(IReadOnlyCollection<ulong> trackedEmojiIds, CancellationToken ct) =>
-        emojiRepository.EmojiUsageCounts.Where(x => !trackedEmojiIds.Contains(x.EmojiId)).ExecuteDeleteAsync(ct);
+    private Task<int> PruneUntrackedEmojiAsync(ulong guildId, IReadOnlyCollection<ulong> trackedEmojiIds, CancellationToken ct) =>
+        emojiRepository.EmojiUsageCounts.Where(x => x.GuildId == guildId && !trackedEmojiIds.Contains(x.EmojiId)).ExecuteDeleteAsync(ct);
 }

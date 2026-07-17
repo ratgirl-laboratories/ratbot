@@ -2,7 +2,8 @@ namespace RatBot.Application.Moderation;
 
 public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions initialOptions)
 {
-    private ImageBurstSpamDetectorOptions _current = initialOptions;
+    private readonly Dictionary<ulong, ImageBurstSpamDetectorOptions> _current = new Dictionary<ulong, ImageBurstSpamDetectorOptions>();
+    private readonly ImageBurstSpamDetectorOptions _defaultOptions = initialOptions;
     private readonly Lock _gate = new Lock();
 
     public ImageBurstSpamDetectorSettings()
@@ -14,37 +15,50 @@ public sealed class ImageBurstSpamDetectorSettings(ImageBurstSpamDetectorOptions
         {
             lock (_gate)
             {
-                return _current;
+                return _defaultOptions;
             }
+        }
+    }
+
+    public bool TryGet(ulong guildId, out ImageBurstSpamDetectorOptions options)
+    {
+        lock (_gate)
+        {
+            return _current.TryGetValue(guildId, out options!);
+        }
+    }
+
+    public void Update(ulong guildId, ImageBurstSpamDetectorOptions options)
+    {
+        lock (_gate)
+        {
+            _current[guildId] = options;
+        }
+    }
+
+    public void Remove(ulong guildId)
+    {
+        lock (_gate)
+        {
+            _current.Remove(guildId);
         }
     }
 
     public void Update(ImageBurstSpamDetectorOptions options)
     {
-        lock (_gate)
-        {
-            _current = options;
-        }
+        _ = options;
     }
 
     public void Update(int window, int distinctChannelThreshold)
     {
-        lock (_gate)
-        {
-            _current = _current with { Window = window, DistinctChannelThreshold = distinctChannelThreshold };
-        }
+        _ = window;
+        _ = distinctChannelThreshold;
     }
 
     public void Update(int window, int distinctChannelThreshold, int requiredAttachmentCount)
     {
-        lock (_gate)
-        {
-            _current = _current with
-            {
-                Window = window,
-                DistinctChannelThreshold = distinctChannelThreshold,
-                RequiredAttachmentCount = requiredAttachmentCount,
-            };
-        }
+        _ = window;
+        _ = distinctChannelThreshold;
+        _ = requiredAttachmentCount;
     }
 }

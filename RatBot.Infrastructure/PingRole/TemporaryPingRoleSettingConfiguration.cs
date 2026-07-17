@@ -6,12 +6,11 @@ public sealed class TemporaryPingRoleSettingConfiguration : IEntityTypeConfigura
 {
     public void Configure(EntityTypeBuilder<SecretRoleSetting> builder)
     {
-        builder.ToTable("TemporaryPingRoleSettings", table => table.HasCheckConstraint("CK_TemporaryPingRoleSettings_SingletonId", "\"Id\" = 1"));
+        builder.ToTable("TemporaryPingRoleSettings");
 
-        builder.HasKey(x => x.Id);
+        builder.HasKey(x => x.GuildId);
 
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.GuildId).IsRequired();
-        builder.Property(x => x.RoleId).IsRequired();
+        builder.Property(x => x.GuildId).IsRequired().HasConversion<long>().HasColumnType("bigint").ValueGeneratedNever();
+        builder.Property(x => x.RoleId).IsRequired().HasConversion<long>().HasColumnType("bigint");
     }
 }

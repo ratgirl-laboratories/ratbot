@@ -26,7 +26,7 @@ public sealed class ImageBurstSpamGatewayHandler(
     {
         using IServiceScope scope = scopeFactory.CreateScope();
         ImageSpamSettingsService settingsService = scope.ServiceProvider.GetRequiredService<ImageSpamSettingsService>();
-        await settingsService.GetCurrentAsync(ct).ConfigureAwait(false);
+        await settingsService.LoadEnabledSettingsAsync(ct).ConfigureAwait(false);
 
         Subscribe();
     }
@@ -37,7 +37,8 @@ public sealed class ImageBurstSpamGatewayHandler(
     {
         SocketGuild guild = discordClient.GetGuild(detection.GuildId);
 
-        ImageBurstSpamDetectorOptions currentSettings = detectorSettings.Current;
+        if (!detectorSettings.TryGet(detection.GuildId, out ImageBurstSpamDetectorOptions currentSettings))
+            return;
 
         string reason =
             "Automatic image-burst spam detection: "
@@ -95,7 +96,10 @@ public sealed class ImageBurstSpamGatewayHandler(
         if (userMessage.Author is not SocketGuildUser guildUser)
             return null;
 
-        if (userMessage.Attachments.Count < detectorSettings.Current.RequiredAttachmentCount)
+        if (!detectorSettings.TryGet(channel.Guild.Id, out ImageBurstSpamDetectorOptions currentSettings))
+            return null;
+
+        if (userMessage.Attachments.Count < currentSettings.RequiredAttachmentCount)
             return null;
 
         if (IsExempt(guildUser))

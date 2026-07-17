@@ -31,7 +31,7 @@ public sealed class MetaCabinetModule(MetaProposalService metaProposalService, M
             return;
         }
 
-        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(thread.Id);
+        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(Context.Guild.Id, thread.Id);
 
         if (stateResult.IsError)
         {
@@ -104,7 +104,7 @@ public sealed class MetaCabinetModule(MetaProposalService metaProposalService, M
             return;
         }
 
-        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(thread.Id);
+        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForSuggestionThreadAsync(Context.Guild.Id, thread.Id);
 
         if (stateResult.IsError)
         {
@@ -140,7 +140,7 @@ public sealed class MetaCabinetModule(MetaProposalService metaProposalService, M
             return;
         }
 
-        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForAnyThreadAsync(thread.Id);
+        ErrorOr<MetaProposalState> stateResult = await metaProposalService.GetForAnyThreadAsync(Context.Guild.Id, thread.Id);
 
         if (stateResult.IsError)
         {
@@ -183,7 +183,13 @@ public sealed class MetaCabinetModule(MetaProposalService metaProposalService, M
             return;
         }
 
-        ErrorOr<MetaProposalState> vetoResult = await metaProposalService.VetoAsync(thread.Id, user.Id, modal.Reason, DateTimeOffset.UtcNow);
+        ErrorOr<MetaProposalState> vetoResult = await metaProposalService.VetoAsync(
+            Context.Guild.Id,
+            thread.Id,
+            user.Id,
+            modal.Reason,
+            DateTimeOffset.UtcNow
+        );
 
         if (vetoResult.IsError)
         {

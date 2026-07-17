@@ -26,14 +26,9 @@ public sealed class SecretRoleGatewayHandler(DiscordSocketClient discordClient, 
         )
             return;
 
-        SecretRoleSetting? setting = manager.Current;
+        SecretRoleSetting? setting = manager.GetCurrent(guildChannel.Guild.Id);
 
-        if (
-            setting is null
-            || setting.GuildId != guildChannel.Guild.Id
-            || !userMessage.MentionedRoleIds.Contains(setting.RoleId)
-            || guildUser.Roles.Any(role => role.Id == setting.RoleId)
-        )
+        if (setting is null || !userMessage.MentionedRoleIds.Contains(setting.RoleId) || guildUser.Roles.Any(role => role.Id == setting.RoleId))
             return;
 
         SocketRole? role = guildChannel.Guild.GetRole(setting.RoleId);

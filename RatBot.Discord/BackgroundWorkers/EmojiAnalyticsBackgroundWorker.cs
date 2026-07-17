@@ -14,11 +14,11 @@ public sealed class EmojiAnalyticsBackgroundWorker(
     private const int BatchSize = 100;
     private readonly ILogger _logger = logger.ForContext<EmojiAnalyticsBackgroundWorker>();
 
-    private static Queue<string> DrainBatch(ChannelReader<string> reader)
+    private static Queue<GuildMessageContent> DrainBatch(ChannelReader<GuildMessageContent> reader)
     {
-        Queue<string> batch = new Queue<string>();
+        Queue<GuildMessageContent> batch = new Queue<GuildMessageContent>();
 
-        while (reader.TryRead(out string? item))
+        while (reader.TryRead(out GuildMessageContent? item))
         {
             batch.Enqueue(item);
 
@@ -29,11 +29,11 @@ public sealed class EmojiAnalyticsBackgroundWorker(
         return batch;
     }
 
-    private static Queue<ulong> DrainReactionBatch(ChannelReader<ulong> reader)
+    private static Queue<GuildReactionEmoji> DrainReactionBatch(ChannelReader<GuildReactionEmoji> reader)
     {
-        Queue<ulong> batch = new Queue<ulong>();
+        Queue<GuildReactionEmoji> batch = new Queue<GuildReactionEmoji>();
 
-        while (reader.TryRead(out ulong item))
+        while (reader.TryRead(out GuildReactionEmoji? item))
         {
             batch.Enqueue(item);
 
@@ -55,8 +55,8 @@ public sealed class EmojiAnalyticsBackgroundWorker(
                 if (!await WaitForDataAsync(stoppingToken).ConfigureAwait(false))
                     break;
 
-                Queue<ulong> reactionBatch = DrainReactionBatch(reactionQueue.Reader);
-                Queue<string> messageContentBatch = DrainBatch(messageContentQueue.Reader);
+                Queue<GuildReactionEmoji> reactionBatch = DrainReactionBatch(reactionQueue.Reader);
+                Queue<GuildMessageContent> messageContentBatch = DrainBatch(messageContentQueue.Reader);
 
                 if (reactionBatch.Count > 0)
                     await ProcessReactionBatchAsync(reactionBatch, stoppingToken).ConfigureAwait(false);
@@ -78,7 +78,7 @@ public sealed class EmojiAnalyticsBackgroundWorker(
         }
     }
 
-    private async Task ProcessMessageContentBatchAsync(Queue<string> messageContentBatch, CancellationToken ct)
+    private async Task ProcessMessageContentBatchAsync(Queue<GuildMessageContent> messageContentBatch, CancellationToken ct)
     {
         try
         {
@@ -88,7 +88,10 @@ public sealed class EmojiAnalyticsBackgroundWorker(
             {
                 EmojiUsageTracker emojiUsageTracker = scope.ServiceProvider.GetRequiredService<EmojiUsageTracker>();
 
-                await emojiUsageTracker.RecordMessageBatchUsageAsync(messageContentBatch, ct).ConfigureAwait(false);
+                foreach (IGrouping<ulong, GuildMessageContent> guildBatch in messageContentBatch.GroupBy(item => item.GuildId))
+                    await emojiUsageTracker
+                        .RecordMessageBatchUsageAsync(guildBatch.Key, guildBatch.Select(item => item.Content), ct)
+                        .ConfigureAwait(false);
 
                 _logger.Debug("Processed {Count} message content emoji usage events from channel.", messageContentBatch.Count);
             }
@@ -99,7 +102,7 @@ public sealed class EmojiAnalyticsBackgroundWorker(
         }
     }
 
-    private async Task ProcessReactionBatchAsync(Queue<ulong> emojiBatch, CancellationToken ct)
+    private async Task ProcessReactionBatchAsync(Queue<GuildReactionEmoji> emojiBatch, CancellationToken ct)
     {
         try
         {
@@ -109,7 +112,10 @@ public sealed class EmojiAnalyticsBackgroundWorker(
             {
                 ReactionUsageTracker reactionUsageTracker = scope.ServiceProvider.GetRequiredService<ReactionUsageTracker>();
 
-                await reactionUsageTracker.RecordBatchUsageAsync(emojiBatch, ct).ConfigureAwait(false);
+                foreach (IGrouping<ulong, GuildReactionEmoji> guildBatch in emojiBatch.GroupBy(item => item.GuildId))
+                    await reactionUsageTracker
+                        .RecordBatchUsageAsync(guildBatch.Key, guildBatch.Select(item => item.EmojiId), ct)
+                        .ConfigureAwait(false);
 
                 _logger.Debug("Processed {Count} emoji reaction usage events from channel.", emojiBatch.Count);
             }

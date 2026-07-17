@@ -5,10 +5,21 @@ public sealed class MessageLogEntryConfiguration : IEntityTypeConfiguration<Mess
     public void Configure(EntityTypeBuilder<MessageLogEntry> builder)
     {
         builder.ToTable("message_log_entries");
-        builder.HasKey(entry => new { entry.OriginalMessageId, entry.LogMessageId });
-        builder.Property(entry => entry.OriginalMessageId).HasColumnName("original_message_id");
-        builder.Property(entry => entry.LogMessageId).HasColumnName("log_message_id");
+        builder.HasKey(entry => new
+        {
+            entry.GuildId,
+            entry.OriginalMessageId,
+            entry.LogMessageId,
+        });
+        builder.Property(entry => entry.GuildId).HasColumnName("guild_id").IsRequired().ValueGeneratedNever();
+        builder.Property(entry => entry.OriginalMessageId).HasColumnName("original_message_id").ValueGeneratedNever();
+        builder.Property(entry => entry.LogMessageId).HasColumnName("log_message_id").ValueGeneratedNever();
         builder.Property(entry => entry.CapturedAtUtc).HasColumnName("captured_at_utc").IsRequired();
-        builder.HasIndex(entry => entry.LogMessageId);
+        builder.HasIndex(entry => new { entry.GuildId, entry.LogMessageId });
+        builder
+            .HasOne<ObservedMessage>()
+            .WithMany()
+            .HasForeignKey(entry => new { entry.GuildId, entry.OriginalMessageId })
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -4,7 +4,7 @@ namespace RatBot.Application.SecretRole;
 
 public interface ISecretRoleRepository
 {
-    Task<SecretRoleSetting?> GetAsync(CancellationToken ct);
+    Task<IReadOnlyList<SecretRoleSetting>> ListAsync(CancellationToken ct);
 
     Task<SecretRoleSetting> ReplaceAsync(ulong guildId, ulong roleId, CancellationToken ct);
 }

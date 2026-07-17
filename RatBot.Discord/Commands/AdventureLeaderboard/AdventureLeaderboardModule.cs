@@ -27,7 +27,7 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manag
             return;
         }
 
-        bool alreadyConfigured = await dbContext.AdventureForumThreadLinks.AnyAsync().ConfigureAwait(false);
+        bool alreadyConfigured = await dbContext.AdventureForumThreadLinks.AnyAsync(link => link.GuildId == Context.Guild.Id).ConfigureAwait(false);
 
         if (alreadyConfigured)
         {
@@ -56,7 +56,7 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manag
                     .CreateThreadAsync(plan.ThreadName, ThreadType.PrivateThread, ThreadArchiveDuration.OneWeek, invitable: false)
                     .ConfigureAwait(false);
 
-                links.Add(AdventureForumThreadLink.Create(plan.ScorePartIndex, thread.Id));
+                links.Add(AdventureForumThreadLink.Create(Context.Guild.Id, plan.ScorePartIndex, thread.Id));
             }
 
             dbContext.AdventureForumThreadLinks.AddRange(links);
@@ -82,7 +82,7 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manag
     {
         await DeferAsync(ephemeral: true).ConfigureAwait(false);
 
-        bool added = await manager.ExcludeUserAsync(user.Id, CancellationToken.None).ConfigureAwait(false);
+        bool added = await manager.ExcludeUserAsync(Context.Guild.Id, user.Id, CancellationToken.None).ConfigureAwait(false);
         string displayName = Format.Sanitize(user.Username);
         string action = added ? "Excluded" : "Already excluding";
 

@@ -9,6 +9,8 @@ public sealed class RoleColourOption
 
     public ulong DisplayRoleId { get; private set; }
 
+    public ulong GuildId { get; private set; }
+
     public bool IsEnabled { get; private set; }
 
     // Stable identifier used by admins and users
@@ -26,8 +28,11 @@ public sealed class RoleColourOption
 
     public DateTimeOffset UpdatedAtUtc { get; private set; }
 
-    public static ErrorOr<RoleColourOption> Create(string key, string label, ulong sourceRoleId, ulong displayRoleId)
+    public static ErrorOr<RoleColourOption> Create(ulong guildId, string key, string label, ulong sourceRoleId, ulong displayRoleId)
     {
+        if (guildId == 0)
+            return Error.Validation("RoleColourOption.GuildRequired", "Guild is required.");
+
         if (sourceRoleId == displayRoleId)
             return Error.Validation("RoleColourOption.RolesMustDiffer", "Source and display role IDs must be different.");
 
@@ -45,6 +50,7 @@ public sealed class RoleColourOption
         return new RoleColourOption
         {
             OptionId = Id.NewId(),
+            GuildId = guildId,
             Key = trimmedKey,
             NormalisedKey = normalized,
             Label = label.Trim(),

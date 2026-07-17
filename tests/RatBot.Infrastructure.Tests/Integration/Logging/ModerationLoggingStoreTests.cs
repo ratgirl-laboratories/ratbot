@@ -91,7 +91,7 @@ public sealed class ModerationLoggingStoreTests
         if (!await store.IsExcludedAsync(1, 2, CancellationToken.None))
         {
             await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, DateTimeOffset.UtcNow), CancellationToken.None);
-            await store.RecordLogEntriesAsync(new[] { new MessageLogEntry(10, 20, DateTimeOffset.UtcNow) }, CancellationToken.None);
+            await store.RecordLogEntriesAsync(new[] { new MessageLogEntry(1, 10, 20, DateTimeOffset.UtcNow) }, CancellationToken.None);
         }
 
         (await db.ObservedMessages.CountAsync()).ShouldBe(0);
@@ -106,7 +106,7 @@ public sealed class ModerationLoggingStoreTests
 
         await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, observedAt), CancellationToken.None);
 
-        ObservedMessage? observed = await store.FindObservedMessageAsync(10, CancellationToken.None);
+        ObservedMessage? observed = await store.FindObservedMessageAsync(1, 10, CancellationToken.None);
 
         observed.ShouldNotBeNull();
         observed.OriginalMessageId.ShouldBe(10UL);
@@ -142,8 +142,10 @@ public sealed class ModerationLoggingStoreTests
         ModerationLoggingStore store = CreateStore();
         DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
 
+        await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, capturedAt), CancellationToken.None);
+        await store.ObserveMessageAsync(new ObservedMessage(11, 1, 2, 4, capturedAt), CancellationToken.None);
         await store.RecordLogEntriesAsync(
-            new[] { new MessageLogEntry(10, 99, capturedAt), new MessageLogEntry(11, 99, capturedAt) },
+            new[] { new MessageLogEntry(1, 10, 99, capturedAt), new MessageLogEntry(1, 11, 99, capturedAt) },
             CancellationToken.None
         );
 
@@ -163,12 +165,15 @@ public sealed class ModerationLoggingStoreTests
         await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, cutoff.AddSeconds(-1)), CancellationToken.None);
         await store.ObserveMessageAsync(new ObservedMessage(11, 1, 2, 3, cutoff), CancellationToken.None);
         await store.ObserveMessageAsync(new ObservedMessage(12, 1, 2, 3, cutoff.AddSeconds(1)), CancellationToken.None);
+        await store.ObserveMessageAsync(new ObservedMessage(20, 1, 2, 3, cutoff.AddSeconds(-1)), CancellationToken.None);
+        await store.ObserveMessageAsync(new ObservedMessage(21, 1, 2, 3, cutoff), CancellationToken.None);
+        await store.ObserveMessageAsync(new ObservedMessage(22, 1, 2, 3, cutoff.AddSeconds(1)), CancellationToken.None);
         await store.RecordLogEntriesAsync(
             new[]
             {
-                new MessageLogEntry(20, 30, cutoff.AddSeconds(-1)),
-                new MessageLogEntry(21, 31, cutoff),
-                new MessageLogEntry(22, 32, cutoff.AddSeconds(1)),
+                new MessageLogEntry(1, 20, 30, cutoff.AddSeconds(-1)),
+                new MessageLogEntry(1, 21, 31, cutoff),
+                new MessageLogEntry(1, 22, 32, cutoff.AddSeconds(1)),
             },
             CancellationToken.None
         );
@@ -180,11 +185,36 @@ public sealed class ModerationLoggingStoreTests
         secondDeletedCount.ShouldBe(0);
         (
             await db.ObservedMessages.AsNoTracking().Select(message => message.OriginalMessageId).OrderBy(messageId => messageId).ToListAsync()
-        ).ShouldBe([11UL, 12UL]);
+        ).ShouldBe([11UL, 12UL, 21UL, 22UL]);
         (await db.MessageLogEntries.AsNoTracking().Select(entry => entry.OriginalMessageId).OrderBy(messageId => messageId).ToListAsync()).ShouldBe([
             21UL,
             22UL,
         ]);
+    }
+
+    [Test]
+    public async Task ObservedMessagesAndLogEntries_AreIsolatedByGuild()
+    {
+        await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
+        ModerationLoggingStore store = CreateStore();
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        await store.ObserveMessageAsync(new ObservedMessage(10, 1, 2, 3, now), CancellationToken.None);
+        await store.ObserveMessageAsync(new ObservedMessage(10, 2, 4, 5, now), CancellationToken.None);
+        await store.RecordLogEntriesAsync(new[] { new MessageLogEntry(1, 10, 99, now), new MessageLogEntry(2, 10, 99, now) }, CancellationToken.None);
+
+        ObservedMessage? firstGuild = await store.FindObservedMessageAsync(1, 10, CancellationToken.None);
+        ObservedMessage? secondGuild = await store.FindObservedMessageAsync(2, 10, CancellationToken.None);
+        IReadOnlyDictionary<ulong, ObservedMessage> firstGuildBatch = await store
+            .FindObservedMessagesAsync(1, new[] { 10UL }, CancellationToken.None)
+            .ConfigureAwait(false);
+
+        firstGuild.ShouldNotBeNull();
+        secondGuild.ShouldNotBeNull();
+        firstGuild.ChannelId.ShouldBe(2UL);
+        secondGuild.ChannelId.ShouldBe(4UL);
+        firstGuildBatch.Single().Value.GuildId.ShouldBe(1UL);
+        (await db.MessageLogEntries.CountAsync(entry => entry.OriginalMessageId == 10 && entry.LogMessageId == 99)).ShouldBe(2);
     }
 
     [Test]

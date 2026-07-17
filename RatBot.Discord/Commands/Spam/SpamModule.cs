@@ -31,6 +31,12 @@ public sealed class SpamModule(ImageSpamSettingsService settingsService) : Slash
         [Summary("burst-duration", "Detection burst duration in seconds.")] int? burstDuration = null
     )
     {
+        if (Context.Guild is null)
+        {
+            await RespondAsync("This command can only be used in a guild.", ephemeral: true).ConfigureAwait(false);
+            return;
+        }
+
         ErrorOr<Success> validationResult = Validate(numberOfChannels, attachmentCount, burstDuration);
 
         if (validationResult.IsError)
@@ -39,10 +45,18 @@ public sealed class SpamModule(ImageSpamSettingsService settingsService) : Slash
             return;
         }
 
-        ImageBurstSpamDetectorOptions settings =
+        ImageBurstSpamDetectorOptions? settings =
             numberOfChannels is null && attachmentCount is null && burstDuration is null
-                ? await settingsService.GetCurrentAsync(CancellationToken.None).ConfigureAwait(false)
-                : await settingsService.UpsertAsync(numberOfChannels, attachmentCount, burstDuration, CancellationToken.None).ConfigureAwait(false);
+                ? await settingsService.GetCurrentAsync(Context.Guild.Id, CancellationToken.None).ConfigureAwait(false)
+                : await settingsService
+                    .UpsertAsync(Context.Guild.Id, numberOfChannels, attachmentCount, burstDuration, CancellationToken.None)
+                    .ConfigureAwait(false);
+
+        if (settings is null)
+        {
+            await RespondAsync("Image spam detection is not configured for this guild.", ephemeral: true).ConfigureAwait(false);
+            return;
+        }
 
         await RespondAsync(FormatSettings(settings), ephemeral: true).ConfigureAwait(false);
     }

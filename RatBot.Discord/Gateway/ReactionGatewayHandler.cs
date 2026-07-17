@@ -1,10 +1,17 @@
 using RatBot.Application.Reactions;
+using RatBot.Discord.Commands.Emoji;
 
 namespace RatBot.Discord.Gateway;
 
-public sealed class ReactionGatewayHandler(DiscordSocketClient discordClient, ReactionQueue buffer, ILogger logger) : IDiscordGatewayHandler
+public sealed class ReactionGatewayHandler(
+    DiscordSocketClient discordClient,
+    ReactionQueue buffer,
+    IOptions<EmojiAnalyticsOptions> options,
+    ILogger logger
+) : IDiscordGatewayHandler
 {
     private readonly ILogger _logger = logger.ForContext<ReactionGatewayHandler>();
+    private readonly EmojiAnalyticsOptions _options = options.Value;
 
     public Task InitializeAsync(CancellationToken ct)
     {
@@ -35,15 +42,28 @@ public sealed class ReactionGatewayHandler(DiscordSocketClient discordClient, Re
     )
     {
         _ = message;
-        _ = channel;
-
-        LogReactionEvent("added", reaction.Emote);
 
         if (reaction.Emote is not Emote customEmote)
             return;
 
-        if (!buffer.Writer.TryWrite(customEmote.Id))
-            await buffer.Writer.WriteAsync(customEmote.Id);
+        if (!channel.HasValue || channel.Value is not IGuildChannel guildChannel)
+        {
+            LogReactionEvent("added_ignored_no_guild", reaction.Emote, null);
+            return;
+        }
+
+        if (!_options.IsEnabled(guildChannel.GuildId))
+        {
+            LogReactionEvent("added_ignored_disabled", reaction.Emote, guildChannel.GuildId);
+            return;
+        }
+
+        LogReactionEvent("added", reaction.Emote, guildChannel.GuildId);
+
+        GuildReactionEmoji item = new GuildReactionEmoji(guildChannel.GuildId, customEmote.Id);
+
+        if (!buffer.Writer.TryWrite(item))
+            await buffer.Writer.WriteAsync(item);
     }
 
     private Task HandleReactionRemovedAsync(
@@ -53,33 +73,34 @@ public sealed class ReactionGatewayHandler(DiscordSocketClient discordClient, Re
     )
     {
         _ = cachedMessage;
-        _ = cachedChannel;
-        LogReactionEvent("removed", reaction.Emote);
+        ulong? guildId = cachedChannel.HasValue && cachedChannel.Value is IGuildChannel guildChannel ? guildChannel.GuildId : null;
+        LogReactionEvent("removed", reaction.Emote, guildId);
         return Task.CompletedTask;
     }
 
     private Task HandleReactionsClearedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
     {
         _ = message;
-        _ = channel;
-        _logger.ForContext("ReactionEventType", "cleared_all").Information("Discord reaction event recorded.");
+        ulong? guildId = channel.HasValue && channel.Value is IGuildChannel guildChannel ? guildChannel.GuildId : null;
+        _logger.ForContext("ReactionEventType", "cleared_all").ForContext("GuildId", guildId).Information("Discord reaction event recorded.");
         return Task.CompletedTask;
     }
 
     private Task HandleReactionsRemovedForEmoteAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, IEmote emote)
     {
         _ = message;
-        _ = channel;
-        LogReactionEvent("cleared_emote", emote);
+        ulong? guildId = channel.HasValue && channel.Value is IGuildChannel guildChannel ? guildChannel.GuildId : null;
+        LogReactionEvent("cleared_emote", emote, guildId);
         return Task.CompletedTask;
     }
 
-    private void LogReactionEvent(string reactionEventType, IEmote emote)
+    private void LogReactionEvent(string reactionEventType, IEmote emote, ulong? guildId)
     {
         ulong? emojiId = emote is Emote customEmote ? customEmote.Id : null;
 
         _logger
             .ForContext("ReactionEventType", reactionEventType)
+            .ForContext("GuildId", guildId)
             .ForContext("EmojiName", emote.Name)
             .ForContext("EmojiId", emojiId)
             .ForContext("IsCustomEmoji", emojiId.HasValue)

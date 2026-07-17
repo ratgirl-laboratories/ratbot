@@ -12,7 +12,7 @@ public sealed class RoleColourReconcilerTests
     public void SelectTargetDisplayRole_ExplicitNoColourSuppressesFallback()
     {
         RoleColourOption option = CreateOption("blue", 10, 20);
-        MemberColourPreference preference = MemberColourPreference.CreateNoColour(1);
+        MemberColourPreference preference = MemberColourPreference.CreateNoColour(1, 1);
 
         ulong? target = RoleColourReconciler.SelectTargetDisplayRole(new ulong[] { 10 }, preference, new[] { option }, _ => 5);
 
@@ -24,7 +24,7 @@ public sealed class RoleColourReconcilerTests
     {
         RoleColourOption lower = CreateOption("blue", 10, 20);
         RoleColourOption higher = CreateOption("red", 11, 21);
-        MemberColourPreference preference = MemberColourPreference.CreateForOption(1, lower.OptionId);
+        MemberColourPreference preference = MemberColourPreference.CreateForOption(1, 1, lower.OptionId);
 
         ulong? target = RoleColourReconciler.SelectTargetDisplayRole(
             new ulong[] { 10, 11 },
@@ -42,7 +42,7 @@ public sealed class RoleColourReconcilerTests
         RoleColourOption unavailable = CreateOption("blue", 10, 20);
         RoleColourOption lower = CreateOption("green", 11, 21);
         RoleColourOption higher = CreateOption("red", 12, 22);
-        MemberColourPreference preference = MemberColourPreference.CreateForOption(1, unavailable.OptionId);
+        MemberColourPreference preference = MemberColourPreference.CreateForOption(1, 1, unavailable.OptionId);
 
         ulong? target = RoleColourReconciler.SelectTargetDisplayRole(
             new ulong[] { 11, 12 },
@@ -81,5 +81,5 @@ public sealed class RoleColourReconcilerTests
     }
 
     private static RoleColourOption CreateOption(string key, ulong sourceRoleId, ulong displayRoleId) =>
-        RoleColourOption.Create(key, key, sourceRoleId, displayRoleId).Value;
+        RoleColourOption.Create(1, key, key, sourceRoleId, displayRoleId).Value;
 }

@@ -16,12 +16,15 @@ public sealed partial class AdventureLeaderboardManager(
     private const MessageFlags LeaderboardMessageFlags = MessageFlags.ComponentsV2 | MessageFlags.SuppressNotification;
 
     private static readonly AllowedMentions UserMentionsOnly = new AllowedMentions(AllowedMentionTypes.Users);
-    private readonly HashSet<ulong> _excludedUserIds = new HashSet<ulong>();
+    private readonly Dictionary<ulong, HashSet<ulong>> _excludedUserIdsByGuild = new Dictionary<ulong, HashSet<ulong>>();
 
     private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
     private readonly ILogger _logger = logger.ForContext<AdventureLeaderboardManager>();
     private readonly AdventureLeaderboardOptions _options = options.Value;
-    private TrackedLeaderboardMessageSequence? _trackedMessageSequence;
+    private ImmutableDictionary<ulong, TrackedLeaderboardMessageSequence> _trackedMessageSequences = ImmutableDictionary<
+        ulong,
+        TrackedLeaderboardMessageSequence
+    >.Empty;
 
     private static string BuildRenderHash(
         AdventureEntrySnapshot snapshot,
@@ -75,13 +78,14 @@ public sealed partial class AdventureLeaderboardManager(
 
         try
         {
-            AdventureEntrySnapshot visibleSnapshot = RemoveExcludedUsers(snapshot);
+            IReadOnlySet<ulong> excludedUserIds = GetExcludedUserIds(channel.Guild.Id);
+            AdventureEntrySnapshot visibleSnapshot = RemoveExcludedUsers(snapshot, excludedUserIds);
 
             ImmutableHashSet<ulong> guildMemberUserIds = (
                 await FindGuildMemberUserIdsAsync(channel.Guild, visibleSnapshot, cancellationToken).ConfigureAwait(false)
             ).ToImmutableHashSet();
 
-            string renderHash = BuildRenderHash(snapshot, guildMemberUserIds, _excludedUserIds);
+            string renderHash = BuildRenderHash(snapshot, guildMemberUserIds, excludedUserIds);
             IReadOnlyList<MessageComponent> components = BuildComponents(visibleSnapshot, year, guildMemberUserIds);
 
             IReadOnlyList<IUserMessage> messages = await SendLeaderboardMessagesAsync(channel, components, cancellationToken).ConfigureAwait(false);
@@ -98,8 +102,10 @@ public sealed partial class AdventureLeaderboardManager(
 
             await SaveTrackedMessageSequenceAsync(trackedSequence, cancellationToken).ConfigureAwait(false);
 
-            previousSequence = _trackedMessageSequence;
-            _trackedMessageSequence = trackedSequence;
+            previousSequence = _trackedMessageSequences.TryGetValue(channel.Guild.Id, out TrackedLeaderboardMessageSequence existingSequence)
+                ? existingSequence
+                : null;
+            _trackedMessageSequences = _trackedMessageSequences.SetItem(channel.Guild.Id, trackedSequence);
         }
         finally
         {
@@ -112,18 +118,19 @@ public sealed partial class AdventureLeaderboardManager(
         return message;
     }
 
-    public async Task<bool> ExcludeUserAsync(ulong userId, CancellationToken cancellationToken)
+    public async Task<bool> ExcludeUserAsync(ulong guildId, ulong userId, CancellationToken cancellationToken)
     {
         await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            bool added = _excludedUserIds.Add(userId);
+            HashSet<ulong> excludedUserIds = GetOrCreateExcludedUserIds(guildId);
+            bool added = excludedUserIds.Add(userId);
 
             try
             {
-                if (_trackedMessageSequence.HasValue)
-                    await UpdateTrackedMessageCoreAsync(_trackedMessageSequence.Value, cancellationToken).ConfigureAwait(false);
+                if (_trackedMessageSequences.TryGetValue(guildId, out TrackedLeaderboardMessageSequence sequence))
+                    await UpdateTrackedMessageCoreAsync(sequence, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -131,7 +138,12 @@ public sealed partial class AdventureLeaderboardManager(
             }
             catch (Exception ex)
             {
-                _logger.Warning(ex, "Failed to update adventure leaderboard message after excluding user {UserId}.", userId);
+                _logger.Warning(
+                    ex,
+                    "Failed to update adventure leaderboard message after excluding user {UserId} in guild {GuildId}.",
+                    userId,
+                    guildId
+                );
             }
 
             return added;
@@ -320,31 +332,41 @@ public sealed partial class AdventureLeaderboardManager(
         if (states.Count == 0)
             return;
 
-        AdventureLeaderboardMessageState firstState = states[0];
+        ImmutableDictionary<ulong, TrackedLeaderboardMessageSequence>.Builder sequences = ImmutableDictionary.CreateBuilder<
+            ulong,
+            TrackedLeaderboardMessageSequence
+        >();
+
+        foreach (IGrouping<ulong, AdventureLeaderboardMessageState> guildStates in states.GroupBy(state => state.GuildId))
+        {
+            AdventureLeaderboardMessageState firstState = guildStates.First();
+            sequences[firstState.GuildId] = new TrackedLeaderboardMessageSequence(
+                firstState.GuildId,
+                firstState.ChannelId,
+                guildStates.OrderBy(x => x.Id).Select(x => x.MessageId).ToArray(),
+                firstState.Year,
+                firstState.LastRenderHash
+            );
+
+            _logger.Information(
+                "Loaded {MessageCount} persisted adventure leaderboard messages in guild {GuildId} channel {ChannelId} for year {Year}.",
+                guildStates.Count(),
+                firstState.GuildId,
+                firstState.ChannelId,
+                firstState.Year
+            );
+        }
 
         await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            _trackedMessageSequence = new TrackedLeaderboardMessageSequence(
-                firstState.GuildId,
-                firstState.ChannelId,
-                states.Select(x => x.MessageId).ToArray(),
-                firstState.Year,
-                firstState.LastRenderHash
-            );
+            _trackedMessageSequences = sequences.ToImmutable();
         }
         finally
         {
             _lock.Release();
         }
-
-        _logger.Information(
-            "Loaded {MessageCount} persisted adventure leaderboard messages in channel {ChannelId} for year {Year}.",
-            states.Count,
-            firstState.ChannelId,
-            firstState.Year
-        );
     }
 
     private async Task<TrackedLeaderboardMessageSequence> ReconcileTrackedMessageSequenceAsync(
@@ -398,14 +420,27 @@ public sealed partial class AdventureLeaderboardManager(
         return recreatedSequence;
     }
 
-    private AdventureEntrySnapshot RemoveExcludedUsers(AdventureEntrySnapshot snapshot)
+    private IReadOnlySet<ulong> GetExcludedUserIds(ulong guildId) =>
+        _excludedUserIdsByGuild.TryGetValue(guildId, out HashSet<ulong>? excludedUserIds) ? excludedUserIds : ImmutableHashSet<ulong>.Empty;
+
+    private HashSet<ulong> GetOrCreateExcludedUserIds(ulong guildId)
     {
-        if (_excludedUserIds.Count == 0)
+        if (_excludedUserIdsByGuild.TryGetValue(guildId, out HashSet<ulong>? excludedUserIds))
+            return excludedUserIds;
+
+        excludedUserIds = new HashSet<ulong>();
+        _excludedUserIdsByGuild[guildId] = excludedUserIds;
+        return excludedUserIds;
+    }
+
+    private static AdventureEntrySnapshot RemoveExcludedUsers(AdventureEntrySnapshot snapshot, IReadOnlySet<ulong> excludedUserIds)
+    {
+        if (excludedUserIds.Count == 0)
             return snapshot;
 
         return snapshot with
         {
-            Rows = snapshot.Rows.Where(row => !ulong.TryParse(row.UserId, out ulong userId) || !_excludedUserIds.Contains(userId)).ToImmutableArray(),
+            Rows = snapshot.Rows.Where(row => !ulong.TryParse(row.UserId, out ulong userId) || !excludedUserIds.Contains(userId)).ToImmutableArray(),
         };
     }
 
@@ -413,7 +448,10 @@ public sealed partial class AdventureLeaderboardManager(
     {
         await using BotDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
 
-        await dbContext.AdventureLeaderboardMessageState.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await dbContext
+            .AdventureLeaderboardMessageState.Where(state => state.GuildId == trackedSequence.GuildId)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         for (int index = 0; index < trackedSequence.MessageIds.Count; index++)
             dbContext.AdventureLeaderboardMessageState.Add(
@@ -504,10 +542,8 @@ public sealed partial class AdventureLeaderboardManager(
 
         try
         {
-            if (!_trackedMessageSequence.HasValue)
-                return;
-
-            await UpdateTrackedMessageCoreAsync(_trackedMessageSequence.Value, cancellationToken).ConfigureAwait(false);
+            foreach (TrackedLeaderboardMessageSequence sequence in _trackedMessageSequences.Values)
+                await UpdateTrackedMessageCoreAsync(sequence, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -529,7 +565,8 @@ public sealed partial class AdventureLeaderboardManager(
 
         await SyncAdventureForumAccessAsync(trackedSequence.GuildId, snapshot, cancellationToken).ConfigureAwait(false);
 
-        AdventureEntrySnapshot visibleSnapshot = RemoveExcludedUsers(snapshot);
+        IReadOnlySet<ulong> excludedUserIds = GetExcludedUserIds(trackedSequence.GuildId);
+        AdventureEntrySnapshot visibleSnapshot = RemoveExcludedUsers(snapshot, excludedUserIds);
 
         (TrackedLeaderboardMessageTarget? target, bool shouldRecreateSequence) = await FindTrackedMessageTargetAsync(
                 trackedSequence,
@@ -544,7 +581,7 @@ public sealed partial class AdventureLeaderboardManager(
             await FindGuildMemberUserIdsAsync(target.Value.Guild, visibleSnapshot, cancellationToken).ConfigureAwait(false)
         ).ToImmutableHashSet();
 
-        string renderHash = BuildRenderHash(snapshot, guildMemberUserIds, _excludedUserIds);
+        string renderHash = BuildRenderHash(snapshot, guildMemberUserIds, excludedUserIds);
 
         IReadOnlyList<MessageComponent> components = BuildComponents(visibleSnapshot, trackedSequence.Year, guildMemberUserIds);
 
@@ -559,7 +596,7 @@ public sealed partial class AdventureLeaderboardManager(
                 )
                 .ConfigureAwait(false);
 
-            _trackedMessageSequence = recreatedSequence;
+            _trackedMessageSequences = _trackedMessageSequences.SetItem(recreatedSequence.GuildId, recreatedSequence);
             return;
         }
 
@@ -578,6 +615,6 @@ public sealed partial class AdventureLeaderboardManager(
             )
             .ConfigureAwait(false);
 
-        _trackedMessageSequence = updatedTrackedSequence;
+        _trackedMessageSequences = _trackedMessageSequences.SetItem(updatedTrackedSequence.GuildId, updatedTrackedSequence);
     }
 }

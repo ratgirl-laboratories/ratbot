@@ -524,8 +524,18 @@ public sealed class DiscordInteractionHandler(
     {
         try
         {
-            await interactionService.RegisterCommandsToGuildAsync(_options.GuildId);
-            _logger.Information("Slash commands registered to guild {GuildId}.", _options.GuildId);
+            if (_options.DevelopmentCommandRegistrationGuildIds.Length == 0)
+            {
+                await interactionService.RegisterCommandsGloballyAsync();
+                _logger.Information("Slash commands registered globally.");
+                return;
+            }
+
+            foreach (ulong guildId in _options.DevelopmentCommandRegistrationGuildIds.Distinct())
+            {
+                await interactionService.RegisterCommandsToGuildAsync(guildId);
+                _logger.Information("Slash commands registered to development guild {GuildId}.", guildId);
+            }
         }
         catch (Exception ex)
         {

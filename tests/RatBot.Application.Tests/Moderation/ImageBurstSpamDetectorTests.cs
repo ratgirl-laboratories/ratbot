@@ -121,6 +121,51 @@ public sealed class ImageBurstSpamDetectorTests
     }
 
     [Test]
+    public void Observe_RequiresGuildSpecificSettingsAndUsesEachGuildThresholds()
+    {
+        TestTimeProvider timeProvider = new TestTimeProvider(BaseTimestamp);
+        ImageBurstSpamDetectorSettings settings = new ImageBurstSpamDetectorSettings();
+        ImageBurstSpamDetector detector = new ImageBurstSpamDetector(timeProvider, settings);
+
+        detector.Observe(CreateMessage(guildId: 1, channelId: 10, timestamp: BaseTimestamp)).ShouldBeNull();
+        detector.Observe(CreateMessage(guildId: 1, channelId: 20, timestamp: BaseTimestamp.AddSeconds(1))).ShouldBeNull();
+        detector.Observe(CreateMessage(guildId: 1, channelId: 30, timestamp: BaseTimestamp.AddSeconds(2))).ShouldBeNull();
+        detector.Observe(CreateMessage(guildId: 1, channelId: 40, timestamp: BaseTimestamp.AddSeconds(3))).ShouldBeNull();
+
+        settings.Update(
+            1,
+            new ImageBurstSpamDetectorOptions
+            {
+                Window = 45,
+                DistinctChannelThreshold = 4,
+                RequiredAttachmentCount = 2,
+                HandlingLockDuration = TimeSpan.FromMinutes(5),
+            }
+        );
+        settings.Update(
+            2,
+            new ImageBurstSpamDetectorOptions
+            {
+                Window = 45,
+                DistinctChannelThreshold = 2,
+                RequiredAttachmentCount = 2,
+                HandlingLockDuration = TimeSpan.FromMinutes(5),
+            }
+        );
+
+        detector.Observe(CreateMessage(guildId: 1, channelId: 10, timestamp: BaseTimestamp.AddSeconds(4))).ShouldBeNull();
+        detector.Observe(CreateMessage(guildId: 1, channelId: 20, timestamp: BaseTimestamp.AddSeconds(5))).ShouldBeNull();
+        detector.Observe(CreateMessage(guildId: 1, channelId: 30, timestamp: BaseTimestamp.AddSeconds(6))).ShouldBeNull();
+        detector.Observe(CreateMessage(guildId: 1, channelId: 40, timestamp: BaseTimestamp.AddSeconds(7))).ShouldNotBeNull();
+
+        detector.Observe(CreateMessage(guildId: 2, channelId: 10, timestamp: BaseTimestamp.AddSeconds(8))).ShouldBeNull();
+        ImageBurstDetection? guildTwoDetection = detector.Observe(CreateMessage(guildId: 2, channelId: 20, timestamp: BaseTimestamp.AddSeconds(9)));
+
+        guildTwoDetection.ShouldNotBeNull();
+        guildTwoDetection.GuildId.ShouldBe(2UL);
+    }
+
+    [Test]
     public void Observe_WithThreeQualifyingMessagesAcrossThreeChannelsInsideFifteenSeconds_ReturnsDetection()
     {
         // Arrange

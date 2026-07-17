@@ -2,11 +2,19 @@ using RatBot.Application.Common.Interfaces;
 
 namespace RatBot.Discord.Commands.Emoji;
 
-public sealed class TrackedEmojiCatalog(DiscordSocketClient discordClient, IOptions<DiscordOptions> options) : ITrackedEmojiCatalog
+public sealed class TrackedEmojiCatalog(DiscordSocketClient discordClient, IOptions<EmojiAnalyticsOptions> options) : ITrackedEmojiCatalog
 {
-    public bool TryGetTrackedEmojiIds(out IReadOnlyCollection<ulong> emojiIds)
+    private readonly EmojiAnalyticsOptions _options = options.Value;
+
+    public bool TryGetTrackedEmojiIds(ulong guildId, out IReadOnlyCollection<ulong> emojiIds)
     {
-        SocketGuild? guild = discordClient.GetGuild(options.Value.GuildId);
+        if (!_options.IsEnabled(guildId))
+        {
+            emojiIds = [];
+            return false;
+        }
+
+        SocketGuild? guild = discordClient.GetGuild(guildId);
 
         if (guild is null)
         {

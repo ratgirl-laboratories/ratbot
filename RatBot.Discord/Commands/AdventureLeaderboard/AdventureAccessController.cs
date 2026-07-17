@@ -77,7 +77,12 @@ public sealed class AdventureAccessController(
             await using BotDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
 
             links = (
-                await dbContext.AdventureForumThreadLinks.AsNoTracking().OrderBy(link => link.ScorePartIndex).ToListAsync(ct).ConfigureAwait(false)
+                await dbContext
+                    .AdventureForumThreadLinks.AsNoTracking()
+                    .Where(link => link.GuildId == guild.Id)
+                    .OrderBy(link => link.ScorePartIndex)
+                    .ToListAsync(ct)
+                    .ConfigureAwait(false)
             ).ToImmutableArray();
         }
         catch (Exception ex)
@@ -92,6 +97,12 @@ public sealed class AdventureAccessController(
             return;
         }
 
+        if (!_options.TryGetAdventurerRoleId(guild.Id, out ulong adventurerRoleId))
+        {
+            _logger.Information("Adventure forum access sync skipped because guild {GuildId} has no adventurer role configured.", guild.Id);
+            return;
+        }
+
         RequestOptions requestOptions = new RequestOptions { CancelToken = ct };
 
         ImmutableDictionary<ulong, IGuildUser> guildMembers = await ResolveGuildMembersAsync(guild, snapshot, requestOptions).ConfigureAwait(false);
@@ -99,7 +110,7 @@ public sealed class AdventureAccessController(
         ImmutableDictionary<int, ulong> threadIdsByScorePart = links.ToImmutableDictionary(link => link.ScorePartIndex, link => link.ThreadId);
 
         ImmutableHashSet<ulong> adventurerUserIds = guildMembers
-            .Values.Where(user => user.RoleIds.Contains(_options.AdventurerRoleId))
+            .Values.Where(user => user.RoleIds.Contains(adventurerRoleId))
             .Select(user => user.Id)
             .ToImmutableHashSet();
 
@@ -173,7 +184,8 @@ public sealed class AdventureAccessController(
         }
 
         _logger.Information(
-            "Adventure forum access sync completed. ThreadLinks={ThreadLinkCount} GuildUsersConsidered={GuildUserCount} AdventurersEligible={AdventurerCount} GrantsAttempted={GrantsAttempted} GrantsAlreadyPresent={GrantsAlreadyPresent} Failures={Failures} NotificationFailures={NotificationFailures} ThreadsSkipped={ThreadsSkipped}.",
+            "Adventure forum access sync completed for guild {GuildId}. ThreadLinks={ThreadLinkCount} GuildUsersConsidered={GuildUserCount} AdventurersEligible={AdventurerCount} GrantsAttempted={GrantsAttempted} GrantsAlreadyPresent={GrantsAlreadyPresent} Failures={Failures} NotificationFailures={NotificationFailures} ThreadsSkipped={ThreadsSkipped}.",
+            guild.Id,
             links.Length,
             guildMembers.Count,
             adventurerUserIds.Count,

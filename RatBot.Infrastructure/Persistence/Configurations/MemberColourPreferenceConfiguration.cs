@@ -24,6 +24,7 @@ public sealed class MemberColourPreferenceConfiguration : IEntityTypeConfigurati
 
         builder.Property(x => x.PreferenceId).HasConversion(id => id.Value, value => new MemberColourPreference.Id(value));
 
+        builder.Property(x => x.GuildId).IsRequired().HasConversion<long>().HasColumnType("bigint");
         builder.Property(x => x.UserId).IsRequired().HasConversion<long>().HasColumnType("bigint");
         builder.Property(x => x.Kind).IsRequired();
 
@@ -31,8 +32,14 @@ public sealed class MemberColourPreferenceConfiguration : IEntityTypeConfigurati
             .Property(x => x.SelectedOptionId)
             .HasConversion(id => id.HasValue ? id.Value.Value : (Guid?)null, value => value.HasValue ? new RoleColourOption.Id(value.Value) : null);
 
-        builder.HasIndex(x => x.UserId).IsUnique();
+        builder.HasIndex(x => new { x.GuildId, x.UserId }).IsUnique();
 
-        builder.HasOne<RoleColourOption>().WithMany().HasForeignKey(x => x.SelectedOptionId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder
+            .HasOne<RoleColourOption>()
+            .WithMany()
+            .HasForeignKey(x => new { x.GuildId, x.SelectedOptionId })
+            .HasPrincipalKey(x => new { x.GuildId, x.OptionId })
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -14,7 +14,7 @@ public sealed class MessageEvidenceCacheTests
 
         cache.Put(Evidence(1, attachmentSize: 10), now, TimeSpan.FromSeconds(5));
 
-        bool found = cache.TryGet(1, now.AddSeconds(6), out MessageEvidence _);
+        bool found = cache.TryGet(10, 1, now.AddSeconds(6), out MessageEvidence _);
 
         found.ShouldBeFalse();
         cache.Count.ShouldBe(0);
@@ -32,9 +32,9 @@ public sealed class MessageEvidenceCacheTests
         cache.Put(Evidence(2, attachmentSize: 10), now.AddSeconds(1), TimeSpan.FromMinutes(5));
         cache.Put(Evidence(3, attachmentSize: 20), now.AddSeconds(2), TimeSpan.FromMinutes(5));
 
-        cache.TryGet(1, now.AddSeconds(2), out MessageEvidence _).ShouldBeFalse();
-        cache.TryGet(2, now.AddSeconds(2), out MessageEvidence second).ShouldBeTrue();
-        cache.TryGet(3, now.AddSeconds(2), out MessageEvidence third).ShouldBeTrue();
+        cache.TryGet(10, 1, now.AddSeconds(2), out MessageEvidence _).ShouldBeFalse();
+        cache.TryGet(10, 2, now.AddSeconds(2), out MessageEvidence second).ShouldBeTrue();
+        cache.TryGet(10, 3, now.AddSeconds(2), out MessageEvidence third).ShouldBeTrue();
         second.Attachments.Count.ShouldBe(1);
         third.Attachments.Count.ShouldBe(0);
     }
@@ -50,9 +50,9 @@ public sealed class MessageEvidenceCacheTests
         cache.Put(Evidence(1, attachmentSize: 10), now.AddSeconds(2), TimeSpan.FromMinutes(5));
         cache.Put(Evidence(3, attachmentSize: 10), now.AddSeconds(3), TimeSpan.FromMinutes(5));
 
-        cache.TryGet(1, now.AddSeconds(3), out MessageEvidence _).ShouldBeTrue();
-        cache.TryGet(2, now.AddSeconds(3), out MessageEvidence _).ShouldBeFalse();
-        cache.TryGet(3, now.AddSeconds(3), out MessageEvidence _).ShouldBeTrue();
+        cache.TryGet(10, 1, now.AddSeconds(3), out MessageEvidence _).ShouldBeTrue();
+        cache.TryGet(10, 2, now.AddSeconds(3), out MessageEvidence _).ShouldBeFalse();
+        cache.TryGet(10, 3, now.AddSeconds(3), out MessageEvidence _).ShouldBeTrue();
     }
 
     [Test]
@@ -66,8 +66,8 @@ public sealed class MessageEvidenceCacheTests
         cache.Put(Evidence(1, attachmentSize: 10), now, TimeSpan.FromMinutes(5));
         cache.Put(Evidence(2, attachmentSize: 10), now.AddSeconds(1), TimeSpan.FromMinutes(5));
 
-        cache.TryGet(1, now.AddSeconds(1), out MessageEvidence _).ShouldBeFalse();
-        cache.TryGet(2, now.AddSeconds(1), out MessageEvidence _).ShouldBeTrue();
+        cache.TryGet(10, 1, now.AddSeconds(1), out MessageEvidence _).ShouldBeFalse();
+        cache.TryGet(10, 2, now.AddSeconds(1), out MessageEvidence _).ShouldBeTrue();
     }
 
     [Test]
@@ -82,10 +82,10 @@ public sealed class MessageEvidenceCacheTests
         cache.Count.ShouldBe(3);
 
         for (ulong messageId = 1; messageId <= 7; messageId++)
-            cache.TryGet(messageId, now.AddSeconds(10), out MessageEvidence _).ShouldBeFalse();
+            cache.TryGet(10, messageId, now.AddSeconds(10), out MessageEvidence _).ShouldBeFalse();
 
         for (ulong messageId = 8; messageId <= 10; messageId++)
-            cache.TryGet(messageId, now.AddSeconds(10), out MessageEvidence _).ShouldBeTrue();
+            cache.TryGet(10, messageId, now.AddSeconds(10), out MessageEvidence _).ShouldBeTrue();
     }
 
     [Test]
@@ -97,8 +97,22 @@ public sealed class MessageEvidenceCacheTests
         cache.Put(Evidence(1, attachmentSize: 10), now, TimeSpan.FromSeconds(5));
         cache.Put(Evidence(2, attachmentSize: 10), now, TimeSpan.FromSeconds(20));
 
-        cache.TryGet(1, now.AddSeconds(6), out MessageEvidence _).ShouldBeFalse();
-        cache.TryGet(2, now.AddSeconds(6), out MessageEvidence _).ShouldBeTrue();
+        cache.TryGet(10, 1, now.AddSeconds(6), out MessageEvidence _).ShouldBeFalse();
+        cache.TryGet(10, 2, now.AddSeconds(6), out MessageEvidence _).ShouldBeTrue();
+    }
+
+    [Test]
+    public void Put_KeysEvidenceByGuildAndMessage()
+    {
+        MessageEvidenceCache cache = new MessageEvidenceCache(Settings());
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        cache.Put(Evidence(1, attachmentSize: 10), now, TimeSpan.FromMinutes(5));
+
+        cache.TryGet(10, 1, now, out MessageEvidence sameGuildEvidence).ShouldBeTrue();
+        cache.TryGet(11, 1, now, out MessageEvidence otherGuildEvidence).ShouldBeFalse();
+        sameGuildEvidence.GuildId.ShouldBe(10UL);
+        otherGuildEvidence.GuildId.ShouldBe(11UL);
     }
 
     private static MessageEvidence Evidence(ulong messageId, int attachmentSize) =>

@@ -35,6 +35,7 @@ public sealed class ColourModule(RoleColourOperations operations, RoleColourReco
         IReadOnlyCollection<ulong> roleIds = invoker.RoleIds;
 
         ErrorOr<RoleColourOption> result = await operations.SelectOptionAsync(
+            Context.Guild.Id,
             Context.User.Id,
             new RoleColourOption.Id(selectedOptionId),
             roleIds,
@@ -97,7 +98,11 @@ public sealed class ColourModule(RoleColourOperations operations, RoleColourReco
         IGuildUser invoker = (IGuildUser)Context.User;
         IReadOnlyCollection<ulong> roleIds = invoker.RoleIds;
 
-        ErrorOr<ImmutableArray<RoleColourOption>> eligibleResult = await operations.ListEligibleOptionsAsync(roleIds, CancellationToken.None);
+        ErrorOr<ImmutableArray<RoleColourOption>> eligibleResult = await operations.ListEligibleOptionsAsync(
+            Context.Guild.Id,
+            roleIds,
+            CancellationToken.None
+        );
         ImmutableArray<RoleColourOption> eligible = eligibleResult.Value;
 
         string applyId = $"{SwapPrefix}:apply:{ownerUserId}:{optId}";
@@ -135,7 +140,7 @@ public sealed class ColourModule(RoleColourOperations operations, RoleColourReco
         Log.Debug("colour_remove start guild_id={GuildId} user_id={UserId}", Context.Guild.Id, Context.User.Id);
         await DeferAsync(ephemeral: true);
 
-        ErrorOr<Success> result = await operations.SelectNoColourAsync(Context.User.Id, CancellationToken.None);
+        ErrorOr<Success> result = await operations.SelectNoColourAsync(Context.Guild.Id, Context.User.Id, CancellationToken.None);
 
         if (result.IsError)
         {
@@ -160,7 +165,11 @@ public sealed class ColourModule(RoleColourOperations operations, RoleColourReco
         IGuildUser invoker = (IGuildUser)Context.User;
         IReadOnlyCollection<ulong> roleIds = invoker.RoleIds;
 
-        ErrorOr<ImmutableArray<RoleColourOption>> eligibleResult = await operations.ListEligibleOptionsAsync(roleIds, CancellationToken.None);
+        ErrorOr<ImmutableArray<RoleColourOption>> eligibleResult = await operations.ListEligibleOptionsAsync(
+            Context.Guild.Id,
+            roleIds,
+            CancellationToken.None
+        );
         ImmutableArray<RoleColourOption> eligible = eligibleResult.Value;
 
         Log.Debug(

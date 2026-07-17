@@ -15,8 +15,7 @@ public sealed class GuildMemberCacheBackgroundWorker(
         TimeSpan interval = TimeSpan.FromMinutes(_options.MemberCacheRefreshIntervalMinutes);
 
         _logger.Information(
-            "Guild member cache background worker started. GuildId={GuildId}, IntervalMinutes={IntervalMinutes}",
-            _options.GuildId,
+            "Guild member cache background worker started. IntervalMinutes={IntervalMinutes}",
             _options.MemberCacheRefreshIntervalMinutes
         );
 
@@ -25,7 +24,7 @@ public sealed class GuildMemberCacheBackgroundWorker(
             using PeriodicTimer timer = new PeriodicTimer(interval);
 
             while (await timer.WaitForNextTickAsync(stoppingToken))
-                await CheckGuildMemberCacheAsync(stoppingToken);
+                await CheckGuildMemberCachesAsync(stoppingToken);
         }
         catch (OperationCanceledException)
         {
@@ -37,16 +36,41 @@ public sealed class GuildMemberCacheBackgroundWorker(
         }
     }
 
-    private async Task CheckGuildMemberCacheAsync(CancellationToken ct)
+    private async Task CheckGuildMemberCachesAsync(CancellationToken ct)
     {
-        SocketGuild? guild = discordClient.GetGuild(_options.GuildId);
+        await ProcessGuildsAsync(
+            discordClient.Guilds,
+            guild => guild.Id,
+            guild => memberCacheService.EnsureGuildMembersDownloadedAsync(guild, "periodic_check", ct),
+            _logger,
+            ct
+        );
+    }
 
-        if (guild is null)
+    internal static async Task ProcessGuildsAsync<TGuild>(
+        IEnumerable<TGuild> guilds,
+        Func<TGuild, ulong> getGuildId,
+        Func<TGuild, Task> processGuildAsync,
+        ILogger logger,
+        CancellationToken ct
+    )
+    {
+        foreach (TGuild guild in guilds)
         {
-            _logger.Debug("Configured guild is not currently available. GuildId={GuildId}", _options.GuildId);
-            return;
-        }
+            ulong guildId = getGuildId(guild);
 
-        await memberCacheService.EnsureGuildMembersDownloadedAsync(guild, "periodic_check", ct);
+            try
+            {
+                await processGuildAsync(guild);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Warning(ex, "Guild member cache refresh failed for guild {GuildId}.", guildId);
+            }
+        }
     }
 }

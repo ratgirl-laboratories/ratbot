@@ -17,9 +17,9 @@ public sealed class MetaProposalStateConfiguration : IEntityTypeConfiguration<Me
 
         builder.HasIndex(x => x.GuildId);
         builder.HasIndex(x => x.Status);
-        builder.HasIndex(x => x.SuggestionThreadChannelId).IsUnique();
-        builder.HasIndex(x => x.PollMessageId);
-        builder.HasIndex(x => x.ProposalThreadChannelId);
+        builder.HasIndex(x => new { x.GuildId, x.SuggestionThreadChannelId }).IsUnique();
+        builder.HasIndex(x => new { x.GuildId, x.PollMessageId });
+        builder.HasIndex(x => new { x.GuildId, x.ProposalThreadChannelId });
         builder.HasIndex(x => new { x.Status, x.PollExpiresAtUtc });
     }
 }

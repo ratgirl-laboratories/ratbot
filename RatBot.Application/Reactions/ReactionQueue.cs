@@ -2,9 +2,11 @@ using System.Threading.Channels;
 
 namespace RatBot.Application.Reactions;
 
+public sealed record GuildReactionEmoji(ulong GuildId, ulong EmojiId);
+
 public sealed class ReactionQueue
 {
-    private readonly Channel<ulong> _channel = Channel.CreateUnbounded<ulong>(
+    private readonly Channel<GuildReactionEmoji> _channel = Channel.CreateUnbounded<GuildReactionEmoji>(
         new UnboundedChannelOptions
         {
             SingleReader = true,
@@ -12,7 +14,7 @@ public sealed class ReactionQueue
             AllowSynchronousContinuations = false,
         }
     );
-    public ChannelReader<ulong> Reader => _channel.Reader;
+    public ChannelReader<GuildReactionEmoji> Reader => _channel.Reader;
 
-    public ChannelWriter<ulong> Writer => _channel.Writer;
+    public ChannelWriter<GuildReactionEmoji> Writer => _channel.Writer;
 }

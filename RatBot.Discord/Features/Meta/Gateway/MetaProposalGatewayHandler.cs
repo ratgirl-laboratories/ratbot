@@ -28,24 +28,26 @@ public sealed class MetaProposalGatewayHandler(
 
     private async Task HandleMessageDeletedAsync(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
     {
-        _ = channel;
+        if (!channel.HasValue || !TryGetGuildId(channel.Value, out ulong guildId))
+            return;
 
         try
         {
             using IServiceScope scope = scopeFactory.CreateScope();
             MetaProposalService service = scope.ServiceProvider.GetRequiredService<MetaProposalService>();
-            ErrorOr<MetaProposalState> clearResult = await service.ClearDeletedPollByMessageAsync(message.Id);
+            ErrorOr<MetaProposalState> clearResult = await service.ClearDeletedPollByMessageAsync(guildId, message.Id);
 
             if (!clearResult.IsError)
                 _logger.Information(
-                    "Cleared deleted meta proposal poll message {PollMessageId} for state {StateId}.",
+                    "Cleared deleted meta proposal poll message {PollMessageId} for state {StateId} in guild {GuildId}.",
                     message.Id,
-                    clearResult.Value.Id
+                    clearResult.Value.Id,
+                    guildId
                 );
         }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Failed to handle meta proposal poll deletion event.");
+            _logger.Warning(ex, "Failed to handle meta proposal poll deletion event in guild {GuildId}.", guildId);
         }
     }
 
@@ -56,7 +58,9 @@ public sealed class MetaProposalGatewayHandler(
     )
     {
         _ = cachedMessage;
-        _ = channel;
+
+        if (!TryGetGuildId(channel, out ulong guildId))
+            return;
 
         if (updatedMessage is not IUserMessage pollMessage)
             return;
@@ -70,7 +74,7 @@ public sealed class MetaProposalGatewayHandler(
         {
             using IServiceScope scope = scopeFactory.CreateScope();
             MetaProposalService service = scope.ServiceProvider.GetRequiredService<MetaProposalService>();
-            ErrorOr<MetaProposalState> stateResult = await service.GetByPollMessageAsync(pollMessage.Id);
+            ErrorOr<MetaProposalState> stateResult = await service.GetByPollMessageAsync(guildId, pollMessage.Id);
 
             if (stateResult.IsError || stateResult.Value.Status is not MetaProposalStatus.PollActive)
                 return;
@@ -78,14 +82,15 @@ public sealed class MetaProposalGatewayHandler(
             await pollResolver.ResolveFinalizedPollAsync(service, stateResult.Value, pollMessage, CancellationToken.None);
 
             _logger.Information(
-                "Resolved manually finalized meta proposal poll {PollMessageId} for state {StateId}.",
+                "Resolved manually finalized meta proposal poll {PollMessageId} for state {StateId} in guild {GuildId}.",
                 pollMessage.Id,
-                stateResult.Value.Id
+                stateResult.Value.Id,
+                guildId
             );
         }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Failed to handle manually finalized meta proposal poll update.");
+            _logger.Warning(ex, "Failed to handle manually finalized meta proposal poll update in guild {GuildId}.", guildId);
         }
     }
 
@@ -124,16 +129,31 @@ public sealed class MetaProposalGatewayHandler(
 
     private async Task HandleThreadDeletedAsync(Cacheable<SocketThreadChannel, ulong> thread)
     {
+        if (!thread.HasValue)
+            return;
+
         try
         {
             using IServiceScope scope = scopeFactory.CreateScope();
             MetaProposalService service = scope.ServiceProvider.GetRequiredService<MetaProposalService>();
-            await service.ForgetDeletedUnsubmittedSuggestionAsync(thread.Id);
+            await service.ForgetDeletedUnsubmittedSuggestionAsync(thread.Value.Guild.Id, thread.Id);
         }
         catch (Exception ex)
         {
             _logger.Warning(ex, "Failed to handle meta suggestion thread deletion event.");
         }
+    }
+
+    private static bool TryGetGuildId(IChannel channel, out ulong guildId)
+    {
+        if (channel is IGuildChannel guildChannel)
+        {
+            guildId = guildChannel.GuildId;
+            return true;
+        }
+
+        guildId = 0;
+        return false;
     }
 
     private void Subscribe()

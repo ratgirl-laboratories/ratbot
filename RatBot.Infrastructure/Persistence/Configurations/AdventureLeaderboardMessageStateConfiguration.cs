@@ -6,13 +6,15 @@ public sealed class AdventureLeaderboardMessageStateConfiguration : IEntityTypeC
     {
         builder.ToTable("AdventureLeaderboardMessageState");
 
-        builder.HasKey(x => x.Id);
+        builder.HasKey(x => new { x.GuildId, x.Id });
 
         builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.GuildId).IsRequired().HasConversion<long>().HasColumnType("bigint");
+        builder.Property(x => x.GuildId).IsRequired().HasConversion<long>().HasColumnType("bigint").ValueGeneratedNever();
         builder.Property(x => x.ChannelId).IsRequired().HasConversion<long>().HasColumnType("bigint");
         builder.Property(x => x.MessageId).IsRequired().HasConversion<long>().HasColumnType("bigint");
         builder.Property(x => x.Year).IsRequired();
         builder.Property(x => x.LastRenderHash).IsRequired();
+
+        builder.HasIndex(x => new { x.GuildId, x.Id }).IsUnique();
     }
 }

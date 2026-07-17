@@ -111,13 +111,16 @@ public sealed class SettingsInteractionRegistrationTests
 
     private sealed class FakeImageSpamSettingsStore : IImageSpamSettingsStore
     {
-        public Task<ImageSpamSettings?> GetAsync(CancellationToken ct) => Task.FromResult<ImageSpamSettings?>(null);
+        public Task<ImageSpamSettings?> GetAsync(ulong guildId, CancellationToken ct) => Task.FromResult<ImageSpamSettings?>(null);
+
+        public Task<IReadOnlyList<ImageSpamSettings>> ListEnabledAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<ImageSpamSettings>>([]);
 
         public Task<ImageSpamSettings> UpsertAsync(
+            ulong guildId,
             int? requiredChannelCount,
             int? requiredAttachmentCount,
             int? burstDurationSeconds,
             CancellationToken ct
-        ) => Task.FromResult(ImageSpamSettings.CreateDefault());
+        ) => Task.FromResult(ImageSpamSettings.CreateDefault(guildId));
     }
 }

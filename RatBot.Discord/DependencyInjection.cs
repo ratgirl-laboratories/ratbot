@@ -15,7 +15,6 @@ using RatBot.Discord.Features.Quorum;
 using RatBot.Discord.Forum;
 using RatBot.Discord.Handlers;
 using RatBot.Discord.Hosting;
-using RatBot.Discord.SecretRole;
 
 namespace RatBot.Discord;
 
@@ -108,9 +107,6 @@ public static class DependencyInjection
             services.AddSingleton<MetaProposalPollResolver>();
             services.AddSingleton<MetaProposalGatewayHandler>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<MetaProposalGatewayHandler>());
-            services.AddSingleton<SecretRoleManager>();
-            services.AddSingleton<SecretRoleGatewayHandler>();
-            services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<SecretRoleGatewayHandler>());
             services.AddSingleton<GuildMemberCacheService>();
             services.AddSingleton<ITrackedEmojiCatalog, TrackedEmojiCatalog>();
             services.AddSingleton<AdventureLeaderboardClient>();

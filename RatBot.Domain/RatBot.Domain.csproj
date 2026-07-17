@@ -3,7 +3,4 @@
         <PackageReference Include="ErrorOr" />
         <PackageReference Include="JetBrains.Annotations" />
     </ItemGroup>
-    <ItemGroup>
-        <Folder Include="TemporaryPingRole\" />
-    </ItemGroup>
 </Project>

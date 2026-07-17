@@ -6,7 +6,6 @@ using RatBot.Domain.Emoji;
 using RatBot.Domain.RoleColours;
 using RatBot.Infrastructure.Data;
 using RatBot.Infrastructure.RoleColours;
-using RatBot.Infrastructure.SecretRole;
 using RatBot.Infrastructure.Stores;
 using Serilog;
 
@@ -55,21 +54,16 @@ public sealed class MultiGuildPersistenceTests
     }
 
     [Test]
-    public async Task ImageSpamAndSecretRoleSettings_ArePerGuild()
+    public async Task ImageSpamSettings_ArePerGuild()
     {
         await using BotDbContext db = PostgresDatabaseFixture.CreateDbContext();
         ImageSpamSettingsStore imageStore = new ImageSpamSettingsStore(db);
-        SecretRoleRepository secretStore = new SecretRoleRepository(db);
 
         await imageStore.UpsertAsync(1, 4, 2, 45, CancellationToken.None);
         await imageStore.UpsertAsync(2, 2, 5, 60, CancellationToken.None);
-        await secretStore.ReplaceAsync(1, 111, CancellationToken.None);
-        await secretStore.ReplaceAsync(2, 222, CancellationToken.None);
 
         (await imageStore.GetAsync(1, CancellationToken.None))!.RequiredChannelCount.ShouldBe(4);
         (await imageStore.GetAsync(2, CancellationToken.None))!.RequiredAttachmentCount.ShouldBe(5);
-        (await secretStore.GetAsync(1, CancellationToken.None))!.RoleId.ShouldBe(111UL);
-        (await secretStore.GetAsync(2, CancellationToken.None))!.RoleId.ShouldBe(222UL);
     }
 
     [Test]

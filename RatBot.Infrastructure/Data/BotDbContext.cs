@@ -1,5 +1,4 @@
 using RatBot.Application.Common.Interfaces;
-using RatBot.Domain.SecretRole;
 
 namespace RatBot.Infrastructure.Data;
 
@@ -23,7 +22,6 @@ public sealed class BotDbContext(DbContextOptions<BotDbContext> options) : DbCon
     public DbSet<MetaSuggestionSettings> MetaSuggestionSettings => Set<MetaSuggestionSettings>();
     public DbSet<ObservedMessage> ObservedMessages => Set<ObservedMessage>();
     public DbSet<RoleColourOption> RoleColourOptions => Set<RoleColourOption>();
-    public DbSet<SecretRoleSetting> TemporaryPingRoleSettings => Set<SecretRoleSetting>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

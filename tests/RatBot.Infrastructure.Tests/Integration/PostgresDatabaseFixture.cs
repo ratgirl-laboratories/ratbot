@@ -44,6 +44,7 @@ public sealed class PostgresDatabaseFixture
             await db.MetaSuggestionSettings.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.AdventureLeaderboardMessageState.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.AdventureForumThreadLinks.ExecuteDeleteAsync().ConfigureAwait(false);
+            await db.AdventureSettings.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.MemberColourPreferences.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.RoleColourOptions.ExecuteDeleteAsync().ConfigureAwait(false);
             await db.ImageSpamSettings.ExecuteDeleteAsync().ConfigureAwait(false);

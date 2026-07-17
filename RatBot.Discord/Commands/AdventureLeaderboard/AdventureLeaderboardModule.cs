@@ -89,6 +89,21 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manag
         await FollowupAsync($"{action} {displayName} ({user.Id}) from the adventure leaderboard.", ephemeral: true).ConfigureAwait(false);
     }
 
+    [SlashCommand("set-role", "Set the role whose members receive access to adventure solution threads.")]
+    [RequireUserPermission(GuildPermission.Administrator)]
+    public async Task SetRoleAsync([Summary("role", "Role whose members receive adventure solution thread access.")] IRole role)
+    {
+        AdventureSettings? settings = await dbContext.AdventureSettings.FindAsync(Context.Guild.Id).ConfigureAwait(false);
+
+        if (settings is null)
+            dbContext.AdventureSettings.Add(AdventureSettings.Create(Context.Guild.Id, role.Id));
+        else
+            settings.UpdateAdventurerRole(role.Id);
+
+        await dbContext.SaveChangesAsync().ConfigureAwait(false);
+        await RespondAsync($"Adventure role set to {role.Mention}.", ephemeral: true).ConfigureAwait(false);
+    }
+
     [SlashCommand("show-leaderboard", "Create and keep an adventure leaderboard message updated.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task ShowLeaderboardAsync(

@@ -5,15 +5,10 @@ using RatBot.Infrastructure.Data;
 
 namespace RatBot.Discord.Commands.AdventureLeaderboard;
 
-public sealed class AdventureAccessController(
-    IDbContextFactory<BotDbContext> dbContextFactory,
-    IOptions<AdventureLeaderboardOptions> options,
-    ILogger logger
-)
+public sealed class AdventureAccessController(IDbContextFactory<BotDbContext> dbContextFactory, ILogger logger)
 {
     private static readonly AllowedMentions UserMentionsOnly = new AllowedMentions(AllowedMentionTypes.Users);
     private readonly ILogger _logger = logger.ForContext<AdventureAccessController>();
-    private readonly AdventureLeaderboardOptions _options = options.Value;
 
     private static async Task<HashSet<ulong>> GetThreadMemberIdsAsync(IThreadChannel thread, RequestOptions options)
     {
@@ -71,10 +66,16 @@ public sealed class AdventureAccessController(
     public async Task UpdateAccessGrantsAsync(SocketGuild guild, AdventureEntrySnapshot snapshot, CancellationToken ct)
     {
         ImmutableArray<AdventureForumThreadLink> links;
+        AdventureSettings? settings;
 
         try
         {
             await using BotDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
+
+            settings = await dbContext
+                .AdventureSettings.AsNoTracking()
+                .SingleOrDefaultAsync(settings => settings.GuildId == guild.Id, ct)
+                .ConfigureAwait(false);
 
             links = (
                 await dbContext
@@ -87,19 +88,19 @@ public sealed class AdventureAccessController(
         }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Could not load adventure forum thread links; skipping access sync.");
+            _logger.Warning(ex, "Could not load adventure settings or forum thread links; skipping access sync.");
+            return;
+        }
+
+        if (settings is null)
+        {
+            _logger.Information("Adventure forum access sync skipped because guild {GuildId} has no adventurer role configured.", guild.Id);
             return;
         }
 
         if (links.Length == 0)
         {
             _logger.Debug("Adventure forum access sync skipped because no score-part threads are configured.");
-            return;
-        }
-
-        if (!_options.TryGetAdventurerRoleId(guild.Id, out ulong adventurerRoleId))
-        {
-            _logger.Information("Adventure forum access sync skipped because guild {GuildId} has no adventurer role configured.", guild.Id);
             return;
         }
 
@@ -110,7 +111,7 @@ public sealed class AdventureAccessController(
         ImmutableDictionary<int, ulong> threadIdsByScorePart = links.ToImmutableDictionary(link => link.ScorePartIndex, link => link.ThreadId);
 
         ImmutableHashSet<ulong> adventurerUserIds = guildMembers
-            .Values.Where(user => user.RoleIds.Contains(adventurerRoleId))
+            .Values.Where(user => user.RoleIds.Contains(settings.AdventurerRoleId))
             .Select(user => user.Id)
             .ToImmutableHashSet();
 

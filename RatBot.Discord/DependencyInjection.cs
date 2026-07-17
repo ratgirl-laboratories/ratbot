@@ -35,14 +35,7 @@ public static class DependencyInjection
                 .Validate(options => options.MessageCacheSize >= 1000, "Discord message cache size must be at least 1000.")
                 .ValidateOnStart();
 
-            services
-                .AddOptions<AdventureLeaderboardOptions>()
-                .Bind(configuration.GetSection(AdventureLeaderboardOptions.SectionName))
-                .Validate(
-                    options => options.Guilds.All(pair => pair.Key != 0 && pair.Value.AdventurerRoleId != 0),
-                    "Adventure guild ids and role ids must be non-zero."
-                )
-                .ValidateOnStart();
+            services.AddOptions<AdventureLeaderboardOptions>().Bind(configuration.GetSection(AdventureLeaderboardOptions.SectionName));
 
             services
                 .AddOptions<EmojiAnalyticsOptions>()

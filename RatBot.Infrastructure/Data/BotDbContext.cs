@@ -10,6 +10,7 @@ public sealed class BotDbContext(DbContextOptions<BotDbContext> options) : DbCon
     public DbSet<AdventureForumThreadLink> AdventureForumThreadLinks => Set<AdventureForumThreadLink>();
 
     public DbSet<AdventureLeaderboardMessageState> AdventureLeaderboardMessageState => Set<AdventureLeaderboardMessageState>();
+    public DbSet<AdventureSettings> AdventureSettings => Set<AdventureSettings>();
     public DbSet<AutobannedUser> AutobannedUsers => Set<AutobannedUser>();
 
     public DbSet<EmojiUsageCount> EmojiUsageCounts => Set<EmojiUsageCount>();

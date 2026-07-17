@@ -74,6 +74,9 @@ public sealed class MultiGuildPersistenceTests
         db.AdventureForumThreadLinks.Add(AdventureForumThreadLink.Create(2, 1, 201));
         db.AdventureLeaderboardMessageState.Add(AdventureLeaderboardMessageState.Create(1, 1, 10, 1000, 2026, "a"));
         db.AdventureLeaderboardMessageState.Add(AdventureLeaderboardMessageState.Create(1, 2, 20, 2000, 2026, "b"));
+        AdventureSettings guildASettings = AdventureSettings.Create(1, 10001);
+        AdventureSettings guildBSettings = AdventureSettings.Create(2, 20001);
+        db.AdventureSettings.AddRange(guildASettings, guildBSettings);
         db.EmojiUsageCounts.Add(
             new EmojiUsageCount
             {
@@ -98,6 +101,17 @@ public sealed class MultiGuildPersistenceTests
         (await db.AdventureForumThreadLinks.SingleAsync(x => x.GuildId == 2 && x.ScorePartIndex == 1)).ThreadId.ShouldBe(201UL);
         (await db.AdventureLeaderboardMessageState.SingleAsync(x => x.GuildId == 1 && x.Id == 1)).MessageId.ShouldBe(1000UL);
         (await db.AdventureLeaderboardMessageState.SingleAsync(x => x.GuildId == 2 && x.Id == 1)).MessageId.ShouldBe(2000UL);
+        (await db.AdventureSettings.SingleAsync(x => x.GuildId == 1)).AdventurerRoleId.ShouldBe(10001UL);
+        (await db.AdventureSettings.SingleAsync(x => x.GuildId == 2)).AdventurerRoleId.ShouldBe(20001UL);
+
+        db.ChangeTracker.Clear();
+        AdventureSettings persistedGuildASettings = await db.AdventureSettings.SingleAsync(x => x.GuildId == 1);
+        persistedGuildASettings.UpdateAdventurerRole(10002);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        (await db.AdventureSettings.SingleAsync(x => x.GuildId == 1)).AdventurerRoleId.ShouldBe(10002UL);
+        (await db.AdventureSettings.SingleAsync(x => x.GuildId == 2)).AdventurerRoleId.ShouldBe(20001UL);
 
         ReactionUsageTracker tracker = new ReactionUsageTracker(db, new StaticTrackedEmojiCatalog(), Log.Logger);
         (await tracker.GetUsagePageAsync(1, 1, ct: CancellationToken.None)).Value.Items.Single().ReactionUsageCount.ShouldBe(1);

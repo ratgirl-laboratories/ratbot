@@ -23,7 +23,6 @@ public sealed class DependencyInjectionTests
                     ["DB:ConnectionString"] = "Host=localhost;Database=ratbot_di_test;Username=ratbot;Password=unused",
                     ["Discord:Token"] = "inert-test-token",
                     ["Discord:MessageCacheSize"] = "1000",
-                    ["AdventureLeaderboard:Guilds:1:AdventurerRoleId"] = "1",
                 }
             )
             .Build();

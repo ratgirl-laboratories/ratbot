@@ -1,10 +1,12 @@
 using RatBot.Application.Common.Forums;
 using RatBot.Application.Common.Interfaces;
+using RatBot.Application.Features.EmojiYoink;
 using RatBot.Application.Features.Logging;
 using RatBot.Application.Features.Quorum;
 using RatBot.Discord.BackgroundWorkers;
 using RatBot.Discord.Commands.AdventureLeaderboard;
 using RatBot.Discord.Commands.Emoji;
+using RatBot.Discord.Features.EmojiYoink;
 using RatBot.Discord.Features.Logging;
 using RatBot.Discord.Features.Logging.BackgroundWorkers;
 using RatBot.Discord.Features.Logging.Gateway;
@@ -91,6 +93,7 @@ public static class DependencyInjection
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<MessageContentGatewayHandler>());
             services.AddSingleton(sp => new MessageEvidenceCache(sp.GetRequiredService<IOptions<LoggingOptions>>().Value.ToEvidenceCacheSettings()));
             services.AddSingleton<HttpClient>();
+            services.AddSingleton<IGuildEmojiImporter, DiscordGuildEmojiImporter>();
             services.AddSingleton<ModerationLoggingGatewayHandler>();
             services.AddSingleton<IDiscordGatewayHandler>(sp => sp.GetRequiredService<ModerationLoggingGatewayHandler>());
             services.AddSingleton<ImageBurstSpamGatewayHandler>();

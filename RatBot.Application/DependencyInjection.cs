@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application.Administration;
+using RatBot.Application.Features.EmojiYoink;
 using RatBot.Application.Features.Quorum;
 using RatBot.Application.Features.Timezone;
 using RatBot.Application.MessageContent;
@@ -24,6 +25,7 @@ public static class DependencyInjection
             services.AddScoped<ReactionUsageTracker>();
             services.AddScoped<EmojiUsageTracker>();
             services.AddScoped<IModerationService, ModerationService>();
+            services.AddScoped<EmojiYoinkOperations>();
             services.AddScoped<QuorumOperations>();
             services.AddScoped<UserTimezoneOperations>();
         }

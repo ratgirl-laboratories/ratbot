@@ -181,7 +181,7 @@ public sealed class ModerationLoggingStoreTests
         int firstDeletedCount = await store.DeleteExpiredMetadataAsync(cutoff, CancellationToken.None);
         int secondDeletedCount = await store.DeleteExpiredMetadataAsync(cutoff, CancellationToken.None);
 
-        firstDeletedCount.ShouldBe(2);
+        firstDeletedCount.ShouldBe(3);
         secondDeletedCount.ShouldBe(0);
         (
             await db.ObservedMessages.AsNoTracking().Select(message => message.OriginalMessageId).OrderBy(messageId => messageId).ToListAsync()

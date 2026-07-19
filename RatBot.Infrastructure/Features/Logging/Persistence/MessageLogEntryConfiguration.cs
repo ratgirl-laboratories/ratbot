@@ -16,10 +16,5 @@ public sealed class MessageLogEntryConfiguration : IEntityTypeConfiguration<Mess
         builder.Property(entry => entry.LogMessageId).HasColumnName("log_message_id").ValueGeneratedNever();
         builder.Property(entry => entry.CapturedAtUtc).HasColumnName("captured_at_utc").IsRequired();
         builder.HasIndex(entry => new { entry.GuildId, entry.LogMessageId });
-        builder
-            .HasOne<ObservedMessage>()
-            .WithMany()
-            .HasForeignKey(entry => new { entry.GuildId, entry.OriginalMessageId })
-            .OnDelete(DeleteBehavior.Cascade);
     }
 }

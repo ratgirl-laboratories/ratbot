@@ -30,13 +30,13 @@ public sealed class EmojiYoinkModule(EmojiYoinkOperations operations) : SlashCom
 
         if (guild is null)
         {
-            await RespondAsync(EmojiYoinkErrors.GuildOnly.Description, ephemeral: true).ConfigureAwait(false);
+            await RespondAsync(EmojiYoinkErrors.GuildOnly.Description).ConfigureAwait(false);
             return;
         }
 
         if (sourceResult.IsError)
         {
-            await RespondAsync(sourceResult.FirstError.Description, ephemeral: true).ConfigureAwait(false);
+            await RespondAsync(sourceResult.FirstError.Description).ConfigureAwait(false);
             return;
         }
 
@@ -44,11 +44,11 @@ public sealed class EmojiYoinkModule(EmojiYoinkOperations operations) : SlashCom
 
         if (rejectLocalSource && guild.Emotes.Any(emote => emote.Id == source.EmojiId))
         {
-            await RespondAsync(EmojiYoinkErrors.SourceAlreadyInGuild.Description, ephemeral: true).ConfigureAwait(false);
+            await RespondAsync(EmojiYoinkErrors.SourceAlreadyInGuild.Description).ConfigureAwait(false);
             return;
         }
 
-        await DeferAsync(ephemeral: true).ConfigureAwait(false);
+        await DeferAsync().ConfigureAwait(false);
 
         ErrorOr<CreatedGuildEmoji> result = await operations
             .YoinkAsync(new YoinkEmojiCommand(guild.Id, Context.User.Id, Context.User.Username, source), CancellationToken.None)
@@ -59,9 +59,9 @@ public sealed class EmojiYoinkModule(EmojiYoinkOperations operations) : SlashCom
             {
                 string prefix = created.IsAnimated ? "a" : string.Empty;
 
-                await FollowupAsync($"Added emoji <{prefix}:{created.Name}:{created.EmojiId}>.", ephemeral: true).ConfigureAwait(false);
+                await FollowupAsync($"Added emoji <{prefix}:{created.Name}:{created.EmojiId}>.").ConfigureAwait(false);
             },
-            async error => await FollowupAsync(error.Description, ephemeral: true).ConfigureAwait(false)
+            async error => await FollowupAsync(error.Description).ConfigureAwait(false)
         );
     }
 }

@@ -2,7 +2,7 @@
     <ItemGroup>
         <PackageReference Include="DiffPlex" />
         <PackageReference Include="ErrorOr" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
         <PackageReference Include="Serilog" />
     </ItemGroup>
 

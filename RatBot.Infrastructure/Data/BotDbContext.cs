@@ -1,11 +1,9 @@
-using RatBot.Application.Common.Interfaces;
-
 namespace RatBot.Infrastructure.Data;
 
 /// <summary>
 ///     Entity Framework Core database context for RatBot persistence.
 /// </summary>
-public sealed class BotDbContext(DbContextOptions<BotDbContext> options) : DbContext(options), IEmojiRepository
+public sealed class BotDbContext(DbContextOptions<BotDbContext> options) : DbContext(options)
 {
     public DbSet<AdventureForumThreadLink> AdventureForumThreadLinks => Set<AdventureForumThreadLink>();
 

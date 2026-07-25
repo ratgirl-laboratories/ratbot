@@ -1,12 +1,11 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using Microsoft.EntityFrameworkCore;
 using RatBot.Application.Common.Interfaces;
-using RatBot.Domain.Emoji;
+using RatBot.Application.Features.EmojiAnalytics;
 
 namespace RatBot.Application.MessageContent;
 
-public sealed class EmojiUsageTracker(IEmojiRepository emojiRepository, ITrackedEmojiCatalog trackedEmojiCatalog, ILogger logger)
+public sealed class EmojiUsageTracker(IEmojiUsageStore emojiUsageStore, ITrackedEmojiCatalog trackedEmojiCatalog, ILogger logger)
 {
     private static readonly Regex EmojiRegex = new Regex(
         @"<a?:\w{2,32}:(?<id>\d{17,21})>",
@@ -34,42 +33,15 @@ public sealed class EmojiUsageTracker(IEmojiRepository emojiRepository, ITracked
 
         HashSet<ulong> trackedEmojiIdSet = trackedEmojiIds.ToHashSet();
 
-        await PruneUntrackedEmojiAsync(guildId, trackedEmojiIds, ct).ConfigureAwait(false);
-
-        List<(ulong Id, int N)> usages = messageContents
+        Dictionary<ulong, int> usages = messageContents
             .SelectMany(ExtractEmojiIds)
             .Where(trackedEmojiIdSet.Contains)
             .GroupBy(x => x)
-            .Select(g => (EmojiId: g.Key, Count: g.Count()))
-            .ToList();
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        await emojiUsageStore.RecordMessageUsageAsync(guildId, usages, trackedEmojiIds, ct).ConfigureAwait(false);
 
         foreach ((ulong emojiId, int count) in usages)
-        {
-            int updatedRowCount = await emojiRepository
-                .EmojiUsageCounts.Where(x => x.GuildId == guildId && x.EmojiId == emojiId)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.MessageUsageCount, x => x.MessageUsageCount + count), ct)
-                .ConfigureAwait(false);
-
-            if (updatedRowCount != 0)
-                continue;
-
-            emojiRepository.EmojiUsageCounts.Add(
-                new EmojiUsageCount
-                {
-                    GuildId = guildId,
-                    EmojiId = emojiId,
-                    ReactionUsageCount = 0,
-                    MessageUsageCount = count,
-                }
-            );
-
-            await emojiRepository.SaveChangesAsync(ct).ConfigureAwait(false);
-        }
-
-        foreach ((ulong Id, int N) usage in usages)
-            _logger.Verbose("Recorded {EmojiUsageCount} message usages for emoji {EmojiId}.", usage.N, usage.Id);
+            _logger.Verbose("Recorded {EmojiUsageCount} message usages for emoji {EmojiId}.", count, emojiId);
     }
-
-    private Task<int> PruneUntrackedEmojiAsync(ulong guildId, IReadOnlyCollection<ulong> trackedEmojiIds, CancellationToken ct) =>
-        emojiRepository.EmojiUsageCounts.Where(x => x.GuildId == guildId && !trackedEmojiIds.Contains(x.EmojiId)).ExecuteDeleteAsync(ct);
 }

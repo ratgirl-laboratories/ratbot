@@ -28,7 +28,7 @@ public static class QuorumScopeResolver
         };
     }
 
-    public static ErrorOr<QuorumScope> ResolveScopeChannel(IGuild currentGuild, IChannel scopeChannel) =>
+    internal static ErrorOr<QuorumScope> ResolveScopeChannel(IGuild currentGuild, IChannel scopeChannel) =>
         scopeChannel switch
         {
             IForumChannel => new QuorumScope.ForumChannel(currentGuild.Id, scopeChannel.Id),

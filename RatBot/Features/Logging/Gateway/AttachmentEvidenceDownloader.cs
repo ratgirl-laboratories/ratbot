@@ -1,6 +1,6 @@
 namespace RatBot.Features.Logging.Gateway;
 
-public static class AttachmentEvidenceDownloader
+internal static class AttachmentEvidenceDownloader
 {
     public static async Task<byte[]?> TryDownloadAsync(HttpClient httpClient, string url, long maxBytes, ILogger logger, CancellationToken ct)
     {
@@ -26,7 +26,7 @@ public static class AttachmentEvidenceDownloader
         }
     }
 
-    public static async Task<byte[]?> ReadLimitedAsync(Stream stream, long maxBytes, CancellationToken ct)
+    internal static async Task<byte[]?> ReadLimitedAsync(Stream stream, long maxBytes, CancellationToken ct)
     {
         if (maxBytes < 0)
             throw new ArgumentOutOfRangeException(nameof(maxBytes), "Maximum attachment bytes must not be negative.");

@@ -225,10 +225,12 @@ public sealed class ModerationLoggingStoreTests
 
         string[] loggingColumns = db
             .Model.GetEntityTypes()
-            .Where(entityType => string.Equals(entityType.ClrType.Namespace, "Sylvan.Domain.Features.Logging", StringComparison.Ordinal))
+            .Where(entityType => string.Equals(entityType.ClrType.Namespace, typeof(LoggingConfiguration).Namespace!, StringComparison.Ordinal))
             .SelectMany(entityType => entityType.GetProperties())
             .Select(property => property.GetColumnName())
             .ToArray();
+
+        loggingColumns.ShouldNotBeEmpty();
 
         foreach (string column in loggingColumns)
             forbiddenFragments.Any(fragment => column.Contains(fragment, StringComparison.OrdinalIgnoreCase)).ShouldBeFalse(column);

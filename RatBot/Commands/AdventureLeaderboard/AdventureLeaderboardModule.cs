@@ -107,7 +107,7 @@ public sealed class AdventureLeaderboardModule(AdventureLeaderboardManager manag
     [SlashCommand("show-leaderboard", "Create and keep an adventure leaderboard message updated.")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public async Task ShowLeaderboardAsync(
-        [Summary("channel", "Channel where Sylvan should post the leaderboard.")] ITextChannel channel,
+        [Summary("channel", "Channel where RatBot should post the leaderboard.")] ITextChannel channel,
         [Summary("year", "Adventure event year to show.")] int year
     )
     {

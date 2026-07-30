@@ -62,7 +62,7 @@ public sealed class RoleColourReconciler(IDbContextFactory<BotDbContext> dbConte
         return changedCount;
     }
 
-    public static ulong? SelectTargetDisplayRole(
+    internal static ulong? SelectTargetDisplayRole(
         IReadOnlyCollection<ulong> currentRoleIds,
         MemberColourPreference? preference,
         IReadOnlyCollection<RoleColourOption> options,
@@ -90,7 +90,7 @@ public sealed class RoleColourReconciler(IDbContextFactory<BotDbContext> dbConte
             .FirstOrDefault();
     }
 
-    public static (ImmutableArray<ulong> Add, ImmutableArray<ulong> Remove) CalculateRoleDiff(
+    internal static (ImmutableArray<ulong> Add, ImmutableArray<ulong> Remove) CalculateRoleDiff(
         IReadOnlyCollection<ulong> currentRoleIds,
         IReadOnlyCollection<ulong> configuredDisplayRoleIds,
         ulong? targetDisplayRoleId

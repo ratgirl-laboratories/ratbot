@@ -3,7 +3,7 @@ using RatBot.Application.Features.Logging;
 
 namespace RatBot.Features.Logging.Gateway;
 
-public static class ModerationLogComponents
+internal static class ModerationLogComponents
 {
     private const string TimestampFormat = "yyyy-MM-dd HH:mm:ss'Z'";
 
@@ -132,9 +132,9 @@ public static class ModerationLogComponents
         return $"```ansi\n{sanitized}\n```";
     }
 
-    public sealed record ModerationLogMessage(MessageComponent Components, ImmutableArray<ModerationLogAttachment> Attachments);
+    internal sealed record ModerationLogMessage(MessageComponent Components, ImmutableArray<ModerationLogAttachment> Attachments);
 
-    public sealed record ModerationLogAttachment(string FileName, string ContentType, byte[] Bytes)
+    internal sealed record ModerationLogAttachment(string FileName, string ContentType, byte[] Bytes)
     {
         public string AttachmentUrl => $"attachment://{FileName}";
     }

@@ -6,7 +6,7 @@ namespace RatBot.Features.EmojiYoink.Commands;
 [DefaultMemberPermissions(GuildPermission.ManageEmojisAndStickers)]
 [RequireUserPermission(GuildPermission.ManageEmojisAndStickers)]
 [RequireBotPermission(GuildPermission.CreateGuildExpressions)]
-[CommandContextType(InteractionContextType.Guild, InteractionContextType.PrivateChannel)]
+[CommandContextType(InteractionContextType.Guild)]
 public sealed class EmojiYoinkModule(EmojiYoinkOperations operations) : SlashCommandBase
 {
     [SlashCommand("yoink", "Copy a custom emoji into this server.")]

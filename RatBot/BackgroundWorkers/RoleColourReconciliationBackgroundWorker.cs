@@ -42,7 +42,7 @@ public sealed class RoleColourReconciliationBackgroundWorker(
         );
     }
 
-    public static async Task ProcessConfiguredGuildsAsync(
+    internal static async Task ProcessConfiguredGuildsAsync(
         IEnumerable<ulong> configuredGuildIds,
         Func<ulong, bool> guildAvailable,
         Func<ulong, Task<int>> reconcileGuildAsync,

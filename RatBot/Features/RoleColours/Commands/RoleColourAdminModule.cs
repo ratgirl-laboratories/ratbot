@@ -16,7 +16,7 @@ public sealed class RoleColourAdminModule(RoleColourOperations operations, RoleC
     public async Task AddAsync(
         [Summary("name", "Name used to identify this colour.")] string name,
         [Summary("source", "Source colour role users select.")] IRole source,
-        [Summary("display", "Display colour role Sylvan manages.")] IRole display
+        [Summary("display", "Display colour role RatBot manages.")] IRole display
     )
     {
         if (Context.Guild is null)
@@ -61,7 +61,7 @@ public sealed class RoleColourAdminModule(RoleColourOperations operations, RoleC
     public async Task UpsertAsync(
         [Summary("name", "Name used to identify this colour.")] string name,
         [Summary("source", "Source colour role users select.")] IRole source,
-        [Summary("display", "Display colour role Sylvan manages.")] IRole display
+        [Summary("display", "Display colour role RatBot manages.")] IRole display
     )
     {
         if (Context.Guild is null)

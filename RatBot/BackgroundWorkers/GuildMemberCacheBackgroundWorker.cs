@@ -50,7 +50,7 @@ public sealed class GuildMemberCacheBackgroundWorker(
         );
     }
 
-    public static async Task ProcessGuildsAsync<TGuild>(
+    internal static async Task ProcessGuildsAsync<TGuild>(
         IEnumerable<TGuild> guilds,
         Func<TGuild, ulong> getGuildId,
         Func<TGuild, Task> processGuildAsync,

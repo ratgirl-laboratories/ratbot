@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using RatBot.Application.Administration;
 using RatBot.Application.Features.EmojiYoink;
 using RatBot.Application.Features.Quorum;
 using RatBot.Application.Features.Timezone;
@@ -21,7 +20,6 @@ public static class DependencyInjection
             services.AddSingleton(sp => new ImageBurstSpamDetector(TimeProvider.System, sp.GetRequiredService<ImageBurstSpamDetectorSettings>()));
 
             services.AddScoped<ImageSpamSettingsService>();
-            services.AddScoped<AdminSendService>();
             services.AddScoped<ReactionUsageTracker>();
             services.AddScoped<EmojiUsageTracker>();
             services.AddScoped<IModerationService, ModerationService>();

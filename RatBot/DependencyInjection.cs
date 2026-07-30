@@ -1,9 +1,13 @@
+using Microsoft.EntityFrameworkCore;
 using RatBot.Application;
 using RatBot.Application.Common.Forums;
 using RatBot.Application.Common.Interfaces;
+using RatBot.Application.Features.EmojiAnalytics;
 using RatBot.Application.Features.EmojiYoink;
 using RatBot.Application.Features.Logging;
 using RatBot.Application.Features.Quorum;
+using RatBot.Application.Features.Timezone;
+using RatBot.Application.Moderation;
 using RatBot.BackgroundWorkers;
 using RatBot.Commands.AdventureLeaderboard;
 using RatBot.Commands.Emoji;
@@ -21,6 +25,15 @@ using RatBot.Gateway;
 using RatBot.Handlers;
 using RatBot.Hosting;
 using RatBot.Infrastructure;
+using RatBot.Infrastructure.Data;
+using RatBot.Infrastructure.Features.EmojiAnalytics;
+using RatBot.Infrastructure.Features.Logging;
+using RatBot.Infrastructure.Features.Meta;
+using RatBot.Infrastructure.Features.Quorum.Persistence;
+using RatBot.Infrastructure.Features.Timezone.Persistence;
+using RatBot.Infrastructure.Persistence.Repositories;
+using RatBot.Infrastructure.RoleColours;
+using RatBot.Infrastructure.Stores;
 
 namespace RatBot;
 
@@ -37,7 +50,24 @@ public static class DependencyInjection
             services.AddDiscordAdapter(configuration);
         }
 
-        public void AddDiscordAdapter(IConfiguration configuration)
+        private void AddInfrastructure(IConfiguration configuration)
+        {
+            string connectionString = PostgresConnectionStringBuilder.Build(configuration);
+
+            services.AddDbContextFactory<BotDbContext>(options => options.UseNpgsql(connectionString));
+
+            services.AddScoped<IAutobannedUserRepository, AutobannedUserRepository>();
+            services.AddScoped<IImageSpamSettingsStore, ImageSpamSettingsStore>();
+            services.AddScoped<IQuorumConfigurationStore>(_ => new QuorumConfigurationStore(connectionString));
+            services.AddScoped<IUserTimezoneStore>(_ => new UserTimezoneStore(connectionString));
+            services.AddScoped<IEmojiUsageStore, EmojiUsageStore>();
+            services.AddSingleton<ModerationLoggingStore>();
+            services.AddScoped<MetaProposalService>();
+            services.AddScoped<MetaSuggestionSettingsService>();
+            services.AddScoped<RoleColourOperations>();
+        }
+
+        private void AddDiscordAdapter(IConfiguration configuration)
         {
             services
                 .AddOptions<DiscordOptions>()
@@ -131,9 +161,6 @@ public static class DependencyInjection
             services.AddHostedService<MetaProposalPollBackgroundWorker>();
             services.AddHostedService<LoggingMetadataCleanupBackgroundWorker>();
             services.AddHostedService(sp => sp.GetRequiredService<AdventureLeaderboardManager>());
-
-            // services.AddSingleton<BirbBackgroundWorker>();
-            // services.AddHostedService(sp => sp.GetRequiredService<BirbBackgroundWorker>());
 
             services.AddSingleton<DiscordQuorumMemberIndex>();
             services.AddSingleton<IQuorumMemberSource, DiscordQuorumMemberSource>();

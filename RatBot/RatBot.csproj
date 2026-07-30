@@ -7,6 +7,7 @@
         <Version>0.0.1-1</Version>
     </PropertyGroup>
     <ItemGroup>
+        <PackageReference Include="Dapper" />
         <PackageReference Include="Discord.Net.Interactions" />
         <PackageReference Include="Discord.Net.WebSocket" />
         <PackageReference Include="DotNetEnv" />
@@ -17,7 +18,9 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="Serilog.Sinks.Console" />
@@ -26,7 +29,6 @@
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\RatBot.Application\RatBot.Application.csproj" />
-        <ProjectReference Include="..\RatBot.Infrastructure\RatBot.Infrastructure.csproj" />
         <ProjectReference Include="..\RatBot.Domain\RatBot.Domain.csproj" />
     </ItemGroup>
     <ItemGroup>

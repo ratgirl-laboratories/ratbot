@@ -4,7 +4,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="coverlet.collector">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="Discord.Net.Interactions" />
         <PackageReference Include="Discord.Net.WebSocket" />
         <PackageReference Include="ErrorOr" />
@@ -30,6 +33,5 @@
         <ProjectReference Include="..\..\RatBot.Application\RatBot.Application.csproj" />
         <ProjectReference Include="..\..\RatBot.Domain\RatBot.Domain.csproj" />
         <ProjectReference Include="..\..\RatBot\RatBot.csproj" />
-        <ProjectReference Include="..\..\RatBot.Infrastructure\RatBot.Infrastructure.csproj" />
     </ItemGroup>
 </Project>

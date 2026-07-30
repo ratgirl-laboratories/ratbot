@@ -2,7 +2,7 @@ using Discord;
 using ErrorOr;
 using NSubstitute;
 using RatBot.Application.Administration;
-using RatBot.Discord.Commands.Admin;
+using RatBot.Commands.Admin;
 using Shouldly;
 
 namespace RatBot.Discord.Tests.Commands.Admin;

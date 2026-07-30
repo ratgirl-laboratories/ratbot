@@ -4,8 +4,8 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application.Moderation;
-using RatBot.Discord.Commands.Settings;
-using RatBot.Discord.Commands.Spam;
+using RatBot.Commands.Settings;
+using RatBot.Commands.Spam;
 using RatBot.Domain.Moderation;
 using Shouldly;
 

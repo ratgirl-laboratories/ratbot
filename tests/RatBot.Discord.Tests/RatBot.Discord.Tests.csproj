@@ -29,7 +29,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\RatBot.Application\RatBot.Application.csproj" />
         <ProjectReference Include="..\..\RatBot.Domain\RatBot.Domain.csproj" />
-        <ProjectReference Include="..\..\RatBot.Discord\RatBot.Discord.csproj" />
+        <ProjectReference Include="..\..\RatBot\RatBot.csproj" />
         <ProjectReference Include="..\..\RatBot.Infrastructure\RatBot.Infrastructure.csproj" />
     </ItemGroup>
 </Project>

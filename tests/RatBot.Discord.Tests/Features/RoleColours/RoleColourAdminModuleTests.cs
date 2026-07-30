@@ -1,7 +1,7 @@
 using System.Reflection;
 using Discord;
 using Discord.Interactions;
-using RatBot.Discord.Features.RoleColours.Commands;
+using RatBot.Features.RoleColours.Commands;
 using Shouldly;
 
 namespace RatBot.Discord.Tests.Features.RoleColours;

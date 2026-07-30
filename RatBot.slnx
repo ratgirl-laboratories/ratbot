@@ -1,10 +1,9 @@
 <Solution>
     <Folder Name="/src/">
-        <Project Path="RatBot.Host/RatBot.Host.csproj" />
         <Project Path="RatBot.Application/RatBot.Application.csproj" />
-        <Project Path="RatBot.Discord/RatBot.Discord.csproj" />
         <Project Path="RatBot.Domain/RatBot.Domain.csproj" />
-        <Project Path="RatBot.Infrastructure/RatBot.Infrastructure.csproj" />
+        <Project Path="RatBot.Infrastructure\RatBot.Infrastructure.csproj" />
+        <Project Path="RatBot\RatBot.csproj" />
     </Folder>
     <Folder Name="/ops/docker/">
         <File Path="docker-compose.yml" />

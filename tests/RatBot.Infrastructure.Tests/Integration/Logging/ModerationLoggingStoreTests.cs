@@ -225,7 +225,7 @@ public sealed class ModerationLoggingStoreTests
 
         string[] loggingColumns = db
             .Model.GetEntityTypes()
-            .Where(entityType => string.Equals(entityType.ClrType.Namespace, "RatBot.Domain.Features.Logging", StringComparison.Ordinal))
+            .Where(entityType => string.Equals(entityType.ClrType.Namespace, "Sylvan.Domain.Features.Logging", StringComparison.Ordinal))
             .SelectMany(entityType => entityType.GetProperties())
             .Select(property => property.GetColumnName())
             .ToArray();

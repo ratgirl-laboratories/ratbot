@@ -4,8 +4,8 @@ using Discord.Interactions;
 using ErrorOr;
 using NSubstitute;
 using RatBot.Application.Features.Quorum;
-using RatBot.Discord.Features.Quorum.Commands;
 using RatBot.Domain.Features.Quorum;
+using RatBot.Features.Quorum.Commands;
 using Shouldly;
 
 namespace RatBot.Discord.Tests.Features.Quorum;

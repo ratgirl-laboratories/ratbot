@@ -1,4 +1,4 @@
-using RatBot.Discord.BackgroundWorkers;
+using RatBot.BackgroundWorkers;
 using Serilog;
 using Shouldly;
 

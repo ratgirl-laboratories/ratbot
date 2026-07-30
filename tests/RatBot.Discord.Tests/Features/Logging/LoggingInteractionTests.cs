@@ -4,7 +4,7 @@ using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using RatBot.Discord.Features.Logging.Commands;
+using RatBot.Features.Logging.Commands;
 using RatBot.Infrastructure.Data;
 using Shouldly;
 

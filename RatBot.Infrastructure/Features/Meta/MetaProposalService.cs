@@ -6,7 +6,6 @@ namespace RatBot.Infrastructure.Features.Meta;
 public sealed class MetaProposalService(BotDbContext db, ILogger logger)
 {
     private static readonly TimeSpan PublicationRetryCooldown = TimeSpan.FromSeconds(10);
-    private readonly BotDbContext _db = db;
     private readonly ILogger _logger = logger.ForContext<MetaProposalService>();
 
     public async Task<ErrorOr<MetaProposalState>> ClearDeletedPollAsync(Guid stateId, CancellationToken ct = default)
@@ -21,7 +20,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return result.Errors;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state.Value;
     }
 
@@ -37,7 +36,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return result.Errors;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state.Value;
     }
 
@@ -53,7 +52,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return result.Errors;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state;
     }
 
@@ -69,16 +68,16 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return result.Errors;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state.Value;
     }
 
     public async Task<IReadOnlyList<MetaProposalState>> FindExpiredPollsAsync(DateTimeOffset nowUtc, int limit, CancellationToken ct = default) =>
-        await _db.MetaProposalStates.AsNoTracking().PollExpiringBeforeOrAt(nowUtc).OrderBy(x => x.PollExpiresAtUtc).Take(limit).ToListAsync(ct);
+        await db.MetaProposalStates.AsNoTracking().PollExpiringBeforeOrAt(nowUtc).OrderBy(x => x.PollExpiresAtUtc).Take(limit).ToListAsync(ct);
 
     public async Task ForgetDeletedUnsubmittedSuggestionAsync(ulong guildId, ulong suggestionThreadChannelId, CancellationToken ct = default)
     {
-        MetaProposalState? state = await _db.MetaProposalStates.ForSuggestionThread(guildId, suggestionThreadChannelId).SingleOrDefaultAsync(ct);
+        MetaProposalState? state = await db.MetaProposalStates.ForSuggestionThread(guildId, suggestionThreadChannelId).SingleOrDefaultAsync(ct);
 
         if (state is null)
             return;
@@ -86,8 +85,8 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (state.HasSubmittedProposal || state.IsTerminal)
             return;
 
-        _db.MetaProposalStates.Remove(state);
-        await _db.SaveChangesAsync(ct);
+        db.MetaProposalStates.Remove(state);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<ErrorOr<Success>> ForgetUnsubmittedSuggestionAsync(Guid stateId, CancellationToken ct = default)
@@ -102,8 +101,8 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (proposal.HasSubmittedProposal || proposal.IsTerminal)
             return Error.Conflict("MetaProposal.CannotForgetSubmitted", "Only unsubmitted suggestion state can be forgotten.");
 
-        _db.MetaProposalStates.Remove(proposal);
-        await _db.SaveChangesAsync(ct);
+        db.MetaProposalStates.Remove(proposal);
+        await db.SaveChangesAsync(ct);
         return Result.Success;
     }
 
@@ -128,7 +127,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
 
     public async Task<ErrorOr<MetaSuggestionSettings>> GetSettingsAsync(ulong guildId, CancellationToken ct = default)
     {
-        MetaSuggestionSettings? settings = await _db.MetaSuggestionSettings.AsNoTracking().ForGuild(guildId).SingleOrDefaultAsync(ct);
+        MetaSuggestionSettings? settings = await db.MetaSuggestionSettings.AsNoTracking().ForGuild(guildId).SingleOrDefaultAsync(ct);
 
         if (settings is null)
             return MetaProposalErrors.SettingsNotConfigured;
@@ -157,7 +156,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return result.Errors;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state;
     }
 
@@ -173,7 +172,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return result.Errors;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state;
     }
 
@@ -189,7 +188,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<ErrorOr<MetaProposalState>> RecordPublicationFailureAsync(
@@ -209,7 +208,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return result.Errors;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state;
     }
 
@@ -225,7 +224,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return MetaProposalErrors.PublicationFailed;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state;
     }
 
@@ -262,7 +261,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return result.Errors;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state.Value;
     }
 
@@ -275,7 +274,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         CancellationToken ct = default
     )
     {
-        MetaProposalState? existing = await _db
+        MetaProposalState? existing = await db
             .MetaProposalStates.AsNoTracking()
             .ForSuggestionThread(guildId, suggestionThreadChannelId)
             .SingleOrDefaultAsync(ct);
@@ -295,8 +294,8 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (create.IsError)
             return;
 
-        _db.MetaProposalStates.Add(create.Value);
-        await _db.SaveChangesAsync(ct);
+        db.MetaProposalStates.Add(create.Value);
+        await db.SaveChangesAsync(ct);
 
         _logger.Information("Tracked meta suggestion thread {SuggestionThreadChannelId} in guild {GuildId}.", suggestionThreadChannelId, guildId);
     }
@@ -320,27 +319,27 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         if (result.IsError)
             return result.Errors;
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
         return state;
     }
 
     private async Task<ErrorOr<MetaProposalState>> FindByAnyThreadAsync(ulong guildId, ulong threadChannelId, bool asNoTracking, CancellationToken ct)
     {
-        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForAnyThread(guildId, threadChannelId);
+        IQueryable<MetaProposalState> query = db.MetaProposalStates.ForAnyThread(guildId, threadChannelId);
         MetaProposalState? state = await (asNoTracking ? query.AsNoTracking() : query).SingleOrDefaultAsync(ct);
         return state is null ? MetaProposalErrors.ThreadNotTracked : state;
     }
 
     private async Task<ErrorOr<MetaProposalState>> FindByIdAsync(Guid stateId, bool asNoTracking, CancellationToken ct)
     {
-        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForId(stateId);
+        IQueryable<MetaProposalState> query = db.MetaProposalStates.ForId(stateId);
         MetaProposalState? state = await (asNoTracking ? query.AsNoTracking() : query).SingleOrDefaultAsync(ct);
         return state is null ? MetaProposalErrors.ThreadNotTracked : state;
     }
 
     private async Task<ErrorOr<MetaProposalState>> FindByPollMessageAsync(ulong guildId, ulong pollMessageId, bool asNoTracking, CancellationToken ct)
     {
-        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForPollMessage(guildId, pollMessageId);
+        IQueryable<MetaProposalState> query = db.MetaProposalStates.ForPollMessage(guildId, pollMessageId);
         MetaProposalState? state = await (asNoTracking ? query.AsNoTracking() : query).SingleOrDefaultAsync(ct);
         return state is null ? MetaProposalErrors.ThreadNotTracked : state;
     }
@@ -352,7 +351,7 @@ public sealed class MetaProposalService(BotDbContext db, ILogger logger)
         CancellationToken ct
     )
     {
-        IQueryable<MetaProposalState> query = _db.MetaProposalStates.ForSuggestionThread(guildId, suggestionThreadChannelId);
+        IQueryable<MetaProposalState> query = db.MetaProposalStates.ForSuggestionThread(guildId, suggestionThreadChannelId);
         MetaProposalState? state = await (asNoTracking ? query.AsNoTracking() : query).SingleOrDefaultAsync(ct);
         return state is null ? MetaProposalErrors.SuggestionNotTracked : state;
     }

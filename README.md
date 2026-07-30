@@ -29,7 +29,7 @@ The database is exposed at `localhost:5432` using the `DB__*` values in `.env`. 
 ### 3. Run or debug the bot
 
 ```bash
-dotnet run --project RatBot.Host --launch-profile RatBot.Local
+dotnet run --project RatBot --launch-profile RatBot.Local
 ```
 
 ### Troubleshooting
@@ -70,8 +70,7 @@ Grafana will be accessible at `http://localhost:3000` (Default: `admin`/`admin`)
 - `RatBot.Application`: Business logic and service interfaces.
 - `RatBot.Domain`: Core domain models and logic.
 - `RatBot.Infrastructure`: Database persistence (EF Core) and external service implementations.
-- `RatBot.Discord`: Discord command modules and interaction handlers.
-- `RatBot.Host`: Entry point and DI configuration.
+- `RatBot`: Executable entry point, dependency injection, Discord command modules, and interaction handlers.
 
 ### Running Tests
 

@@ -33,7 +33,6 @@
         <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
         <PackageVersion Include="Serilog" Version="4.3.1" />
         <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
-        <PackageVersion Include="Serilog.Filters.Expressions" Version="2.1.0" />
         <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
         <PackageVersion Include="Serilog.Sinks.OpenTelemetry" Version="4.2.0" />

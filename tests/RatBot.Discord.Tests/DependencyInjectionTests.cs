@@ -1,11 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using RatBot.Application;
-using RatBot.Discord.Configuration;
-using RatBot.Discord.Features.Logging.Gateway;
-using RatBot.Discord.Gateway;
-using RatBot.Infrastructure;
+using RatBot.Configuration;
+using RatBot.Features.Logging.Gateway;
+using RatBot.Gateway;
 using Serilog;
 using Shouldly;
 
@@ -30,9 +28,7 @@ public sealed class DependencyInjectionTests
         ServiceCollection services = new ServiceCollection();
         services.AddSingleton(configuration);
         services.AddSingleton<ILogger>(new LoggerConfiguration().CreateLogger());
-        services.AddApplication();
-        services.AddInfrastructure(configuration);
-        services.AddDiscordAdapter(configuration);
+        services.AddRatBot(configuration);
 
         await using ServiceProvider provider = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }

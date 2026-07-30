@@ -1,5 +1,5 @@
 using System.Net;
-using RatBot.Discord.Features.Logging.Gateway;
+using RatBot.Features.Logging.Gateway;
 using Serilog.Core;
 using Shouldly;
 

@@ -1,7 +1,7 @@
 using Discord;
 using NSubstitute;
 using RatBot.Application.Features.Logging;
-using RatBot.Discord.Features.Logging.Gateway;
+using RatBot.Features.Logging.Gateway;
 using Shouldly;
 
 namespace RatBot.Discord.Tests.Features.Logging;

@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
-using RatBot.Discord.Handlers;
 using RatBot.Domain.RoleColours;
+using RatBot.Handlers;
 using Shouldly;
 
 namespace RatBot.Discord.Tests.Handlers;

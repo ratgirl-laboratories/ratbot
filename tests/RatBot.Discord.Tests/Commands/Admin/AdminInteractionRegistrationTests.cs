@@ -4,7 +4,7 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using RatBot.Application.Administration;
-using RatBot.Discord.Commands.Admin;
+using RatBot.Commands.Admin;
 using Shouldly;
 
 namespace RatBot.Discord.Tests.Commands.Admin;

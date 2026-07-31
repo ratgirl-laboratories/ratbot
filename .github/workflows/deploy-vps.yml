@@ -66,7 +66,7 @@ jobs:
                 {
                   target: "production",
                   environment_name: "production",
-                  project: "production",
+                  project: "ratbot-production",
                   remote_dir: "/opt/ratbot/production",
                   image_ref: $image_ref
                 }

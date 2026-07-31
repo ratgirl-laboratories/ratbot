@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using RatBot.Application;
 using RatBot.Application.Common.Forums;
 using RatBot.Application.Common.Interfaces;
 using RatBot.Application.Features.EmojiAnalytics;
@@ -7,7 +6,9 @@ using RatBot.Application.Features.EmojiYoink;
 using RatBot.Application.Features.Logging;
 using RatBot.Application.Features.Quorum;
 using RatBot.Application.Features.Timezone;
+using RatBot.Application.MessageContent;
 using RatBot.Application.Moderation;
+using RatBot.Application.Reactions;
 using RatBot.BackgroundWorkers;
 using RatBot.Commands.AdventureLeaderboard;
 using RatBot.Commands.Emoji;
@@ -48,6 +49,22 @@ public static class DependencyInjection
             services.AddApplication();
             services.AddInfrastructure(configuration);
             services.AddDiscordAdapter(configuration);
+        }
+
+        private void AddApplication()
+        {
+            services.AddSingleton<ReactionQueue>();
+            services.AddSingleton<MessageContentQueue>();
+            services.AddSingleton<ImageBurstSpamDetectorSettings>();
+            services.AddSingleton(sp => new ImageBurstSpamDetector(TimeProvider.System, sp.GetRequiredService<ImageBurstSpamDetectorSettings>()));
+
+            services.AddScoped<ImageSpamSettingsService>();
+            services.AddScoped<ReactionUsageTracker>();
+            services.AddScoped<EmojiUsageTracker>();
+            services.AddScoped<IModerationService, ModerationService>();
+            services.AddScoped<EmojiYoinkOperations>();
+            services.AddScoped<QuorumOperations>();
+            services.AddScoped<UserTimezoneOperations>();
         }
 
         private void AddInfrastructure(IConfiguration configuration)

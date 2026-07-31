@@ -8,6 +8,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Dapper" />
+        <PackageReference Include="DiffPlex" />
         <PackageReference Include="Discord.Net.Interactions" />
         <PackageReference Include="Discord.Net.WebSocket" />
         <PackageReference Include="DotNetEnv" />
@@ -28,7 +29,6 @@
         <PackageReference Include="Serilog.Sinks.OpenTelemetry" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\RatBot.Application\RatBot.Application.csproj" />
         <ProjectReference Include="..\RatBot.Domain\RatBot.Domain.csproj" />
     </ItemGroup>
     <ItemGroup>

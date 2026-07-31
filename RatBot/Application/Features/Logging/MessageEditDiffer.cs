@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using DiffPlex;
 using DiffPlex.Chunkers;
 using DiffPlex.Model;
@@ -14,7 +13,7 @@ public sealed class MessageEditDiffer
     public MessageEditDiffer()
         : this(Differ.Instance) { }
 
-    internal MessageEditDiffer(IDiffer differ)
+    private MessageEditDiffer(IDiffer differ)
     {
         _differ = differ;
     }
